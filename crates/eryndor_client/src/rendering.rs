@@ -9,6 +9,12 @@ pub struct VisualEntity {
     pub game_entity: Entity,
 }
 
+/// Marker for name label entities
+#[derive(Component)]
+pub struct NameLabel {
+    pub game_entity: Entity,
+}
+
 pub fn spawn_visual_entities(
     mut commands: Commands,
     query: Query<(Entity, &VisualShape), Without<VisualEntity>>,
@@ -87,13 +93,53 @@ pub fn update_visual_positions(
     }
 }
 
+pub fn spawn_name_labels(
+    mut commands: Commands,
+    player_query: Query<(Entity, &Character), (With<Player>, Without<NameLabel>)>,
+    label_query: Query<&NameLabel>,
+) {
+    for (game_entity, character) in &player_query {
+        // Check if name label already exists
+        let already_has_label = label_query.iter().any(|l| l.game_entity == game_entity);
+        if already_has_label {
+            continue;
+        }
+
+        // Spawn name label text entity
+        commands.spawn((
+            NameLabel { game_entity },
+            Text2d::new(character.name.clone()),
+            TextFont {
+                font_size: 16.0,
+                ..default()
+            },
+            TextColor(Color::WHITE),
+        ));
+    }
+}
+
+pub fn update_name_label_positions(
+    game_entities: Query<(Entity, &Position), With<Player>>,
+    mut label_entities: Query<(&NameLabel, &mut Transform)>,
+) {
+    for (label, mut transform) in &mut label_entities {
+        if let Ok((_entity, position)) = game_entities.get(label.game_entity) {
+            // Position name label above the character
+            transform.translation = Vec3::new(position.0.x, position.0.y + 25.0, 1.0);
+        }
+    }
+}
+
 pub fn update_camera_follow(
     client_state: Res<MyClientState>,
     player_query: Query<&Position, With<Player>>,
     mut camera_query: Query<&mut Transform, (With<Camera2d>, Without<Player>)>,
 ) {
-    let Some(player_entity) = client_state.player_entity else { return };
+    let Some(player_entity) = client_state.player_entity else {
+        return
+    };
 
+    // Silently wait for entity to be replicated
     if let Ok(position) = player_query.get(player_entity) {
         if let Ok(mut camera_transform) = camera_query.single_mut() {
             camera_transform.translation = Vec3::new(position.0.x, position.0.y, camera_transform.translation.z);

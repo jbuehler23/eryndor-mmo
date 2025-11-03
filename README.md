@@ -94,19 +94,19 @@ cargo run -p eryndor_client
 
 - **WASD** or **Arrow Keys** - Movement
 - **Left Click** - Select target (enemies, NPCs, items)
-- **E** - Interact with selected target (pickup items, talk to NPCs)
+- **E** - Interact with selected target (pickup items, Talk to theNPCs)
 - **1-9, 0** - Use abilities on hotbar
 - **I** (planned) - Open inventory
 
 ## Gameplay Loop
 
-1. **Talk to Elder Wisdom** (the green circle NPC)
+1. **Talk to theElder** (the green circle NPC)
    - Click on the NPC
    - Press **E** to interact
    - Accept the quest "Choose Your Path"
 
 2. **Complete the quest**
-   - Talk to Elder Wisdom again
+   - Talk to theElder again
    - Press **E** to complete the quest
    - You'll receive your **class-specific weapon**:
      - **Rogue** → Dagger (Quick Strike ability)

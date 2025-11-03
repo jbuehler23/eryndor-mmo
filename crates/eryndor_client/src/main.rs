@@ -99,9 +99,15 @@ fn main() {
             ui::game_ui.run_if(in_state(GameState::InGame)),
         ))
         .add_systems(Update, (
+            // Connection monitoring
+            game_state::monitor_connection,
+            // Player entity detection
+            game_state::detect_player_entity.run_if(in_state(GameState::InGame)),
             // Rendering
             rendering::spawn_visual_entities,
             rendering::update_visual_positions,
+            rendering::spawn_name_labels,
+            rendering::update_name_label_positions,
             rendering::update_camera_follow.run_if(in_state(GameState::InGame)),
             // Input
             input::handle_movement_input.run_if(in_state(GameState::InGame)),

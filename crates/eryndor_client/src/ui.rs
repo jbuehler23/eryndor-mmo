@@ -161,9 +161,14 @@ pub fn game_ui(
 ) {
     let Ok(ctx) = contexts.ctx_mut() else { return };
 
-    // Wait for server to tell us which entity is our character
-    let Some(player_entity) = client_state.player_entity else { return };
-    let Ok((_, health, mana, current_target, hotbar, inventory, learned_abilities, quest_log)) = player_query.get(player_entity) else { return };
+    let Some(player_entity) = client_state.player_entity else {
+        return
+    };
+
+    // Silently wait for entity to be replicated with all components
+    let Ok((_, health, mana, current_target, hotbar, inventory, _learned_abilities, quest_log)) = player_query.get(player_entity) else {
+        return
+    };
 
     // Player health/mana bar (top left)
     egui::Window::new("Player Status")
@@ -279,7 +284,7 @@ pub fn game_ui(
 
             if quest_log.active_quests.is_empty() {
                 ui.label("No active quests");
-                ui.label("Talk to Elder Wisdom to start!");
+                ui.label("Talk to theElder to start!");
             }
         });
 

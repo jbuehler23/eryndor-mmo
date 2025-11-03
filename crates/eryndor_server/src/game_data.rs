@@ -131,7 +131,7 @@ impl Default for QuestDatabase {
             name: "Choose Your Path".to_string(),
             description: "Return to me when you're ready to receive your class weapon and begin your training. As a member of your class, you will wield the weapon that best suits your abilities.".to_string(),
             objectives: vec![QuestObjective::TalkToNpc {
-                npc_id: 1, // Elder Wisdom
+                npc_id: 1, // Elder
             }],
             reward_exp: 100,
         });

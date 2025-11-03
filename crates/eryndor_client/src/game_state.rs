@@ -16,8 +16,10 @@ pub enum GameState {
 pub struct MyClientState {
     pub account_id: Option<i64>,
     pub characters: Vec<CharacterData>,
+    pub selected_character_id: Option<i64>,
     pub player_entity: Option<Entity>,
     pub notifications: Vec<String>,
+    pub connection_error_shown: bool,
 }
 
 pub fn handle_login_response(
@@ -84,10 +86,37 @@ pub fn handle_notifications(
 pub fn handle_select_character_response(
     trigger: On<SelectCharacterResponse>,
     mut client_state: ResMut<MyClientState>,
+    mut next_state: ResMut<NextState<GameState>>,
 ) {
     let response = trigger.event();
-    info!("Character entity assigned: {:?}", response.character_entity);
-    client_state.player_entity = Some(response.character_entity);
+
+    info!("Character selected: ID {}, transitioning to InGame", response.character_id);
+    client_state.selected_character_id = Some(response.character_id);
+    // Transition to InGame state - the entity will be discovered via detect_player_entity
+    next_state.set(GameState::InGame);
+}
+
+// Detect when our player entity has been replicated
+pub fn detect_player_entity(
+    mut client_state: ResMut<MyClientState>,
+    player_query: Query<(Entity, &Character), (With<Player>, Added<Player>)>,
+) {
+    // Only detect if we don't have a player entity yet and we know which character we selected
+    if client_state.player_entity.is_none() {
+        if let Some(selected_id) = client_state.selected_character_id {
+            // Find the character name from our character list
+            if let Some(character_data) = client_state.characters.iter().find(|c| c.id == selected_id) {
+                // Look for a newly added Player entity with matching name
+                for (entity, character) in &player_query {
+                    if character.name == character_data.name {
+                        client_state.player_entity = Some(entity);
+                        info!("Detected player entity {:?} for character: {}", entity, character.name);
+                        return;
+                    }
+                }
+            }
+        }
+    }
 }
 
 pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>) {
@@ -131,4 +160,18 @@ pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>
     commands.insert_resource(transport);
 
     info!("Connected to server at {}", server_addr);
+}
+
+pub fn monitor_connection(
+    client: Option<Res<RenetClient>>,
+    mut client_state: ResMut<MyClientState>,
+) {
+    // Check if client exists and is disconnected
+    if let Some(client) = client {
+        if client.is_disconnected() && !client_state.connection_error_shown {
+            error!("Lost connection to server!");
+            client_state.notifications.push("ERROR: Cannot connect to server. Please make sure the server is running.".to_string());
+            client_state.connection_error_shown = true;
+        }
+    }
 }

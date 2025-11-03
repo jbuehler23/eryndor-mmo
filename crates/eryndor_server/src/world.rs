@@ -9,7 +9,7 @@ pub fn spawn_world(mut commands: Commands) {
     commands.spawn((
         Replicated,
         Npc,
-        NpcName("Elder Wisdom".to_string()),
+        NpcName("Elder".to_string()),
         QuestGiver {
             available_quests: vec![QUEST_FIRST_WEAPON],
         },
@@ -21,7 +21,7 @@ pub fn spawn_world(mut commands: Commands) {
         },
     ));
 
-    info!("Spawned NPC: Elder Wisdom");
+    info!("Spawned NPC: Elder");
 
     // Note: Weapons are now given as quest rewards, not spawned in the world
 

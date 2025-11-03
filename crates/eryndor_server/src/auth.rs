@@ -21,6 +21,7 @@ pub fn handle_login(
     trigger: On<FromClient<LoginRequest>>,
     mut commands: Commands,
     db: Res<DatabaseConnection>,
+    authenticated_clients: Query<&Authenticated>,
 ) {
     info!("handle_login observer triggered!");
     let Some(pool) = db.pool() else {
@@ -34,7 +35,7 @@ pub fn handle_login(
     };
     let request = trigger.event();
 
-    info!("Login attempt from client {:?}: {}", client_entity, request.username);
+    info!("Login attempt from client {:?}: username={}", client_entity, request.username);
 
     // Verify credentials (blocking for simplicity in POC)
     let runtime = tokio::runtime::Runtime::new().unwrap();
@@ -42,7 +43,23 @@ pub fn handle_login(
 
     match result {
         Ok(account_id) => {
-            info!("Login successful for {}", request.username);
+            // Check if this account is already logged in
+            let already_logged_in = authenticated_clients.iter().any(|auth| auth.account_id == account_id);
+
+            if already_logged_in {
+                warn!("Account {} (ID: {}) is already logged in, rejecting duplicate login", request.username, account_id);
+                commands.server_trigger(ToClients {
+                    mode: SendMode::Direct(ClientId::Client(client_entity)),
+                    message: LoginResponse {
+                        success: false,
+                        message: "This account is already logged in".to_string(),
+                        account_id: None,
+                    },
+                });
+                return;
+            }
+
+            info!("Login successful for {} (ID: {})", request.username, account_id);
 
             // Mark client as authenticated
             commands.entity(client_entity).insert(Authenticated { account_id });
@@ -294,11 +311,11 @@ pub fn handle_select_character(
             // Link client to character
             commands.entity(client_entity).insert(ActiveCharacterEntity(character_entity));
 
-            // Tell the client which entity is theirs
+            // Tell the client which character was selected
             commands.server_trigger(ToClients {
                 mode: SendMode::Direct(ClientId::Client(client_entity)),
                 message: SelectCharacterResponse {
-                    character_entity,
+                    character_id: request.character_id,
                 },
             });
 
@@ -320,34 +337,50 @@ pub fn handle_select_character(
 pub fn handle_client_disconnect(
     mut commands: Commands,
     mut disconnected: RemovedComponents<ConnectedClient>,
-    active_chars: Query<&ActiveCharacterEntity>,
-    characters: Query<(Entity, &Position, &Health, &Mana, &CharacterDatabaseId)>,
+    authenticated: Query<&Authenticated>,
+    characters: Query<(Entity, &OwnedBy, &Character, &Position, &Health, &Mana, &CharacterDatabaseId)>,
     db: Res<DatabaseConnection>,
 ) {
     let Some(pool) = db.pool() else { return };
 
     for client_entity in disconnected.read() {
-        info!("Client disconnected: {:?}", client_entity);
+        // Log account info if available
+        if let Ok(auth) = authenticated.get(client_entity) {
+            info!("Client disconnected: {:?} (Account ID: {})", client_entity, auth.account_id);
+        } else {
+            info!("Client disconnected: {:?} (not authenticated)", client_entity);
+        }
 
-        // Find and despawn their character
-        if let Ok(active) = active_chars.get(client_entity) {
-            let char_entity = active.0;
+        // Find and despawn their character using OwnedBy component
+        let mut found_character = false;
+        for (entity, owned_by, character, position, health, mana, db_id) in characters.iter() {
+            if owned_by.0 == client_entity {
+                found_character = true;
+                info!("Saving character '{}' (DB ID: {}) at position ({:.1}, {:.1})",
+                    character.name, db_id.0, position.0.x, position.0.y);
 
-            if let Ok((entity, position, health, mana, db_id)) = characters.get(char_entity) {
                 // Save character to database
                 let runtime = tokio::runtime::Runtime::new().unwrap();
-                let _ = runtime.block_on(database::save_character(
+                match runtime.block_on(database::save_character(
                     pool,
                     db_id.0,
                     position,
                     health,
                     mana,
-                ));
+                )) {
+                    Ok(_) => info!("Character '{}' saved successfully", character.name),
+                    Err(e) => error!("Failed to save character '{}': {}", character.name, e),
+                }
 
-                // Despawn character
+                // Despawn character - this will replicate to all clients
                 commands.entity(entity).despawn();
-                info!("Character saved and despawned");
+                info!("Character '{}' despawned from world (will replicate to all clients)", character.name);
+                break;
             }
+        }
+
+        if !found_character {
+            info!("Client had no active character");
         }
     }
 }
