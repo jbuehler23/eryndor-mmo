@@ -1,0 +1,135 @@
+use bevy::prelude::*;
+use bevy_replicon::prelude::*;
+use eryndor_shared::*;
+use crate::game_state::MyClientState;
+
+#[derive(Resource, Default)]
+pub struct InputState {
+    pub selected_target: Option<Entity>,
+}
+
+pub fn handle_movement_input(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    client_state: Res<MyClientState>,
+    mut commands: Commands,
+) {
+    let Some(_player_entity) = client_state.player_entity else { return };
+
+    let mut direction = Vec2::ZERO;
+
+    if keyboard.pressed(KeyCode::KeyW) || keyboard.pressed(KeyCode::ArrowUp) {
+        direction.y += 1.0;
+    }
+    if keyboard.pressed(KeyCode::KeyS) || keyboard.pressed(KeyCode::ArrowDown) {
+        direction.y -= 1.0;
+    }
+    if keyboard.pressed(KeyCode::KeyA) || keyboard.pressed(KeyCode::ArrowLeft) {
+        direction.x -= 1.0;
+    }
+    if keyboard.pressed(KeyCode::KeyD) || keyboard.pressed(KeyCode::ArrowRight) {
+        direction.x += 1.0;
+    }
+
+    // Always send input, even if direction is zero (to stop movement)
+    commands.client_trigger(MoveInput { direction });
+}
+
+pub fn handle_targeting_input(
+    mouse_button: Res<ButtonInput<MouseButton>>,
+    windows: Query<&Window>,
+    camera_query: Query<(&Camera, &GlobalTransform)>,
+    entities_query: Query<(Entity, &Position), Or<(With<Enemy>, With<Npc>, With<WorldItem>)>>,
+    mut input_state: ResMut<InputState>,
+    mut commands: Commands,
+) {
+    if !mouse_button.just_pressed(MouseButton::Left) {
+        return;
+    }
+
+    let Ok(window) = windows.single() else { return };
+    let Some(cursor_pos) = window.cursor_position() else { return };
+
+    let Ok((camera, camera_transform)) = camera_query.single() else { return };
+
+    // Convert screen to world coordinates
+    let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) else {
+        return;
+    };
+
+    // Find closest entity to click
+    let mut closest_entity = None;
+    let mut closest_distance = f32::MAX;
+
+    for (entity, position) in &entities_query {
+        let distance = position.0.distance(world_pos);
+        if distance < 30.0 && distance < closest_distance {
+            closest_distance = distance;
+            closest_entity = Some(entity);
+        }
+    }
+
+    if let Some(entity) = closest_entity {
+        input_state.selected_target = Some(entity);
+        commands.client_trigger(SetTargetRequest {
+            target: Some(entity),
+        });
+        info!("Selected target: {:?}", entity);
+    }
+}
+
+pub fn handle_ability_input(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    client_state: Res<MyClientState>,
+    player_query: Query<&Hotbar>,
+    mut commands: Commands,
+) {
+    let Some(player_entity) = client_state.player_entity else { return };
+    let Ok(hotbar) = player_query.get(player_entity) else { return };
+
+    // Check number keys 1-9 and 0
+    let keys = [
+        KeyCode::Digit1, KeyCode::Digit2, KeyCode::Digit3, KeyCode::Digit4, KeyCode::Digit5,
+        KeyCode::Digit6, KeyCode::Digit7, KeyCode::Digit8, KeyCode::Digit9, KeyCode::Digit0,
+    ];
+
+    for (i, key) in keys.iter().enumerate() {
+        if keyboard.just_pressed(*key) {
+            if let Some(slot) = &hotbar.slots[i] {
+                match slot {
+                    HotbarSlot::Ability(ability_id) => {
+                        commands.client_trigger(UseAbilityRequest {
+                            ability_id: *ability_id,
+                        });
+                        info!("Used ability from slot {}", i + 1);
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub fn handle_interaction_input(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    input_state: Res<InputState>,
+    npc_query: Query<Entity, With<Npc>>,
+    world_item_query: Query<Entity, With<WorldItem>>,
+    mut commands: Commands,
+) {
+    if !keyboard.just_pressed(KeyCode::KeyE) {
+        return;
+    }
+
+    let Some(target) = input_state.selected_target else { return };
+
+    // Check if target is NPC
+    if npc_query.get(target).is_ok() {
+        commands.client_trigger(InteractNpcRequest { npc_entity: target });
+        info!("Interacting with NPC");
+    }
+
+    // Check if target is world item
+    if world_item_query.get(target).is_ok() {
+        commands.client_trigger(PickupItemRequest { item_entity: target });
+        info!("Picking up item");
+    }
+}

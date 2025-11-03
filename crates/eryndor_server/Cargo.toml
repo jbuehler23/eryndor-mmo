@@ -1,0 +1,27 @@
+[package]
+name = "eryndor_server"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "server"
+path = "src/main.rs"
+
+[dependencies]
+bevy = { workspace = true, features = ["bevy_core_pipeline", "bevy_render"] }
+bevy_replicon = { workspace = true }
+bevy_renet = { workspace = true }
+bevy_replicon_renet = { workspace = true }
+serde = { workspace = true }
+log = { workspace = true }
+tracing = { workspace = true }
+
+# Database
+sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio"] }
+tokio = { version = "1", features = ["full"] }
+
+# Hashing for passwords
+argon2 = "0.5"
+rand = "0.8"
+
+eryndor_shared = { path = "../eryndor_shared" }

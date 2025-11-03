@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:www.hankruiger.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(cargo check:*)",
+      "Bash(cargo doc:*)",
+      "Bash(cargo tree:*)",
+      "WebFetch(domain:docs.rs)",
+      "WebFetch(domain:crates.io)",
+      "Bash(cargo search:*)",
+      "Bash(cargo info:*)",
+      "Bash(cargo update:*)",
+      "Bash(cargo clean:*)",
+      "Bash(timeout 10 cargo run:*)",
+      "Bash(cargo run:*)",
+      "Bash(cargo build:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(pkill:*)",
+      "Bash(find:*)",
+      "Bash(cat:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

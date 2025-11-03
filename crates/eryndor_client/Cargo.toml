@@ -1,0 +1,25 @@
+[package]
+name = "eryndor_client"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "client"
+path = "src/main.rs"
+
+[dependencies]
+bevy = { workspace = true, features = ["default"] }
+bevy_replicon = { workspace = true }
+bevy_renet = { workspace = true }
+bevy_replicon_renet = { workspace = true }
+serde = { workspace = true }
+log = { workspace = true }
+tracing = { workspace = true }
+
+# UI
+bevy_egui = "0.38"
+
+# Shapes rendering
+bevy_prototype_lyon = "0.15"
+
+eryndor_shared = { path = "../eryndor_shared" }
