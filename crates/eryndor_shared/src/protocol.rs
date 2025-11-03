@@ -137,6 +137,12 @@ pub struct CreateCharacterResponse {
     pub character: Option<CharacterData>,
 }
 
+/// Character selection response - tells client which entity is their character
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct SelectCharacterResponse {
+    pub character_entity: Entity,
+}
+
 /// Combat event for visual feedback
 #[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
 pub struct CombatEvent {

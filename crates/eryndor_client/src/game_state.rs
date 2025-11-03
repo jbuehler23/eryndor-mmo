@@ -81,6 +81,15 @@ pub fn handle_notifications(
     client_state.notifications.push(notification.message.clone());
 }
 
+pub fn handle_select_character_response(
+    trigger: On<SelectCharacterResponse>,
+    mut client_state: ResMut<MyClientState>,
+) {
+    let response = trigger.event();
+    info!("Character entity assigned: {:?}", response.character_entity);
+    client_state.player_entity = Some(response.character_entity);
+}
+
 pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>) {
     info!("Connecting to server...");
 

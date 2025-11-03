@@ -294,6 +294,14 @@ pub fn handle_select_character(
             // Link client to character
             commands.entity(client_entity).insert(ActiveCharacterEntity(character_entity));
 
+            // Tell the client which entity is theirs
+            commands.server_trigger(ToClients {
+                mode: SendMode::Direct(ClientId::Client(client_entity)),
+                message: SelectCharacterResponse {
+                    character_entity,
+                },
+            });
+
             info!("Character spawned: entity {:?}", character_entity);
         }
         Err(e) => {

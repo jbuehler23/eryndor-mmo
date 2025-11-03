@@ -78,6 +78,7 @@ fn main() {
         .add_server_event::<CreateAccountResponse>(Channel::Ordered)
         .add_server_event::<CharacterListResponse>(Channel::Ordered)
         .add_server_event::<CreateCharacterResponse>(Channel::Ordered)
+        .add_server_event::<SelectCharacterResponse>(Channel::Ordered)
         .add_server_event::<CombatEvent>(Channel::Ordered)
         .add_server_event::<QuestUpdateEvent>(Channel::Ordered)
         .add_server_event::<DeathEvent>(Channel::Ordered)
@@ -87,6 +88,7 @@ fn main() {
         .add_observer(game_state::handle_character_list)
         .add_observer(game_state::handle_create_account_response)
         .add_observer(game_state::handle_create_character_response)
+        .add_observer(game_state::handle_select_character_response)
         .add_observer(game_state::handle_notifications)
         // Systems
         .add_systems(Startup, (setup_camera, game_state::connect_to_server))

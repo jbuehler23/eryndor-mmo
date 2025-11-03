@@ -74,6 +74,7 @@ fn main() {
         .add_server_event::<CreateAccountResponse>(Channel::Ordered)
         .add_server_event::<CharacterListResponse>(Channel::Ordered)
         .add_server_event::<CreateCharacterResponse>(Channel::Ordered)
+        .add_server_event::<SelectCharacterResponse>(Channel::Ordered)
         .add_server_event::<CombatEvent>(Channel::Ordered)
         .add_server_event::<QuestUpdateEvent>(Channel::Ordered)
         .add_server_event::<DeathEvent>(Channel::Ordered)
