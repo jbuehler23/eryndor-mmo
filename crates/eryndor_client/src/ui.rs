@@ -232,7 +232,7 @@ pub fn game_ui(
         });
 
     // Inventory button
-    egui::Window::new("Menu")
+    egui::Window::new("Actions")
         .fixed_pos([1180.0, 10.0])
         .fixed_size([90.0, 60.0])
         .title_bar(false)
