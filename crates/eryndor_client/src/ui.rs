@@ -12,6 +12,7 @@ pub struct UiState {
     pub selected_class: CharacterClass,
     pub show_create_character: bool,
     pub show_inventory: bool,
+    pub show_esc_menu: bool,
 }
 
 pub fn login_ui(
@@ -316,8 +317,50 @@ pub fn game_ui(
             ui.label("Click - Select Target");
             ui.label("E - Interact/Pickup");
             ui.label("1-9,0 - Use Abilities");
+            ui.label("ESC - Menu");
             ui.label("");
             ui.label("Click NPCs with E to talk");
-            ui.label("Click items with E to pickup");
         });
+
+    // ESC Menu
+    if ui_state.show_esc_menu {
+        egui::Window::new("Menu")
+            .collapsible(false)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .fixed_size([300.0, 150.0])
+            .show(ctx, |ui| {
+                ui.vertical_centered(|ui| {
+                    ui.add_space(20.0);
+                    ui.heading("Game Menu");
+                    ui.add_space(20.0);
+
+                    if ui.button("Return to Character Select").clicked() {
+                        info!("Player requested disconnect to character select");
+                        ui_state.show_esc_menu = false;
+                        commands.client_trigger(DisconnectCharacterRequest);
+                    }
+
+                    ui.add_space(10.0);
+
+                    if ui.button("Resume").clicked() {
+                        ui_state.show_esc_menu = false;
+                    }
+                });
+            });
+    }
+}
+
+pub fn handle_esc_key(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut ui_state: ResMut<UiState>,
+    current_state: Res<State<GameState>>,
+) {
+    // Only handle ESC in the InGame state
+    if *current_state.get() != GameState::InGame {
+        return;
+    }
+
+    if keyboard.just_pressed(KeyCode::Escape) {
+        ui_state.show_esc_menu = !ui_state.show_esc_menu;
+    }
 }

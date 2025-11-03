@@ -73,6 +73,7 @@ fn main() {
         .add_client_event::<AcceptQuestRequest>(Channel::Ordered)
         .add_client_event::<CompleteQuestRequest>(Channel::Ordered)
         .add_client_event::<SetHotbarSlotRequest>(Channel::Ordered)
+        .add_client_event::<DisconnectCharacterRequest>(Channel::Ordered)
         // Register server -> client events
         .add_server_event::<LoginResponse>(Channel::Ordered)
         .add_server_event::<CreateAccountResponse>(Channel::Ordered)
@@ -103,12 +104,16 @@ fn main() {
             game_state::monitor_connection,
             // Player entity detection
             game_state::detect_player_entity.run_if(in_state(GameState::InGame)),
+            game_state::handle_character_despawn.run_if(in_state(GameState::InGame)),
             // Rendering
             rendering::spawn_visual_entities,
             rendering::update_visual_positions,
             rendering::spawn_name_labels,
             rendering::update_name_label_positions,
+            rendering::cleanup_despawned_entities,
             rendering::update_camera_follow.run_if(in_state(GameState::InGame)),
+            // UI Input
+            ui::handle_esc_key.run_if(in_state(GameState::InGame)),
             // Input
             input::handle_movement_input.run_if(in_state(GameState::InGame)),
             input::handle_targeting_input.run_if(in_state(GameState::InGame)),

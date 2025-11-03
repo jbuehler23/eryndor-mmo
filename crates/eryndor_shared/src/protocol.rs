@@ -96,6 +96,10 @@ pub struct SetHotbarSlotRequest {
     pub content: Option<HotbarSlot>,
 }
 
+/// Disconnect from current character (return to character select)
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct DisconnectCharacterRequest;
+
 // ============================================================================
 // SERVER -> CLIENT MESSAGES
 // ============================================================================

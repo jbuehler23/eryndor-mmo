@@ -175,3 +175,26 @@ pub fn monitor_connection(
         }
     }
 }
+
+// Handle when player entity is despawned (disconnected from character)
+pub fn handle_character_despawn(
+    mut client_state: ResMut<MyClientState>,
+    mut next_state: ResMut<NextState<GameState>>,
+    player_query: Query<Entity, With<Player>>,
+    current_state: Res<State<GameState>>,
+) {
+    // Only check if we're in game and have a player entity reference
+    if *current_state.get() != GameState::InGame {
+        return;
+    }
+
+    if let Some(player_entity) = client_state.player_entity {
+        // Check if the player entity still exists
+        if player_query.get(player_entity).is_err() {
+            info!("Player entity despawned, returning to character select");
+            client_state.player_entity = None;
+            client_state.selected_character_id = None;
+            next_state.set(GameState::CharacterSelect);
+        }
+    }
+}

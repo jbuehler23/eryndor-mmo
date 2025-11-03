@@ -130,6 +130,29 @@ pub fn update_name_label_positions(
     }
 }
 
+pub fn cleanup_despawned_entities(
+    mut commands: Commands,
+    visual_entities: Query<(Entity, &VisualEntity)>,
+    label_entities: Query<(Entity, &NameLabel)>,
+    all_entities: Query<Entity>,
+) {
+    // Clean up visual entities whose game entity no longer exists
+    for (visual_entity, visual) in &visual_entities {
+        if all_entities.get(visual.game_entity).is_err() {
+            commands.entity(visual_entity).despawn();
+            info!("Despawned visual entity for game entity {:?}", visual.game_entity);
+        }
+    }
+
+    // Clean up name labels whose game entity no longer exists
+    for (label_entity, label) in &label_entities {
+        if all_entities.get(label.game_entity).is_err() {
+            commands.entity(label_entity).despawn();
+            info!("Despawned name label for game entity {:?}", label.game_entity);
+        }
+    }
+}
+
 pub fn update_camera_follow(
     client_state: Res<MyClientState>,
     player_query: Query<&Position, With<Player>>,

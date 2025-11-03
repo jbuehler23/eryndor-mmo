@@ -385,6 +385,57 @@ pub fn handle_client_disconnect(
     }
 }
 
+pub fn handle_disconnect_character(
+    trigger: On<FromClient<DisconnectCharacterRequest>>,
+    mut commands: Commands,
+    clients: Query<&Authenticated>,
+    characters: Query<(Entity, &OwnedBy, &Character, &Position, &Health, &Mana, &CharacterDatabaseId)>,
+    db: Res<DatabaseConnection>,
+) {
+    let Some(pool) = db.pool() else { return };
+
+    let Some(client_entity) = trigger.client_id.entity() else { return };
+
+    // Check if client is authenticated
+    let Ok(auth) = clients.get(client_entity) else {
+        warn!("Unauthenticated client tried to disconnect character");
+        return;
+    };
+
+    info!("Client {:?} (Account ID: {}) requested disconnect from character", client_entity, auth.account_id);
+
+    // Find and save/despawn their character
+    for (entity, owned_by, character, position, health, mana, db_id) in characters.iter() {
+        if owned_by.0 == client_entity {
+            info!("Disconnecting character '{}' (DB ID: {}) from client {:?}", character.name, db_id.0, client_entity);
+
+            // Save character to database
+            let runtime = tokio::runtime::Runtime::new().unwrap();
+            match runtime.block_on(database::save_character(
+                pool,
+                db_id.0,
+                position,
+                health,
+                mana,
+            )) {
+                Ok(_) => info!("Character '{}' saved successfully", character.name),
+                Err(e) => error!("Failed to save character '{}': {}", character.name, e),
+            }
+
+            // Despawn character - this will replicate to all clients
+            commands.entity(entity).despawn();
+            info!("Character '{}' despawned (will replicate to all clients)", character.name);
+
+            // Remove ActiveCharacterEntity link
+            commands.entity(client_entity).remove::<ActiveCharacterEntity>();
+
+            return;
+        }
+    }
+
+    warn!("Client {:?} requested disconnect but had no active character", client_entity);
+}
+
 // Simple password hashing (use argon2 in production)
 fn hash_password(password: &str) -> String {
     use argon2::{
