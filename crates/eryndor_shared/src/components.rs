@@ -391,6 +391,48 @@ impl Default for AiState {
 }
 
 // ============================================================================
+// INTERACTION COMPONENTS
+// ============================================================================
+
+/// Marks entities that can be interacted with
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+pub struct Interactable {
+    pub interaction_radius: f32,
+    pub interaction_type: InteractionType,
+}
+
+impl Interactable {
+    pub fn new(interaction_type: InteractionType, interaction_radius: f32) -> Self {
+        Self {
+            interaction_radius,
+            interaction_type,
+        }
+    }
+
+    pub fn npc() -> Self {
+        Self::new(InteractionType::NpcDialogue, 30.0)
+    }
+
+    pub fn item() -> Self {
+        Self::new(InteractionType::ItemPickup, 30.0)
+    }
+
+    pub fn enemy() -> Self {
+        Self::new(InteractionType::Enemy, 30.0)
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum InteractionType {
+    NpcDialogue,
+    ItemPickup,
+    Enemy,
+    Harvest,
+    Door,
+    LoreObject,
+}
+
+// ============================================================================
 // WORLD ITEM COMPONENTS
 // ============================================================================
 

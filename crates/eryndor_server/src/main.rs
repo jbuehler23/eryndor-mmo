@@ -53,6 +53,7 @@ fn main() {
         .replicate::<EnemyType>()
         .replicate::<AiState>()
         .replicate::<WorldItem>()
+        .replicate::<Interactable>()
         .replicate::<VisualShape>()
         // Register client -> server events (Events API)
         .add_client_event::<LoginRequest>(Channel::Ordered)

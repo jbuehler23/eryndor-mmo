@@ -94,9 +94,10 @@ cargo run -p eryndor_client
 
 - **WASD** or **Arrow Keys** - Movement
 - **Left Click** - Select target (enemies, NPCs, items)
-- **E** - Interact with selected target (pickup items, Talk to theNPCs)
+- **E** - Interact with selected target (pickup items, talk to NPCs)
 - **1-9, 0** - Use abilities on hotbar
-- **I** (planned) - Open inventory
+- **ESC** - Open game menu (return to character select)
+- **Inventory Button** - Open inventory (top right)
 
 ## Gameplay Loop
 
@@ -178,9 +179,27 @@ This is a **proof-of-concept** demonstrating:
 - ✅ Inventory and item system
 - ✅ Quest system
 - ✅ Simple enemy AI
+- ✅ Character name labels above players
+- ✅ Character disconnect/switching (ESC menu)
+- ✅ Visual entity cleanup on disconnect
+- ✅ Database persistence (position, health, mana saved on disconnect)
 
-### Known Limitations
+### Recent Updates (2025)
 
+**Multiplayer Improvements:**
+- Added character name labels displayed above each player
+- Implemented ESC menu for character switching without client restart
+- Fixed visual entity cleanup - disconnected characters now properly disappear from other clients
+- Added camera following for smooth player tracking
+
+**Network & Replication:**
+- Migrated to bevy_replicon 0.36 Events API (observer-based)
+- Fixed entity replication issues with OwnedBy component pattern
+- Character state properly saves to database on disconnect
+
+### Known Limitations & Issues
+
+- ❌ NPC interaction broken - targeting system doesn't select NPCs (needs Interactable component)
 - Simple shape-based graphics (no sprites yet)
 - Basic UI
 - Single zone/area
@@ -188,6 +207,7 @@ This is a **proof-of-concept** demonstrating:
 - No character progression beyond level 1
 - No chat system
 - Enemy AI is very basic
+- ESC menu interferes with WASD movement input when open (fixed)
 
 ## Future Enhancements
 

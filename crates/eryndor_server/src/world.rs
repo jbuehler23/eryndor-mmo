@@ -14,6 +14,7 @@ pub fn spawn_world(mut commands: Commands) {
             available_quests: vec![QUEST_FIRST_WEAPON],
         },
         Position(NPC_POSITION),
+        Interactable::npc(),
         VisualShape {
             shape_type: ShapeType::Circle,
             color: COLOR_NPC,
@@ -42,6 +43,7 @@ pub fn spawn_world(mut commands: Commands) {
             },
             CurrentTarget::default(),
             AiState::default(),
+            Interactable::enemy(),
             VisualShape {
                 shape_type: ShapeType::Circle,
                 color: COLOR_ENEMY,

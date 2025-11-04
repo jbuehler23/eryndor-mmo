@@ -19,7 +19,8 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(pkill:*)",
       "Bash(find:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "WebFetch(domain:cbournhonesque.github.io)"
     ],
     "deny": [],
     "ask": []

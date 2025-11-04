@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_replicon::prelude::*;
 use eryndor_shared::*;
 use crate::game_state::MyClientState;
+use crate::ui::UiState;
 
 #[derive(Resource, Default)]
 pub struct InputState {
@@ -11,8 +12,14 @@ pub struct InputState {
 pub fn handle_movement_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     client_state: Res<MyClientState>,
+    ui_state: Res<UiState>,
     mut commands: Commands,
 ) {
+    // Don't handle movement if ESC menu is open
+    if ui_state.show_esc_menu {
+        return;
+    }
+
     let Some(_player_entity) = client_state.player_entity else { return };
 
     let mut direction = Vec2::ZERO;
@@ -38,7 +45,7 @@ pub fn handle_targeting_input(
     mouse_button: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
-    entities_query: Query<(Entity, &Position), Or<(With<Enemy>, With<Npc>, With<WorldItem>)>>,
+    interactable_query: Query<(Entity, &Position, &Interactable)>,
     mut input_state: ResMut<InputState>,
     mut commands: Commands,
 ) {
@@ -56,13 +63,14 @@ pub fn handle_targeting_input(
         return;
     };
 
-    // Find closest entity to click
+    // Find closest interactable entity to click
     let mut closest_entity = None;
     let mut closest_distance = f32::MAX;
 
-    for (entity, position) in &entities_query {
+    for (entity, position, interactable) in &interactable_query {
         let distance = position.0.distance(world_pos);
-        if distance < 30.0 && distance < closest_distance {
+        // Use the interactable's interaction radius for targeting
+        if distance < interactable.interaction_radius && distance < closest_distance {
             closest_distance = distance;
             closest_entity = Some(entity);
         }
@@ -111,25 +119,34 @@ pub fn handle_ability_input(
 pub fn handle_interaction_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     input_state: Res<InputState>,
+    ui_state: Res<UiState>,
     npc_query: Query<Entity, With<Npc>>,
     world_item_query: Query<Entity, With<WorldItem>>,
     mut commands: Commands,
 ) {
+    // Don't handle interaction if ESC menu is open
+    if ui_state.show_esc_menu {
+        return;
+    }
+
     if !keyboard.just_pressed(KeyCode::KeyE) {
         return;
     }
 
-    let Some(target) = input_state.selected_target else { return };
+    let Some(target) = input_state.selected_target else {
+        info!("E pressed but no target selected");
+        return;
+    };
 
     // Check if target is NPC
     if npc_query.get(target).is_ok() {
         commands.client_trigger(InteractNpcRequest { npc_entity: target });
-        info!("Interacting with NPC");
+        info!("Interacting with NPC: {:?}", target);
     }
 
     // Check if target is world item
     if world_item_query.get(target).is_ok() {
         commands.client_trigger(PickupItemRequest { item_entity: target });
-        info!("Picking up item");
+        info!("Picking up item: {:?}", target);
     }
 }
