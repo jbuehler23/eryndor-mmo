@@ -2,8 +2,6 @@ use bevy::prelude::*;
 use bevy_replicon::prelude::*;
 use eryndor_shared::*;
 use crate::database::{self, DatabaseConnection};
-use avian2d::prelude::{RigidBody, Collider, CollisionLayers};
-use crate::{PhysicsPosition, PhysicsVelocity};
 
 /// Component marking authenticated clients
 #[derive(Component)]
@@ -252,75 +250,16 @@ pub fn handle_select_character(
         Ok((character, position, health, mana)) => {
             info!("Spawning character: {}", character.name);
 
-            // Determine visual shape based on class
-            let visual = match character.class {
-                CharacterClass::Rogue => VisualShape {
-                    shape_type: ShapeType::Triangle,
-                    color: COLOR_PLAYER,
-                    size: PLAYER_SIZE,
-                },
-                CharacterClass::Mage => VisualShape {
-                    shape_type: ShapeType::Circle,
-                    color: COLOR_PLAYER,
-                    size: PLAYER_SIZE,
-                },
-                CharacterClass::Knight => VisualShape {
-                    shape_type: ShapeType::Square,
-                    color: COLOR_PLAYER,
-                    size: PLAYER_SIZE,
-                },
-            };
-
-            // Grant class-based starting abilities
-            let mut learned_abilities = LearnedAbilities::default();
-            let mut hotbar = Hotbar::default();
-
-            for (i, ability_id) in character.class.starting_abilities().iter().enumerate() {
-                learned_abilities.learn(*ability_id);
-                // Add to hotbar automatically
-                if i < hotbar.slots.len() {
-                    hotbar.slots[i] = Some(HotbarSlot::Ability(*ability_id));
-                }
-            }
-
-            // Spawn character entity (split to avoid bundle size limit)
-            let character_entity = commands.spawn((
-                Replicated,
-                Player,
+            // Use character module to spawn character with all components
+            let character_entity = crate::character::spawn_character_components(
+                &mut commands,
                 character,
                 position,
-                Velocity::default(),
-                MoveSpeed::default(),
                 health,
                 mana,
-                CombatStats::default(),
-                CurrentTarget::default(),
-                InCombat(false),
-            )).id();
-
-            commands.entity(character_entity).insert((
-                Inventory::new(MAX_INVENTORY_SLOTS),
-                Equipment::default(),
-                hotbar,
-                learned_abilities,
-            ));
-
-            commands.entity(character_entity).insert((
-                QuestLog::default(),
-                AbilityCooldowns::default(),
-                visual,
-                OwnedBy(client_entity),
-                CharacterDatabaseId(request.character_id),
-            ));
-
-            // Physics components (separate insert to avoid bundle size limit)
-            commands.entity(character_entity).insert((
-                PhysicsPosition(position.0),
-                PhysicsVelocity::default(),
-                RigidBody::Dynamic,
-                Collider::circle(PLAYER_SIZE / 2.0),
-                CollisionLayers::new(GameLayer::Player, [GameLayer::Enemy, GameLayer::Npc, GameLayer::Environment]),
-            ));
+                client_entity,
+                request.character_id,
+            );
 
             // Link client to character
             commands.entity(client_entity).insert(ActiveCharacterEntity(character_entity));

@@ -195,6 +195,46 @@ impl Default for CurrentTarget {
 #[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct InCombat(pub bool);
 
+/// Auto-attack state - enabled/disabled and cooldown timer
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+pub struct AutoAttack {
+    pub enabled: bool,
+    pub cooldown_timer: f32,  // Time until next auto-attack (in seconds)
+}
+
+impl Default for AutoAttack {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            cooldown_timer: 0.0,
+        }
+    }
+}
+
+/// Weapon proficiency levels (1-99 like RuneScape)
+#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+pub struct WeaponProficiency {
+    pub sword: u32,
+    pub dagger: u32,
+    pub staff: u32,
+    pub mace: u32,
+    pub bow: u32,
+    pub axe: u32,
+}
+
+impl Default for WeaponProficiency {
+    fn default() -> Self {
+        Self {
+            sword: 1,
+            dagger: 1,
+            staff: 1,
+            mace: 1,
+            bow: 1,
+            axe: 1,
+        }
+    }
+}
+
 // ============================================================================
 // INVENTORY COMPONENTS
 // ============================================================================

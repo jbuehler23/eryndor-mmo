@@ -325,7 +325,8 @@ pub fn game_ui(
         .fixed_size([270.0, 150.0])
         .show(ctx, |ui| {
             ui.label("WASD - Move");
-            ui.label("Click - Select Target");
+            ui.label("Left Click - Select Target");
+            ui.label("Right Click - Toggle Auto-Attack");
             ui.label("E - Interact/Pickup");
             ui.label("1-9,0 - Use Abilities");
             ui.label("ESC - Menu");

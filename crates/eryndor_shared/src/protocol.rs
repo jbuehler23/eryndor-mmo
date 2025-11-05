@@ -100,6 +100,12 @@ pub struct SetHotbarSlotRequest {
 #[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
 pub struct DisconnectCharacterRequest;
 
+/// Toggle auto-attack on/off
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct ToggleAutoAttackRequest {
+    pub enabled: bool,
+}
+
 // ============================================================================
 // SERVER -> CLIENT MESSAGES
 // ============================================================================

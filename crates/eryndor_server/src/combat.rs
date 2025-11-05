@@ -24,6 +24,35 @@ pub fn handle_set_target(
     }
 }
 
+pub fn handle_toggle_auto_attack(
+    trigger: On<FromClient<ToggleAutoAttackRequest>>,
+    mut commands: Commands,
+    clients: Query<&ActiveCharacterEntity>,
+    mut players: Query<&mut AutoAttack>,
+) {
+    let Some(client_entity) = trigger.client_id.entity() else { return };
+    let request = trigger.event();
+
+    // Get client's character
+    let Ok(active_char) = clients.get(client_entity) else { return };
+    let char_entity = active_char.0;
+
+    // Update auto-attack state
+    if let Ok(mut auto_attack) = players.get_mut(char_entity) {
+        auto_attack.enabled = request.enabled;
+        info!("Player {:?} toggled auto-attack: {}", char_entity, request.enabled);
+
+        // Send notification to client
+        commands.server_trigger(ToClients {
+            mode: SendMode::Direct(ClientId::Client(client_entity)),
+            message: NotificationEvent {
+                message: format!("Auto-attack: {}", if request.enabled { "ON" } else { "OFF" }),
+                notification_type: NotificationType::Info,
+            },
+        });
+    }
+}
+
 pub fn handle_use_ability(
     trigger: On<FromClient<UseAbilityRequest>>,
     mut commands: Commands,

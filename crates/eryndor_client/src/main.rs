@@ -45,6 +45,8 @@ fn main() {
         .replicate::<CombatStats>()
         .replicate::<CurrentTarget>()
         .replicate::<InCombat>()
+        .replicate::<AutoAttack>()
+        .replicate::<WeaponProficiency>()
         .replicate::<Inventory>()
         .replicate::<Equipment>()
         .replicate::<Hotbar>()
@@ -75,6 +77,7 @@ fn main() {
         .add_client_event::<CompleteQuestRequest>(Channel::Ordered)
         .add_client_event::<SetHotbarSlotRequest>(Channel::Ordered)
         .add_client_event::<DisconnectCharacterRequest>(Channel::Ordered)
+        .add_client_event::<ToggleAutoAttackRequest>(Channel::Ordered)
         // Register server -> client events
         .add_server_event::<LoginResponse>(Channel::Ordered)
         .add_server_event::<CreateAccountResponse>(Channel::Ordered)
@@ -127,6 +130,7 @@ fn main() {
             input::handle_targeting_input.run_if(in_state(GameState::InGame)),
             input::handle_ability_input.run_if(in_state(GameState::InGame)),
             input::handle_interaction_input.run_if(in_state(GameState::InGame)),
+            input::handle_auto_attack_toggle.run_if(in_state(GameState::InGame)),
         ))
         .run();
 }

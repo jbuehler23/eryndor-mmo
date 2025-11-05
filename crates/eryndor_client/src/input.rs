@@ -128,6 +128,34 @@ pub fn handle_ability_input(
     }
 }
 
+pub fn handle_auto_attack_toggle(
+    mouse_button: Res<ButtonInput<MouseButton>>,
+    client_state: Res<MyClientState>,
+    ui_state: Res<UiState>,
+    player_query: Query<&AutoAttack>,
+    mut commands: Commands,
+) {
+    // Don't handle if ESC menu is open
+    if ui_state.show_esc_menu {
+        return;
+    }
+
+    if !mouse_button.just_pressed(MouseButton::Right) {
+        return;
+    }
+
+    let Some(player_entity) = client_state.player_entity else { return };
+    let Ok(auto_attack) = player_query.get(player_entity) else { return };
+
+    // Toggle the state
+    let new_state = !auto_attack.enabled;
+    commands.client_trigger(ToggleAutoAttackRequest {
+        enabled: new_state,
+    });
+
+    info!("Toggling auto-attack: {}", if new_state { "ON" } else { "OFF" });
+}
+
 pub fn handle_interaction_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     input_state: Res<InputState>,

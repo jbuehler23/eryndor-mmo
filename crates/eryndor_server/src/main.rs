@@ -1,4 +1,5 @@
 mod auth;
+mod character;
 mod combat;
 mod database;
 mod game_data;
@@ -6,6 +7,7 @@ mod inventory;
 mod movement;
 mod quest;
 mod spawn;
+mod weapon;
 mod world;
 
 use bevy::prelude::*;
@@ -53,6 +55,8 @@ fn main() {
         .replicate::<CombatStats>()
         .replicate::<CurrentTarget>()
         .replicate::<InCombat>()
+        .replicate::<AutoAttack>()
+        .replicate::<WeaponProficiency>()
         .replicate::<Inventory>()
         .replicate::<Equipment>()
         .replicate::<Hotbar>()
@@ -83,6 +87,7 @@ fn main() {
         .add_client_event::<CompleteQuestRequest>(Channel::Ordered)
         .add_client_event::<SetHotbarSlotRequest>(Channel::Ordered)
         .add_client_event::<DisconnectCharacterRequest>(Channel::Ordered)
+        .add_client_event::<ToggleAutoAttackRequest>(Channel::Ordered)
         // Register server -> client events (Events API)
         .add_server_event::<LoginResponse>(Channel::Ordered)
         .add_server_event::<CreateAccountResponse>(Channel::Ordered)
@@ -101,6 +106,7 @@ fn main() {
         .add_observer(auth::handle_select_character)
         .add_observer(movement::handle_move_input)
         .add_observer(combat::handle_set_target)
+        .add_observer(combat::handle_toggle_auto_attack)
         .add_observer(combat::handle_use_ability)
         .add_observer(inventory::handle_pickup_item)
         .add_observer(inventory::handle_drop_item)
