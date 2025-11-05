@@ -20,7 +20,8 @@
       "Bash(pkill:*)",
       "Bash(find:*)",
       "Bash(cat:*)",
-      "WebFetch(domain:cbournhonesque.github.io)"
+      "WebFetch(domain:cbournhonesque.github.io)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []

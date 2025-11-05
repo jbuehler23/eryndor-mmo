@@ -13,6 +13,17 @@ pub struct UiState {
     pub show_create_character: bool,
     pub show_inventory: bool,
     pub show_esc_menu: bool,
+    pub quest_dialogue: Option<QuestDialogueData>,
+}
+
+#[derive(Clone)]
+pub struct QuestDialogueData {
+    pub npc_name: String,
+    pub quest_id: u32,
+    pub quest_name: String,
+    pub description: String,
+    pub objectives_text: String,
+    pub rewards_text: String,
 }
 
 pub fn login_ui(
@@ -348,6 +359,62 @@ pub fn game_ui(
                 });
             });
     }
+
+    // Quest Dialogue Window
+    if let Some(dialogue) = ui_state.quest_dialogue.clone() {
+        egui::Window::new(&dialogue.npc_name)
+            .collapsible(false)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .fixed_size([500.0, 400.0])
+            .show(ctx, |ui| {
+                ui.vertical_centered(|ui| {
+                    ui.add_space(10.0);
+                    ui.heading(&dialogue.quest_name);
+                    ui.add_space(10.0);
+                });
+
+                ui.separator();
+                ui.add_space(10.0);
+
+                // Description
+                ui.label(egui::RichText::new("Description:").strong());
+                ui.label(&dialogue.description);
+                ui.add_space(10.0);
+
+                // Objectives
+                ui.label(egui::RichText::new("Objectives:").strong());
+                ui.label(&dialogue.objectives_text);
+                ui.add_space(10.0);
+
+                // Rewards
+                ui.label(egui::RichText::new("Rewards:").strong());
+                ui.label(&dialogue.rewards_text);
+                ui.add_space(20.0);
+
+                ui.separator();
+                ui.add_space(10.0);
+
+                // Buttons
+                ui.horizontal(|ui| {
+                    ui.add_space(100.0);
+
+                    if ui.button(egui::RichText::new("Accept Quest").size(16.0)).clicked() {
+                        commands.client_trigger(AcceptQuestRequest {
+                            quest_id: dialogue.quest_id,
+                        });
+                        ui_state.quest_dialogue = None;
+                        info!("Accepted quest: {}", dialogue.quest_name);
+                    }
+
+                    ui.add_space(20.0);
+
+                    if ui.button(egui::RichText::new("Decline").size(16.0)).clicked() {
+                        ui_state.quest_dialogue = None;
+                        info!("Declined quest: {}", dialogue.quest_name);
+                    }
+                });
+            });
+    }
 }
 
 pub fn handle_esc_key(
@@ -363,4 +430,22 @@ pub fn handle_esc_key(
     if keyboard.just_pressed(KeyCode::Escape) {
         ui_state.show_esc_menu = !ui_state.show_esc_menu;
     }
+}
+
+/// Observer for QuestDialogueEvent - opens the quest dialogue window
+pub fn handle_quest_dialogue(
+    trigger: On<QuestDialogueEvent>,
+    mut ui_state: ResMut<UiState>,
+) {
+    let event = trigger.event();
+    info!("[QUEST DIALOGUE] Received event for quest: {} from NPC: {}", event.quest_name, event.npc_name);
+    ui_state.quest_dialogue = Some(QuestDialogueData {
+        npc_name: event.npc_name.clone(),
+        quest_id: event.quest_id,
+        quest_name: event.quest_name.clone(),
+        description: event.description.clone(),
+        objectives_text: event.objectives_text.clone(),
+        rewards_text: event.rewards_text.clone(),
+    });
+    info!("[QUEST DIALOGUE] Dialogue window opened for quest: {}", event.quest_name);
 }

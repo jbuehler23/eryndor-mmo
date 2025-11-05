@@ -3,6 +3,7 @@ use bevy_replicon::prelude::*;
 use eryndor_shared::*;
 use crate::auth::ActiveCharacterEntity;
 use crate::game_data::AbilityDatabase;
+use avian2d::prelude::LinearVelocity;
 
 pub fn handle_set_target(
     trigger: On<FromClient<SetTargetRequest>>,
@@ -183,6 +184,7 @@ pub fn enemy_ai(
         &mut AiState,
         &mut Position,
         &mut Velocity,
+        &mut LinearVelocity,
         &mut CurrentTarget,
         &MoveSpeed,
         &CombatStats,
@@ -191,7 +193,7 @@ pub fn enemy_ai(
     mut players: Query<(Entity, &Position, &mut Health), (With<Player>, Without<Enemy>)>,
     time: Res<Time>,
 ) {
-    for (mut ai_state, mut enemy_pos, mut velocity, mut current_target, move_speed, stats, _enemy_type) in &mut enemies {
+    for (mut ai_state, mut enemy_pos, mut velocity, mut physics_velocity, mut current_target, move_speed, stats, _enemy_type) in &mut enemies {
         match *ai_state {
             AiState::Idle => {
                 // Look for nearby players
@@ -214,6 +216,7 @@ pub fn enemy_ai(
                         *ai_state = AiState::Idle;
                         current_target.0 = None;
                         velocity.0 = Vec2::ZERO;
+                        physics_velocity.0 = Vec2::ZERO;
                         continue;
                     }
 
@@ -221,10 +224,13 @@ pub fn enemy_ai(
                     if distance < MELEE_RANGE {
                         *ai_state = AiState::Attacking(target_entity);
                         velocity.0 = Vec2::ZERO;
+                        physics_velocity.0 = Vec2::ZERO;
                     } else {
                         // Move towards target
                         let direction = (target_pos.0 - enemy_pos.0).normalize();
-                        velocity.0 = direction * move_speed.0;
+                        let vel = direction * move_speed.0;
+                        velocity.0 = vel;
+                        physics_velocity.0 = vel;
                     }
                 } else {
                     *ai_state = AiState::Idle;

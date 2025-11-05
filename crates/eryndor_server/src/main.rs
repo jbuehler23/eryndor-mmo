@@ -11,8 +11,15 @@ mod world;
 use bevy::prelude::*;
 use bevy_replicon::prelude::*;
 use bevy_replicon_renet::RepliconRenetPlugins;
+use avian2d::prelude::*;
 
 use eryndor_shared::*;
+
+// Disambiguate Position - use our custom one for replication
+use eryndor_shared::Position as SharedPosition;
+// Import Avian physics components for movement
+use avian2d::prelude::Position as PhysicsPosition;
+use avian2d::prelude::LinearVelocity as PhysicsVelocity;
 
 fn main() {
     App::new()
@@ -23,6 +30,11 @@ fn main() {
             RepliconPlugins,
         ))
         .add_plugins(RepliconRenetPlugins)
+        // Physics - server-authoritative with fixed timestep
+        // Use headless mode - bevy_scene feature disabled in Cargo.toml
+        .add_plugins(PhysicsPlugins::default().with_length_unit(1.0))
+        .insert_resource(Gravity(Vec2::ZERO))  // Top-down game, no gravity
+        .insert_resource(Time::<Fixed>::from_hz(60.0))  // 60 Hz physics tick rate
         // Database
         .init_resource::<database::DatabaseConnection>()
         // Game data resources
@@ -33,7 +45,7 @@ fn main() {
         .replicate::<Player>()
         .replicate::<Character>()
         .replicate::<OwnedBy>()
-        .replicate::<Position>()
+        .replicate::<SharedPosition>()
         .replicate::<Velocity>()
         .replicate::<MoveSpeed>()
         .replicate::<Health>()
@@ -81,6 +93,7 @@ fn main() {
         .add_server_event::<QuestUpdateEvent>(Channel::Ordered)
         .add_server_event::<DeathEvent>(Channel::Ordered)
         .add_server_event::<NotificationEvent>(Channel::Ordered)
+        .add_server_event::<QuestDialogueEvent>(Channel::Ordered)
         // Register observers for client triggers
         .add_observer(auth::handle_login)
         .add_observer(auth::handle_create_account)
@@ -115,7 +128,20 @@ fn main() {
             // Quests
             quest::update_quest_progress,
         ))
+        // Physics sync - runs after physics update to sync PhysicsPosition -> Position
+        .add_systems(PostUpdate, sync_physics_to_position)
         .run();
+}
+
+/// Syncs Avian's PhysicsPosition to our replicated Position component
+/// This runs after physics updates so clients get the physics-driven positions
+/// Uses change detection to only sync when physics actually moved the entity
+fn sync_physics_to_position(
+    mut query: Query<(&PhysicsPosition, &mut SharedPosition), Changed<PhysicsPosition>>,
+) {
+    for (physics_pos, mut position) in &mut query {
+        position.0 = physics_pos.0;
+    }
 }
 
 fn setup_server(mut commands: Commands, channels: Res<RepliconChannels>) {

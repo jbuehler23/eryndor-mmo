@@ -11,6 +11,7 @@ bevy = { version = "0.17", default-features = false }
 bevy_replicon = "0.36"
 bevy_renet = "3.0"
 bevy_replicon_renet = "0.12"
+avian2d = { version = "0.4", default-features = false, features = ["2d", "f32", "parry-f32", "xpbd_joints", "parallel", "bevy_picking", "serialize"] }
 serde = { version = "1.0", features = ["derive"] }
 log = { version = "0.4", features = [
     "max_level_debug",

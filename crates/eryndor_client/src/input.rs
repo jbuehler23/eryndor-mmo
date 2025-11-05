@@ -45,7 +45,7 @@ pub fn handle_targeting_input(
     mouse_button: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
-    interactable_query: Query<(Entity, &Position, &Interactable)>,
+    targetable_query: Query<(Entity, &Position, &VisualShape), With<Interactable>>,
     mut input_state: ResMut<InputState>,
     mut commands: Commands,
 ) {
@@ -63,16 +63,26 @@ pub fn handle_targeting_input(
         return;
     };
 
-    // Find closest interactable entity to click
+    // Find closest targetable entity to click based on visual size
+    // Target selection works from any distance - you can click on what you see
     let mut closest_entity = None;
     let mut closest_distance = f32::MAX;
 
-    for (entity, position, interactable) in &interactable_query {
+    info!("Click at world pos: {:?}, checking {} targetable entities", world_pos, targetable_query.iter().count());
+
+    for (entity, position, visual) in &targetable_query {
         let distance = position.0.distance(world_pos);
-        // Use the interactable's interaction radius for targeting
-        if distance < interactable.interaction_radius && distance < closest_distance {
+
+        // Use visual size as the "clickable" radius for targeting
+        // This means if you can see it, you can target it
+        let click_radius = visual.size;
+
+        info!("  -> Entity {:?} at {:?}, distance: {:.2}, click_radius: {:.2}", entity, position.0, distance, click_radius);
+
+        if distance < click_radius && distance < closest_distance {
             closest_distance = distance;
             closest_entity = Some(entity);
+            info!("     SELECTED!");
         }
     }
 
@@ -82,6 +92,8 @@ pub fn handle_targeting_input(
             target: Some(entity),
         });
         info!("Selected target: {:?}", entity);
+    } else {
+        info!("No entity clicked");
     }
 }
 
@@ -120,8 +132,10 @@ pub fn handle_interaction_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     input_state: Res<InputState>,
     ui_state: Res<UiState>,
-    npc_query: Query<Entity, With<Npc>>,
-    world_item_query: Query<Entity, With<WorldItem>>,
+    client_state: Res<MyClientState>,
+    player_query: Query<&Position, With<Player>>,
+    npc_query: Query<(Entity, &Position), With<Npc>>,
+    world_item_query: Query<(Entity, &Position), With<WorldItem>>,
     mut commands: Commands,
 ) {
     // Don't handle interaction if ESC menu is open
@@ -138,15 +152,33 @@ pub fn handle_interaction_input(
         return;
     };
 
+    // Get player position for distance check
+    let Some(player_entity) = client_state.player_entity else {
+        return;
+    };
+    let Ok(player_pos) = player_query.get(player_entity) else {
+        return;
+    };
+
     // Check if target is NPC
-    if npc_query.get(target).is_ok() {
-        commands.client_trigger(InteractNpcRequest { npc_entity: target });
-        info!("Interacting with NPC: {:?}", target);
+    if let Ok((_, npc_pos)) = npc_query.get(target) {
+        let distance = player_pos.0.distance(npc_pos.0);
+        if distance <= INTERACTION_RANGE {
+            commands.client_trigger(InteractNpcRequest { npc_entity: target });
+            info!("Interacting with NPC: {:?} at distance {:.2}", target, distance);
+        } else {
+            info!("NPC too far away: {:.2} pixels (max: {})", distance, INTERACTION_RANGE);
+        }
     }
 
     // Check if target is world item
-    if world_item_query.get(target).is_ok() {
-        commands.client_trigger(PickupItemRequest { item_entity: target });
-        info!("Picking up item: {:?}", target);
+    if let Ok((_, item_pos)) = world_item_query.get(target) {
+        let distance = player_pos.0.distance(item_pos.0);
+        if distance <= PICKUP_RANGE {
+            commands.client_trigger(PickupItemRequest { item_entity: target });
+            info!("Picking up item: {:?} at distance {:.2}", target, distance);
+        } else {
+            info!("Item too far away: {:.2} pixels (max: {})", distance, PICKUP_RANGE);
+        }
     }
 }

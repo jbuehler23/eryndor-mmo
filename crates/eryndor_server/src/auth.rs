@@ -2,6 +2,8 @@ use bevy::prelude::*;
 use bevy_replicon::prelude::*;
 use eryndor_shared::*;
 use crate::database::{self, DatabaseConnection};
+use avian2d::prelude::{RigidBody, Collider, CollisionLayers};
+use crate::{PhysicsPosition, PhysicsVelocity};
 
 /// Component marking authenticated clients
 #[derive(Component)]
@@ -281,7 +283,7 @@ pub fn handle_select_character(
                 }
             }
 
-            // Spawn character entity
+            // Spawn character entity (split to avoid bundle size limit)
             let character_entity = commands.spawn((
                 Replicated,
                 Player,
@@ -294,11 +296,14 @@ pub fn handle_select_character(
                 CombatStats::default(),
                 CurrentTarget::default(),
                 InCombat(false),
+            )).id();
+
+            commands.entity(character_entity).insert((
                 Inventory::new(MAX_INVENTORY_SLOTS),
                 Equipment::default(),
                 hotbar,
                 learned_abilities,
-            )).id();
+            ));
 
             commands.entity(character_entity).insert((
                 QuestLog::default(),
@@ -306,6 +311,15 @@ pub fn handle_select_character(
                 visual,
                 OwnedBy(client_entity),
                 CharacterDatabaseId(request.character_id),
+            ));
+
+            // Physics components (separate insert to avoid bundle size limit)
+            commands.entity(character_entity).insert((
+                PhysicsPosition(position.0),
+                PhysicsVelocity::default(),
+                RigidBody::Dynamic,
+                Collider::circle(PLAYER_SIZE / 2.0),
+                CollisionLayers::new(GameLayer::Player, [GameLayer::Enemy, GameLayer::Npc, GameLayer::Environment]),
             ));
 
             // Link client to character

@@ -191,3 +191,14 @@ pub enum NotificationType {
     Warning,
     Error,
 }
+
+/// Quest dialogue data - sent when player interacts with quest giver
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct QuestDialogueEvent {
+    pub npc_name: String,
+    pub quest_id: u32,
+    pub quest_name: String,
+    pub description: String,
+    pub objectives_text: String,
+    pub rewards_text: String,
+}

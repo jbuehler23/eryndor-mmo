@@ -1,6 +1,23 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use avian2d::prelude::*;
+
+// ============================================================================
+// PHYSICS & COLLISION LAYERS
+// ============================================================================
+
+/// Defines collision layers for physics interactions
+/// This controls which entities can collide with each other
+#[derive(PhysicsLayer, Clone, Copy, Debug, Default)]
+pub enum GameLayer {
+    #[default]
+    Player,      // Player characters
+    Enemy,       // Enemy NPCs
+    Npc,         // Friendly NPCs (non-combat)
+    WorldItem,   // Items that can be picked up
+    Environment, // Walls, obstacles, boundaries
+}
 
 // ============================================================================
 // PLAYER & CHARACTER COMPONENTS

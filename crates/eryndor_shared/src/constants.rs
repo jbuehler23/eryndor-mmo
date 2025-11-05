@@ -75,7 +75,7 @@ pub const ENEMY_TYPE_SLIME: u32 = 1;
 // ============================================================================
 
 pub const SPAWN_POINT: Vec2 = Vec2::new(0.0, 0.0);
-pub const NPC_POSITION: Vec2 = Vec2::new(100.0, 0.0);
+pub const NPC_POSITION: Vec2 = Vec2::new(0.0, -20.0);  // 20 pixels below spawn point
 
 // Item spawn positions
 pub const ITEM_DAGGER_POS: Vec2 = Vec2::new(-80.0, -80.0);

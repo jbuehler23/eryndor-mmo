@@ -48,11 +48,36 @@ pub fn handle_interact_npc(
         if quest_log.can_accept_quest(*quest_id) {
             has_available_quest = true;
             if let Some(quest_def) = quest_db.quests.get(quest_id) {
+                // Format objectives text
+                let objectives_vec: Vec<String> = quest_def.objectives.iter().enumerate()
+                    .map(|(i, obj)| match obj {
+                        crate::game_data::QuestObjective::ObtainItem { item_id, count } => {
+                            format!("{}. Obtain {} x{}", i + 1, item_id, count)
+                        }
+                        crate::game_data::QuestObjective::KillEnemy { enemy_type, count } => {
+                            format!("{}. Kill {} enemies x{}", i + 1, enemy_type, count)
+                        }
+                        crate::game_data::QuestObjective::TalkToNpc { npc_id } => {
+                            format!("{}. Talk to NPC {}", i + 1, npc_id)
+                        }
+                    })
+                    .collect();
+                let objectives_text = objectives_vec.join("\n");
+
+                let rewards_text = format!("{} XP", quest_def.reward_exp);
+
+                info!("Sending QuestDialogueEvent to client for quest: {} (ID: {})", quest_def.name, quest_id);
+
+                // Send quest dialogue event to open the dialogue window
                 commands.server_trigger(ToClients {
                     mode: SendMode::Direct(ClientId::Client(client_entity)),
-                    message: NotificationEvent {
-                        message: format!("{}: {} - {}", npc_name.0, quest_def.name, quest_def.description),
-                        notification_type: NotificationType::Info,
+                    message: QuestDialogueEvent {
+                        npc_name: npc_name.0.clone(),
+                        quest_id: *quest_id,
+                        quest_name: quest_def.name.clone(),
+                        description: quest_def.description.clone(),
+                        objectives_text,
+                        rewards_text,
                     },
                 });
             }

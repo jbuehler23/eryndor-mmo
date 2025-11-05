@@ -12,6 +12,7 @@ bevy = { workspace = true, features = ["bevy_core_pipeline", "bevy_render"] }
 bevy_replicon = { workspace = true }
 bevy_renet = { workspace = true }
 bevy_replicon_renet = { workspace = true }
+avian2d = { workspace = true }
 serde = { workspace = true }
 log = { workspace = true }
 tracing = { workspace = true }

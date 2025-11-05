@@ -85,6 +85,7 @@ fn main() {
         .add_server_event::<QuestUpdateEvent>(Channel::Ordered)
         .add_server_event::<DeathEvent>(Channel::Ordered)
         .add_server_event::<NotificationEvent>(Channel::Ordered)
+        .add_server_event::<QuestDialogueEvent>(Channel::Ordered)
         // Register observers for server -> client events
         .add_observer(game_state::handle_login_response)
         .add_observer(game_state::handle_character_list)
@@ -92,6 +93,7 @@ fn main() {
         .add_observer(game_state::handle_create_character_response)
         .add_observer(game_state::handle_select_character_response)
         .add_observer(game_state::handle_notifications)
+        .add_observer(ui::handle_quest_dialogue)
         // Systems
         .add_systems(Startup, (setup_camera, game_state::connect_to_server))
         // UI systems must be in EguiPrimaryContextPass for bevy_egui 0.38
@@ -113,6 +115,11 @@ fn main() {
             rendering::update_name_label_positions,
             rendering::cleanup_despawned_entities,
             rendering::update_camera_follow.run_if(in_state(GameState::InGame)),
+            // Debug rendering (commented out - uncomment when needed)
+            // rendering::spawn_debug_grid.run_if(in_state(GameState::InGame)),
+            // rendering::draw_debug_labels.run_if(in_state(GameState::InGame)),
+            // Target indicator
+            rendering::draw_target_indicator.run_if(in_state(GameState::InGame)),
             // UI Input
             ui::handle_esc_key.run_if(in_state(GameState::InGame)),
             // Input
