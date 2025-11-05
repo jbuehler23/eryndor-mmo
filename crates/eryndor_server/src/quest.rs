@@ -9,42 +9,77 @@ pub fn handle_interact_npc(
     mut commands: Commands,
     clients: Query<&ActiveCharacterEntity>,
     players: Query<(&Position, &QuestLog)>,
-    npcs: Query<(&Position, &QuestGiver, &NpcName)>,
+    npcs: Query<(Entity, (&Position, &QuestGiver, &NpcName)), With<Npc>>,
     quest_db: Res<QuestDatabase>,
 ) {
-    let Some(client_entity) = trigger.client_id.entity() else { return };
-    let request = trigger.event();
-
-    // Get client's character
-    let Ok(active_char) = clients.get(client_entity) else { return };
-    let char_entity = active_char.0;
-
-    // Get NPC
-    let Ok((npc_pos, quest_giver, npc_name)) = npcs.get(request.npc_entity) else {
+    info!("=== INTERACT NPC HANDLER CALLED ===");
+    let Some(client_entity) = trigger.client_id.entity() else {
+        info!("No client entity found");
         return;
     };
+    let request = trigger.event();
+    info!("Interact request for NPC entity: {:?}", request.npc_entity);
 
-    // Get player
-    let Ok((player_pos, quest_log)) = players.get(char_entity) else { return };
+    // Get client's character
+    let Ok(active_char) = clients.get(client_entity) else {
+        info!("Failed to get active character for client {:?}", client_entity);
+        return;
+    };
+    let char_entity = active_char.0;
+    info!("Character entity: {:?}", char_entity);
 
-    // Check range
-    let distance = player_pos.0.distance(npc_pos.0);
-    if distance > INTERACTION_RANGE {
+    // The client sends a replicated entity ID, but we need the server-side NPC entity
+    // Instead of using the entity ID directly, find the NPC by proximity to the player
+    info!("Client sent NPC entity: {:?} (this is a client-side replicated entity)", request.npc_entity);
+
+    // Get player position first
+    let Ok((player_pos, quest_log)) = players.get(char_entity) else {
+        info!("Failed to get player data for character {:?}", char_entity);
+        return;
+    };
+    info!("Got player position: {:?}", player_pos.0);
+
+    // Find the closest NPC to the player within interaction range
+    let mut closest_npc: Option<(Entity, f32, &Position, &QuestGiver, &NpcName)> = None;
+    for (entity, (npc_pos, quest_giver, npc_name)) in npcs.iter() {
+        let distance = player_pos.0.distance(npc_pos.0);
+        info!("Found NPC '{}' at {:?}, distance: {:.2}", npc_name.0, npc_pos.0, distance);
+
+        if distance <= INTERACTION_RANGE {
+            if let Some((_, closest_dist, _, _, _)) = closest_npc {
+                if distance < closest_dist {
+                    closest_npc = Some((entity, distance, npc_pos, quest_giver, npc_name));
+                }
+            } else {
+                closest_npc = Some((entity, distance, npc_pos, quest_giver, npc_name));
+            }
+        }
+    }
+
+    let Some((npc_entity, distance, npc_pos, quest_giver, npc_name)) = closest_npc else {
+        info!("No NPC found within interaction range");
         commands.server_trigger(ToClients {
             mode: SendMode::Direct(ClientId::Client(client_entity)),
             message: NotificationEvent {
-                message: "Too far away!".to_string(),
+                message: "No NPC nearby!".to_string(),
                 notification_type: NotificationType::Warning,
             },
         });
         return;
-    }
+    };
+
+    info!("Found closest NPC: {} at distance {:.2}", npc_name.0, distance);
+    // Distance was already checked in the loop above, player_pos and quest_log already retrieved
 
     info!("Player interacting with NPC: {}", npc_name.0);
+    info!("NPC has {} quests available", quest_giver.available_quests.len());
+    info!("Player quest log - Active: {}, Completed: {}",
+        quest_log.active_quests.len(), quest_log.completed_quests.len());
 
     // Check available quests
     let mut has_available_quest = false;
     for quest_id in &quest_giver.available_quests {
+        info!("Checking quest {} - can_accept: {}", quest_id, quest_log.can_accept_quest(*quest_id));
         if quest_log.can_accept_quest(*quest_id) {
             has_available_quest = true;
             if let Some(quest_def) = quest_db.quests.get(quest_id) {
