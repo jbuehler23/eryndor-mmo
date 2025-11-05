@@ -53,6 +53,96 @@ pub fn handle_toggle_auto_attack(
     }
 }
 
+/// Process auto-attacks for all entities with auto-attack enabled
+pub fn process_auto_attacks(
+    mut commands: Commands,
+    mut attackers: Query<(
+        Entity,
+        &Position,
+        &CurrentTarget,
+        &CombatStats,
+        &mut AutoAttack,
+    )>,
+    mut targets: Query<(&Position, &mut Health, &CombatStats)>,
+    time: Res<Time>,
+) {
+    for (attacker_entity, attacker_pos, current_target, attacker_stats, mut auto_attack) in &mut attackers {
+        // Skip if auto-attack is disabled
+        if !auto_attack.enabled {
+            continue;
+        }
+
+        // Tick down cooldown timer
+        auto_attack.cooldown_timer -= time.delta_secs();
+
+        // Skip if still on cooldown
+        if auto_attack.cooldown_timer > 0.0 {
+            continue;
+        }
+
+        // Check if we have a target
+        let Some(target_entity) = current_target.0 else {
+            info!("Auto-attack skipped for {:?}: no target", attacker_entity);
+            continue;
+        };
+
+        // Get target data
+        let Ok((target_pos, mut target_health, target_stats)) = targets.get_mut(target_entity) else {
+            info!("Auto-attack skipped for {:?}: target {:?} not found or missing components", attacker_entity, target_entity);
+            continue;
+        };
+
+        // Get weapon stats - for now, use default sword stats
+        // TODO: Get actual equipped weapon from Equipment component
+        let weapon_stats = crate::weapon::WeaponType::Sword.stats();
+
+        // Check if target is in range
+        let distance = attacker_pos.0.distance(target_pos.0);
+        if distance > weapon_stats.range {
+            info!("Auto-attack skipped for {:?}: target {:?} out of range (distance: {:.2}, max: {:.2})",
+                  attacker_entity, target_entity, distance, weapon_stats.range);
+            continue;
+        }
+
+        // Calculate damage: base attack * weapon multiplier
+        let base_damage = attacker_stats.attack_power * weapon_stats.damage_multiplier;
+
+        // Apply defense mitigation
+        let mitigation = target_stats.defense / (target_stats.defense + 100.0);
+        let mut damage = base_damage * (1.0 - mitigation);
+
+        // Critical hit check
+        let is_crit = rand::random::<f32>() < attacker_stats.crit_chance;
+        if is_crit {
+            damage *= 1.5;
+        }
+
+        // Apply damage
+        target_health.current = (target_health.current - damage).max(0.0);
+
+        // Reset cooldown based on weapon attack speed
+        // attack_speed is attacks per second, so cooldown = 1.0 / attack_speed
+        auto_attack.cooldown_timer = 1.0 / weapon_stats.attack_speed;
+
+        info!(
+            "Auto-attack: {:?} hit {:?} for {:.1} damage (crit: {})",
+            attacker_entity, target_entity, damage, is_crit
+        );
+
+        // Send combat event to all clients for VFX
+        commands.server_trigger(ToClients {
+            mode: SendMode::Broadcast,
+            message: CombatEvent {
+                attacker: attacker_entity,
+                target: target_entity,
+                damage,
+                ability_id: 0, // 0 indicates auto-attack (not an ability)
+                is_crit,
+            },
+        });
+    }
+}
+
 pub fn handle_use_ability(
     trigger: On<FromClient<UseAbilityRequest>>,
     mut commands: Commands,
