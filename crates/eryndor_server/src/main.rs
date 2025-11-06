@@ -87,16 +87,15 @@ fn main() {
         .add_client_event::<CompleteQuestRequest>(Channel::Ordered)
         .add_client_event::<SetHotbarSlotRequest>(Channel::Ordered)
         .add_client_event::<DisconnectCharacterRequest>(Channel::Ordered)
-        .add_client_event::<ToggleAutoAttackRequest>(Channel::Ordered)
         // Register server -> client events (Events API)
         .add_server_event::<LoginResponse>(Channel::Ordered)
         .add_server_event::<CreateAccountResponse>(Channel::Ordered)
         .add_server_event::<CharacterListResponse>(Channel::Ordered)
         .add_server_event::<CreateCharacterResponse>(Channel::Ordered)
         .add_server_event::<SelectCharacterResponse>(Channel::Ordered)
-        .add_server_event::<CombatEvent>(Channel::Ordered)
+        .add_mapped_server_event::<CombatEvent>(Channel::Ordered)
         .add_server_event::<QuestUpdateEvent>(Channel::Ordered)
-        .add_server_event::<DeathEvent>(Channel::Ordered)
+        .add_mapped_server_event::<DeathEvent>(Channel::Ordered)
         .add_server_event::<NotificationEvent>(Channel::Ordered)
         .add_server_event::<QuestDialogueEvent>(Channel::Ordered)
         // Register observers for client triggers
@@ -106,7 +105,6 @@ fn main() {
         .add_observer(auth::handle_select_character)
         .add_observer(movement::handle_move_input)
         .add_observer(combat::handle_set_target)
-        .add_observer(combat::handle_toggle_auto_attack)
         .add_observer(combat::handle_use_ability)
         .add_observer(inventory::handle_pickup_item)
         .add_observer(inventory::handle_drop_item)
@@ -116,6 +114,8 @@ fn main() {
         .add_observer(quest::handle_accept_quest)
         .add_observer(quest::handle_complete_quest)
         .add_observer(auth::handle_disconnect_character)
+        // Respawn system
+        .add_observer(spawn::schedule_respawn)
         // Systems
         .add_systems(Startup, (
             setup_server,
@@ -134,6 +134,8 @@ fn main() {
             combat::enemy_ai,
             // Quests
             quest::update_quest_progress,
+            // Respawn
+            spawn::process_respawns,
         ))
         // Physics sync - runs after physics update to sync PhysicsPosition -> Position
         .add_systems(PostUpdate, sync_physics_to_position)

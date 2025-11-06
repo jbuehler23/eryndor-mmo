@@ -8,7 +8,7 @@ use avian2d::prelude::LinearVelocity;
 pub fn handle_set_target(
     trigger: On<FromClient<SetTargetRequest>>,
     clients: Query<&ActiveCharacterEntity>,
-    mut players: Query<(&mut CurrentTarget, &Character)>,
+    mut players: Query<(&mut CurrentTarget, &mut AutoAttack, &mut InCombat, &Character)>,
     enemies: Query<&EnemyType, With<Enemy>>,
     npcs: Query<&NpcName, With<Npc>>,
 ) {
@@ -20,50 +20,33 @@ pub fn handle_set_target(
     let char_entity = active_char.0;
 
     // Update target
-    if let Ok((mut current_target, character)) = players.get_mut(char_entity) {
+    if let Ok((mut current_target, mut auto_attack, mut in_combat, character)) = players.get_mut(char_entity) {
         current_target.0 = request.target;
 
-        // Log targeting with metadata
+        // Auto-enable auto-attack and enter combat when targeting an enemy
         if let Some(target_entity) = request.target {
             if let Ok(enemy_type) = enemies.get(target_entity) {
-                info!("{} targeted enemy: {} (Entity {:?})",
-                    character.name, enemy_type.0, target_entity);
+                // Targeting an enemy - enter combat and enable auto-attack
+                auto_attack.enabled = true;
+                in_combat.0 = true;
+                info!("{} targeted enemy: {} - auto-attack enabled",
+                    character.name, enemy_type.0);
             } else if let Ok(npc_name) = npcs.get(target_entity) {
-                info!("{} targeted NPC: {} (Entity {:?})",
-                    character.name, npc_name.0, target_entity);
+                // Targeting NPC - no combat
+                info!("{} targeted NPC: {}",
+                    character.name, npc_name.0);
             }
+        } else {
+            // Cleared target - leave combat and disable auto-attack
+            auto_attack.enabled = false;
+            in_combat.0 = false;
+            info!("{} cleared target - exited combat", character.name);
         }
     }
 }
 
-pub fn handle_toggle_auto_attack(
-    trigger: On<FromClient<ToggleAutoAttackRequest>>,
-    mut commands: Commands,
-    clients: Query<&ActiveCharacterEntity>,
-    mut players: Query<&mut AutoAttack>,
-) {
-    let Some(client_entity) = trigger.client_id.entity() else { return };
-    let request = trigger.event();
-
-    // Get client's character
-    let Ok(active_char) = clients.get(client_entity) else { return };
-    let char_entity = active_char.0;
-
-    // Update auto-attack state
-    if let Ok(mut auto_attack) = players.get_mut(char_entity) {
-        auto_attack.enabled = request.enabled;
-        info!("Player {:?} toggled auto-attack: {}", char_entity, request.enabled);
-
-        // Send notification to client
-        commands.server_trigger(ToClients {
-            mode: SendMode::Direct(ClientId::Client(client_entity)),
-            message: NotificationEvent {
-                message: format!("Auto-attack: {}", if request.enabled { "ON" } else { "OFF" }),
-                notification_type: NotificationType::Info,
-            },
-        });
-    }
-}
+// Auto-attack is now automatically enabled when targeting enemies
+// and disabled when leaving combat - no manual toggle needed
 
 /// Process auto-attacks for all entities with auto-attack enabled
 pub fn process_auto_attacks(
@@ -286,21 +269,31 @@ pub fn update_ability_cooldowns(
 pub fn check_deaths(
     mut commands: Commands,
     query: Query<(Entity, &Health, Option<&Enemy>, Option<&Player>), Changed<Health>>,
+    mut players: Query<(&CurrentTarget, &mut AutoAttack, &mut InCombat)>,
 ) {
     for (entity, health, is_enemy, is_player) in &query {
         if health.is_dead() {
             info!("Entity {:?} died", entity);
 
-            // Send death event
+            // Trigger death event both for server (observers) and clients (visuals)
+            commands.trigger(DeathEvent { entity });
             commands.server_trigger(ToClients {
                 mode: SendMode::Broadcast,
                 message: DeathEvent { entity },
             });
 
             if is_enemy.is_some() {
-                // Despawn enemies immediately
+                // Exit combat for any players targeting this enemy
+                for (current_target, mut auto_attack, mut in_combat) in &mut players {
+                    if current_target.0 == Some(entity) {
+                        auto_attack.enabled = false;
+                        in_combat.0 = false;
+                        info!("Player exited combat - target died");
+                    }
+                }
+
+                // Despawn enemies immediately (respawn will be handled by observer)
                 commands.entity(entity).despawn();
-                // TODO: Respawn after delay
             }
 
             if is_player.is_some() {

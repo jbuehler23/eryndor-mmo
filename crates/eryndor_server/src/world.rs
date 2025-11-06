@@ -33,7 +33,7 @@ pub fn spawn_world(mut commands: Commands) {
 
     // Note: Weapons are now given as quest rewards, not spawned in the world
 
-    // Spawn enemies
+    // Spawn enemies with respawn points
     for (i, pos) in [ENEMY_SPAWN_1, ENEMY_SPAWN_2, ENEMY_SPAWN_3].iter().enumerate() {
         let enemy_entity = commands.spawn((
             Replicated,
@@ -60,6 +60,11 @@ pub fn spawn_world(mut commands: Commands) {
                 size: ENEMY_SIZE,
             },
             AbilityCooldowns::default(),
+            // Add spawn point for respawn system
+            crate::spawn::SpawnPoint {
+                position: *pos,
+                respawn_delay: 30.0, // 30 seconds
+            },
         ));
 
         // Physics components

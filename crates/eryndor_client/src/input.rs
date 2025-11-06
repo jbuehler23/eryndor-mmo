@@ -46,10 +46,17 @@ pub fn handle_targeting_input(
     windows: Query<&Window>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
     targetable_query: Query<(Entity, &Position, &VisualShape), With<Interactable>>,
+    npc_query: Query<Entity, With<Npc>>,
+    enemy_query: Query<Entity, With<Enemy>>,
     mut input_state: ResMut<InputState>,
     mut commands: Commands,
 ) {
-    if !mouse_button.just_pressed(MouseButton::Left) {
+    // Left-click for general targeting (NPCs, items, enemies)
+    let left_click = mouse_button.just_pressed(MouseButton::Left);
+    // Right-click specifically for enemies (combat)
+    let right_click = mouse_button.just_pressed(MouseButton::Right);
+
+    if !left_click && !right_click {
         return;
     }
 
@@ -82,11 +89,24 @@ pub fn handle_targeting_input(
     }
 
     if let Some(entity) = closest_entity {
-        input_state.selected_target = Some(entity);
-        commands.client_trigger(SetTargetRequest {
-            target: Some(entity),
-        });
-        info!("Selected target: {:?}", entity);
+        // Check if right-click was used
+        if right_click {
+            // Right-click: only target enemies
+            if enemy_query.get(entity).is_ok() {
+                input_state.selected_target = Some(entity);
+                commands.client_trigger(SetTargetRequest {
+                    target: Some(entity),
+                });
+                info!("Right-click targeted enemy: {:?}", entity);
+            }
+        } else {
+            // Left-click: target anything interactable
+            input_state.selected_target = Some(entity);
+            commands.client_trigger(SetTargetRequest {
+                target: Some(entity),
+            });
+            info!("Left-click selected target: {:?}", entity);
+        }
     }
 }
 
@@ -121,33 +141,7 @@ pub fn handle_ability_input(
     }
 }
 
-pub fn handle_auto_attack_toggle(
-    mouse_button: Res<ButtonInput<MouseButton>>,
-    client_state: Res<MyClientState>,
-    ui_state: Res<UiState>,
-    player_query: Query<&AutoAttack>,
-    mut commands: Commands,
-) {
-    // Don't handle if ESC menu is open
-    if ui_state.show_esc_menu {
-        return;
-    }
-
-    if !mouse_button.just_pressed(MouseButton::Right) {
-        return;
-    }
-
-    let Some(player_entity) = client_state.player_entity else { return };
-    let Ok(auto_attack) = player_query.get(player_entity) else { return };
-
-    // Toggle the state
-    let new_state = !auto_attack.enabled;
-    commands.client_trigger(ToggleAutoAttackRequest {
-        enabled: new_state,
-    });
-
-    info!("Toggling auto-attack: {}", if new_state { "ON" } else { "OFF" });
-}
+// Auto-attack toggle removed - now automatically enabled when targeting enemies
 
 pub fn handle_interaction_input(
     keyboard: Res<ButtonInput<KeyCode>>,

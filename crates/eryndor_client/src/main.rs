@@ -77,16 +77,15 @@ fn main() {
         .add_client_event::<CompleteQuestRequest>(Channel::Ordered)
         .add_client_event::<SetHotbarSlotRequest>(Channel::Ordered)
         .add_client_event::<DisconnectCharacterRequest>(Channel::Ordered)
-        .add_client_event::<ToggleAutoAttackRequest>(Channel::Ordered)
         // Register server -> client events
         .add_server_event::<LoginResponse>(Channel::Ordered)
         .add_server_event::<CreateAccountResponse>(Channel::Ordered)
         .add_server_event::<CharacterListResponse>(Channel::Ordered)
         .add_server_event::<CreateCharacterResponse>(Channel::Ordered)
         .add_server_event::<SelectCharacterResponse>(Channel::Ordered)
-        .add_server_event::<CombatEvent>(Channel::Ordered)
+        .add_mapped_server_event::<CombatEvent>(Channel::Ordered)
         .add_server_event::<QuestUpdateEvent>(Channel::Ordered)
-        .add_server_event::<DeathEvent>(Channel::Ordered)
+        .add_mapped_server_event::<DeathEvent>(Channel::Ordered)
         .add_server_event::<NotificationEvent>(Channel::Ordered)
         .add_server_event::<QuestDialogueEvent>(Channel::Ordered)
         // Register observers for server -> client events
@@ -97,6 +96,7 @@ fn main() {
         .add_observer(game_state::handle_select_character_response)
         .add_observer(game_state::handle_notifications)
         .add_observer(ui::handle_quest_dialogue)
+        .add_observer(rendering::spawn_damage_numbers)
         // Systems
         .add_systems(Startup, (setup_camera, game_state::connect_to_server))
         // UI systems must be in EguiPrimaryContextPass for bevy_egui 0.38
@@ -124,6 +124,8 @@ fn main() {
             // rendering::draw_debug_labels.run_if(in_state(GameState::InGame)),
             // Target indicator
             rendering::draw_target_indicator.run_if(in_state(GameState::InGame)),
+            // Damage numbers
+            rendering::update_damage_numbers.run_if(in_state(GameState::InGame)),
             // UI Input
             ui::handle_esc_key.run_if(in_state(GameState::InGame)),
             // Input
@@ -131,7 +133,6 @@ fn main() {
             input::handle_targeting_input.run_if(in_state(GameState::InGame)),
             input::handle_ability_input.run_if(in_state(GameState::InGame)),
             input::handle_interaction_input.run_if(in_state(GameState::InGame)),
-            input::handle_auto_attack_toggle.run_if(in_state(GameState::InGame)),
         ))
         .run();
 }

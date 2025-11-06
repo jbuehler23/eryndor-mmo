@@ -121,7 +121,8 @@ pub struct SetHotbarSlotRequest {
 #[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
 pub struct DisconnectCharacterRequest;
 
-/// Toggle auto-attack on/off
+/// DEPRECATED: Auto-attack now automatically enabled when targeting enemies
+/// Kept for backwards compatibility but no longer used
 #[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
 pub struct ToggleAutoAttackRequest {
     pub enabled: bool,
@@ -184,6 +185,13 @@ pub struct CombatEvent {
     pub is_crit: bool,
 }
 
+impl MapEntities for CombatEvent {
+    fn map_entities<M: bevy::ecs::entity::EntityMapper>(&mut self, entity_mapper: &mut M) {
+        self.attacker = entity_mapper.get_mapped(self.attacker);
+        self.target = entity_mapper.get_mapped(self.target);
+    }
+}
+
 /// Quest update notification
 #[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
 pub struct QuestUpdateEvent {
@@ -195,6 +203,12 @@ pub struct QuestUpdateEvent {
 #[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
 pub struct DeathEvent {
     pub entity: Entity,
+}
+
+impl MapEntities for DeathEvent {
+    fn map_entities<M: bevy::ecs::entity::EntityMapper>(&mut self, entity_mapper: &mut M) {
+        self.entity = entity_mapper.get_mapped(self.entity);
+    }
 }
 
 /// Chat message
