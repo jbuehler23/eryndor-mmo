@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_replicon::prelude::*;
 use serde::{Deserialize, Serialize};
+use bevy::ecs::entity::MapEntities;
 
 use crate::components::*;
 
@@ -47,6 +48,14 @@ pub struct SetTargetRequest {
     pub target: Option<Entity>,
 }
 
+impl MapEntities for SetTargetRequest {
+    fn map_entities<M: bevy::ecs::entity::EntityMapper>(&mut self, entity_mapper: &mut M) {
+        if let Some(entity) = &mut self.target {
+            *entity = entity_mapper.get_mapped(*entity);
+        }
+    }
+}
+
 /// Use an ability
 #[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
 pub struct UseAbilityRequest {
@@ -57,6 +66,12 @@ pub struct UseAbilityRequest {
 #[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
 pub struct PickupItemRequest {
     pub item_entity: Entity,
+}
+
+impl MapEntities for PickupItemRequest {
+    fn map_entities<M: bevy::ecs::entity::EntityMapper>(&mut self, entity_mapper: &mut M) {
+        self.item_entity = entity_mapper.get_mapped(self.item_entity);
+    }
 }
 
 /// Drop an item from inventory
@@ -75,6 +90,12 @@ pub struct EquipItemRequest {
 #[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
 pub struct InteractNpcRequest {
     pub npc_entity: Entity,
+}
+
+impl MapEntities for InteractNpcRequest {
+    fn map_entities<M: bevy::ecs::entity::EntityMapper>(&mut self, entity_mapper: &mut M) {
+        self.npc_entity = entity_mapper.get_mapped(self.npc_entity);
+    }
 }
 
 /// Accept a quest from NPC

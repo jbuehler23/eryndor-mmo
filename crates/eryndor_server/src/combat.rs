@@ -8,7 +8,9 @@ use avian2d::prelude::LinearVelocity;
 pub fn handle_set_target(
     trigger: On<FromClient<SetTargetRequest>>,
     clients: Query<&ActiveCharacterEntity>,
-    mut players: Query<&mut CurrentTarget>,
+    mut players: Query<(&mut CurrentTarget, &Character)>,
+    enemies: Query<&EnemyType, With<Enemy>>,
+    npcs: Query<&NpcName, With<Npc>>,
 ) {
     let Some(client_entity) = trigger.client_id.entity() else { return };
     let request = trigger.event();
@@ -18,9 +20,19 @@ pub fn handle_set_target(
     let char_entity = active_char.0;
 
     // Update target
-    if let Ok(mut current_target) = players.get_mut(char_entity) {
+    if let Ok((mut current_target, character)) = players.get_mut(char_entity) {
         current_target.0 = request.target;
-        info!("Player {:?} targeted {:?}", char_entity, request.target);
+
+        // Log targeting with metadata
+        if let Some(target_entity) = request.target {
+            if let Ok(enemy_type) = enemies.get(target_entity) {
+                info!("{} targeted enemy: {} (Entity {:?})",
+                    character.name, enemy_type.0, target_entity);
+            } else if let Ok(npc_name) = npcs.get(target_entity) {
+                info!("{} targeted NPC: {} (Entity {:?})",
+                    character.name, npc_name.0, target_entity);
+            }
+        }
     }
 }
 
@@ -62,8 +74,9 @@ pub fn process_auto_attacks(
         &CurrentTarget,
         &CombatStats,
         &mut AutoAttack,
-    )>,
-    mut targets: Query<(&Position, &mut Health, &CombatStats)>,
+    ), With<Player>>,
+    mut targets: Query<(&Position, &mut Health, &CombatStats), With<Enemy>>,
+    all_enemies: Query<Entity, With<Enemy>>,
     time: Res<Time>,
 ) {
     for (attacker_entity, attacker_pos, current_target, attacker_stats, mut auto_attack) in &mut attackers {
@@ -82,13 +95,16 @@ pub fn process_auto_attacks(
 
         // Check if we have a target
         let Some(target_entity) = current_target.0 else {
-            info!("Auto-attack skipped for {:?}: no target", attacker_entity);
             continue;
         };
 
+        // Check if target is an enemy
+        if all_enemies.get(target_entity).is_err() {
+            continue;
+        }
+
         // Get target data
         let Ok((target_pos, mut target_health, target_stats)) = targets.get_mut(target_entity) else {
-            info!("Auto-attack skipped for {:?}: target {:?} not found or missing components", attacker_entity, target_entity);
             continue;
         };
 
@@ -99,8 +115,6 @@ pub fn process_auto_attacks(
         // Check if target is in range
         let distance = attacker_pos.0.distance(target_pos.0);
         if distance > weapon_stats.range {
-            info!("Auto-attack skipped for {:?}: target {:?} out of range (distance: {:.2}, max: {:.2})",
-                  attacker_entity, target_entity, distance, weapon_stats.range);
             continue;
         }
 

@@ -70,9 +70,11 @@ pub fn spawn_world(mut commands: Commands) {
             Collider::circle(ENEMY_SIZE / 2.0),
             CollisionLayers::new(GameLayer::Enemy, [GameLayer::Player, GameLayer::Npc, GameLayer::Enemy, GameLayer::Environment]),
         ));
+
+        info!("Spawned enemy #{} at {:?} with entity ID: {:?}", i + 1, pos, enemy_entity);
     }
 
-    info!("Spawned 3 enemies");
+    info!("Finished spawning 3 enemies");
 
     // Spawn world boundaries - visible red walls
     let wall_thickness = 20.0;

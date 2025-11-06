@@ -183,11 +183,20 @@ impl Default for CombatStats {
 
 /// Current combat target
 #[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+#[component(map_entities)]
 pub struct CurrentTarget(pub Option<Entity>);
 
 impl Default for CurrentTarget {
     fn default() -> Self {
         Self(None)
+    }
+}
+
+impl bevy::ecs::entity::MapEntities for CurrentTarget {
+    fn map_entities<M: bevy::ecs::entity::EntityMapper>(&mut self, entity_mapper: &mut M) {
+        if let Some(entity) = &mut self.0 {
+            *entity = entity_mapper.get_mapped(*entity);
+        }
     }
 }
 
@@ -435,6 +444,7 @@ pub struct EnemyType(pub u32);
 
 /// Enemy AI state
 #[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+#[component(map_entities)]
 pub enum AiState {
     Idle,
     Chasing(Entity),
@@ -444,6 +454,16 @@ pub enum AiState {
 impl Default for AiState {
     fn default() -> Self {
         Self::Idle
+    }
+}
+
+impl bevy::ecs::entity::MapEntities for AiState {
+    fn map_entities<M: bevy::ecs::entity::EntityMapper>(&mut self, entity_mapper: &mut M) {
+        match self {
+            AiState::Chasing(entity) => *entity = entity_mapper.get_mapped(*entity),
+            AiState::Attacking(entity) => *entity = entity_mapper.get_mapped(*entity),
+            AiState::Idle => {},
+        }
     }
 }
 

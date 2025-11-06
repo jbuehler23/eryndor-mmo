@@ -68,8 +68,6 @@ pub fn handle_targeting_input(
     let mut closest_entity = None;
     let mut closest_distance = f32::MAX;
 
-    info!("Click at world pos: {:?}, checking {} targetable entities", world_pos, targetable_query.iter().count());
-
     for (entity, position, visual) in &targetable_query {
         let distance = position.0.distance(world_pos);
 
@@ -77,12 +75,9 @@ pub fn handle_targeting_input(
         // This means if you can see it, you can target it
         let click_radius = visual.size;
 
-        info!("  -> Entity {:?} at {:?}, distance: {:.2}, click_radius: {:.2}", entity, position.0, distance, click_radius);
-
         if distance < click_radius && distance < closest_distance {
             closest_distance = distance;
             closest_entity = Some(entity);
-            info!("     SELECTED!");
         }
     }
 
@@ -92,8 +87,6 @@ pub fn handle_targeting_input(
             target: Some(entity),
         });
         info!("Selected target: {:?}", entity);
-    } else {
-        info!("No entity clicked");
     }
 }
 

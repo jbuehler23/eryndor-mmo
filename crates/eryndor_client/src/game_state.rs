@@ -198,3 +198,18 @@ pub fn handle_character_despawn(
         }
     }
 }
+
+/// Cleanup all replicated entities when leaving InGame state
+/// This prevents stale entities from previous sessions
+pub fn cleanup_game_entities(
+    mut commands: Commands,
+    replicated_entities: Query<Entity, With<Replicated>>,
+) {
+    let count = replicated_entities.iter().count();
+    if count > 0 {
+        info!("Cleaning up {} replicated entities", count);
+        for entity in &replicated_entities {
+            commands.entity(entity).despawn();
+        }
+    }
+}

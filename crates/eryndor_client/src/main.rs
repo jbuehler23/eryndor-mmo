@@ -67,12 +67,12 @@ fn main() {
         .add_client_event::<CreateCharacterRequest>(Channel::Ordered)
         .add_client_event::<SelectCharacterRequest>(Channel::Ordered)
         .add_client_event::<MoveInput>(Channel::Unreliable)
-        .add_client_event::<SetTargetRequest>(Channel::Ordered)
+        .add_mapped_client_event::<SetTargetRequest>(Channel::Ordered)
         .add_client_event::<UseAbilityRequest>(Channel::Ordered)
-        .add_client_event::<PickupItemRequest>(Channel::Ordered)
+        .add_mapped_client_event::<PickupItemRequest>(Channel::Ordered)
         .add_client_event::<DropItemRequest>(Channel::Ordered)
         .add_client_event::<EquipItemRequest>(Channel::Ordered)
-        .add_client_event::<InteractNpcRequest>(Channel::Ordered)
+        .add_mapped_client_event::<InteractNpcRequest>(Channel::Ordered)
         .add_client_event::<AcceptQuestRequest>(Channel::Ordered)
         .add_client_event::<CompleteQuestRequest>(Channel::Ordered)
         .add_client_event::<SetHotbarSlotRequest>(Channel::Ordered)
@@ -105,6 +105,7 @@ fn main() {
             ui::character_select_ui.run_if(in_state(GameState::CharacterSelect)),
             ui::game_ui.run_if(in_state(GameState::InGame)),
         ))
+        .add_systems(OnExit(GameState::InGame), game_state::cleanup_game_entities)
         .add_systems(Update, (
             // Connection monitoring
             game_state::monitor_connection,
