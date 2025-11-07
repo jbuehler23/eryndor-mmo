@@ -302,12 +302,22 @@ pub struct ItemStack {
 /// Equipment slots
 #[derive(Component, Serialize, Deserialize, Clone, Debug)]
 pub struct Equipment {
-    pub weapon: Option<u32>, // Item ID
+    pub weapon: Option<u32>,  // Item ID
+    pub helmet: Option<u32>,  // Item ID
+    pub chest: Option<u32>,   // Item ID
+    pub legs: Option<u32>,    // Item ID
+    pub boots: Option<u32>,   // Item ID
 }
 
 impl Default for Equipment {
     fn default() -> Self {
-        Self { weapon: None }
+        Self {
+            weapon: None,
+            helmet: None,
+            chest: None,
+            legs: None,
+            boots: None,
+        }
     }
 }
 
@@ -463,6 +473,21 @@ impl bevy::ecs::entity::MapEntities for AiState {
             AiState::Chasing(entity) => *entity = entity_mapper.get_mapped(*entity),
             AiState::Attacking(entity) => *entity = entity_mapper.get_mapped(*entity),
             AiState::Idle => {},
+        }
+    }
+}
+
+/// Tracks delay before AI activates (for newly spawned enemies)
+/// This prevents combat events from being sent before entity replication completes
+#[derive(Component)]
+pub struct AiActivationDelay {
+    pub timer: Timer,
+}
+
+impl Default for AiActivationDelay {
+    fn default() -> Self {
+        Self {
+            timer: Timer::from_seconds(0.2, TimerMode::Once), // 200ms delay (3-4 frames at 60Hz)
         }
     }
 }

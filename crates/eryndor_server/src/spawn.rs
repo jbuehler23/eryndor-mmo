@@ -94,6 +94,9 @@ impl EntityTemplate {
                     AbilityCooldowns::default(),
                 ));
 
+                // Add AI activation delay in third batch to stay within bundle size limits
+                commands.entity(enemy_entity).insert(AiActivationDelay::default());
+
                 // Add physics components
                 commands.entity(enemy_entity).insert((
                     PhysicsPosition(position),
@@ -212,7 +215,7 @@ pub fn initialize_spawn_points(mut spawn_registry: ResMut<SpawnRegistry>) {
     // These match the positions in world.rs
     spawn_registry.register_enemy(
         ENEMY_SPAWN_1,
-        30.0, // 30 second respawn
+        5.0, // 30 second respawn
         EnemyTemplate {
             enemy_type_id: ENEMY_TYPE_SLIME,
             health: 50.0,
@@ -228,7 +231,7 @@ pub fn initialize_spawn_points(mut spawn_registry: ResMut<SpawnRegistry>) {
 
     spawn_registry.register_enemy(
         ENEMY_SPAWN_2,
-        30.0,
+        5.0,
         EnemyTemplate {
             enemy_type_id: ENEMY_TYPE_SLIME,
             health: 50.0,
@@ -244,7 +247,7 @@ pub fn initialize_spawn_points(mut spawn_registry: ResMut<SpawnRegistry>) {
 
     spawn_registry.register_enemy(
         ENEMY_SPAWN_3,
-        30.0,
+        5.0,
         EnemyTemplate {
             enemy_type_id: ENEMY_TYPE_SLIME,
             health: 50.0,

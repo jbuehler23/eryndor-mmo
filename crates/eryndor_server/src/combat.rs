@@ -57,12 +57,13 @@ pub fn process_auto_attacks(
         &CurrentTarget,
         &CombatStats,
         &mut AutoAttack,
+        &Equipment,
     ), With<Player>>,
     mut targets: Query<(&Position, &mut Health, &CombatStats), With<Enemy>>,
     all_enemies: Query<Entity, With<Enemy>>,
     time: Res<Time>,
 ) {
-    for (attacker_entity, attacker_pos, current_target, attacker_stats, mut auto_attack) in &mut attackers {
+    for (attacker_entity, attacker_pos, current_target, attacker_stats, mut auto_attack, equipment) in &mut attackers {
         // Skip if auto-attack is disabled
         if !auto_attack.enabled {
             continue;
@@ -91,9 +92,19 @@ pub fn process_auto_attacks(
             continue;
         };
 
-        // Get weapon stats - for now, use default sword stats
-        // TODO: Get actual equipped weapon from Equipment component
-        let weapon_stats = crate::weapon::WeaponType::Sword.stats();
+        // Get weapon stats from equipped weapon (default to unarmed/fists if no weapon)
+        let weapon_stats = equipment.weapon
+            .and_then(|item_id| crate::weapon::WeaponType::from_item_id(item_id))
+            .map(|weapon_type| weapon_type.stats())
+            .unwrap_or_else(|| {
+                // Unarmed/fists - weak but fast
+                crate::weapon::WeaponStats {
+                    weapon_type: crate::weapon::WeaponType::Dagger, // Use dagger as base
+                    attack_speed: 1.5,
+                    range: 20.0,
+                    damage_multiplier: 0.5,
+                }
+            });
 
         // Check if target is in range
         let distance = attacker_pos.0.distance(target_pos.0);
@@ -315,7 +326,7 @@ pub fn enemy_ai(
         &MoveSpeed,
         &CombatStats,
         &EnemyType,
-    ), (With<Enemy>, Without<Player>)>,
+    ), (With<Enemy>, Without<Player>, Without<AiActivationDelay>)>,
     mut players: Query<(Entity, &Position, &mut Health), (With<Player>, Without<Enemy>)>,
     time: Res<Time>,
 ) {
@@ -381,6 +392,23 @@ pub fn enemy_ai(
                     current_target.0 = None;
                 }
             }
+        }
+    }
+}
+
+/// Tick AI activation delay timers and remove the component when ready
+/// This allows enemies to "warm up" after spawning to ensure replication completes
+pub fn update_ai_activation_delays(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut AiActivationDelay)>,
+    time: Res<Time>,
+) {
+    for (entity, mut delay) in &mut query {
+        delay.timer.tick(time.delta());
+
+        if delay.timer.finished() {
+            commands.entity(entity).remove::<AiActivationDelay>();
+            info!("Enemy {:?} AI activated", entity);
         }
     }
 }

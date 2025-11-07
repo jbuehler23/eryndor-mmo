@@ -121,9 +121,13 @@ pub fn spawn_character_components(
         InCombat(false),
     )).id();
 
+    // Give starting weapon based on class
+    let mut equipment = Equipment::default();
+    equipment.weapon = Some(class.starting_weapon());
+
     commands.entity(character_entity).insert((
         Inventory::new(MAX_INVENTORY_SLOTS),
-        Equipment::default(),
+        equipment,
         hotbar,
         learned_abilities,
     ));

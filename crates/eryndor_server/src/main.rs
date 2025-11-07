@@ -128,6 +128,7 @@ fn main() {
             // Movement
             movement::update_positions,
             // Combat
+            combat::update_ai_activation_delays,
             combat::process_auto_attacks,
             combat::update_ability_cooldowns,
             combat::check_deaths,
