@@ -71,28 +71,199 @@ impl Default for ItemDatabase {
     fn default() -> Self {
         let mut items = HashMap::new();
 
-        // Dagger
+        // Dagger - High crit, moderate attack
         items.insert(ITEM_DAGGER, ItemDefinition {
             id: ITEM_DAGGER,
             name: "Dagger".to_string(),
             item_type: ItemType::Weapon,
             grants_ability: Some(ABILITY_QUICK_STRIKE),
+            stat_bonuses: ItemStatBonuses {
+                attack_power: 8.0,
+                crit_chance: 0.10,
+                ..Default::default()
+            },
         });
 
-        // Wand
+        // Wand - High attack, mana bonus
         items.insert(ITEM_WAND, ItemDefinition {
             id: ITEM_WAND,
             name: "Wand".to_string(),
             item_type: ItemType::Weapon,
             grants_ability: Some(ABILITY_FIREBALL),
+            stat_bonuses: ItemStatBonuses {
+                attack_power: 12.0,
+                max_mana: 20.0,
+                ..Default::default()
+            },
         });
 
-        // Sword
+        // Sword - Balanced attack and defense
         items.insert(ITEM_SWORD, ItemDefinition {
             id: ITEM_SWORD,
             name: "Sword".to_string(),
             item_type: ItemType::Weapon,
             grants_ability: Some(ABILITY_HEAVY_SLASH),
+            stat_bonuses: ItemStatBonuses {
+                attack_power: 10.0,
+                defense: 2.0,
+                ..Default::default()
+            },
+        });
+
+        // ========== ARMOR - HELMETS ==========
+
+        items.insert(ITEM_LEATHER_CAP, ItemDefinition {
+            id: ITEM_LEATHER_CAP,
+            name: "Leather Cap".to_string(),
+            item_type: ItemType::Helmet,
+            grants_ability: None,
+            stat_bonuses: ItemStatBonuses {
+                defense: 2.0,
+                max_health: 5.0,
+                ..Default::default()
+            },
+        });
+
+        items.insert(ITEM_CLOTH_HAT, ItemDefinition {
+            id: ITEM_CLOTH_HAT,
+            name: "Cloth Hat".to_string(),
+            item_type: ItemType::Helmet,
+            grants_ability: None,
+            stat_bonuses: ItemStatBonuses {
+                defense: 1.0,
+                max_mana: 10.0,
+                attack_power: 2.0,
+                ..Default::default()
+            },
+        });
+
+        items.insert(ITEM_IRON_HELM, ItemDefinition {
+            id: ITEM_IRON_HELM,
+            name: "Iron Helm".to_string(),
+            item_type: ItemType::Helmet,
+            grants_ability: None,
+            stat_bonuses: ItemStatBonuses {
+                defense: 4.0,
+                max_health: 10.0,
+                ..Default::default()
+            },
+        });
+
+        // ========== ARMOR - CHEST ==========
+
+        items.insert(ITEM_LEATHER_TUNIC, ItemDefinition {
+            id: ITEM_LEATHER_TUNIC,
+            name: "Leather Tunic".to_string(),
+            item_type: ItemType::Chest,
+            grants_ability: None,
+            stat_bonuses: ItemStatBonuses {
+                defense: 4.0,
+                max_health: 10.0,
+                ..Default::default()
+            },
+        });
+
+        items.insert(ITEM_CLOTH_ROBE, ItemDefinition {
+            id: ITEM_CLOTH_ROBE,
+            name: "Cloth Robe".to_string(),
+            item_type: ItemType::Chest,
+            grants_ability: None,
+            stat_bonuses: ItemStatBonuses {
+                defense: 2.0,
+                max_mana: 20.0,
+                attack_power: 4.0,
+                ..Default::default()
+            },
+        });
+
+        items.insert(ITEM_IRON_CHESTPLATE, ItemDefinition {
+            id: ITEM_IRON_CHESTPLATE,
+            name: "Iron Chestplate".to_string(),
+            item_type: ItemType::Chest,
+            grants_ability: None,
+            stat_bonuses: ItemStatBonuses {
+                defense: 8.0,
+                max_health: 20.0,
+                ..Default::default()
+            },
+        });
+
+        // ========== ARMOR - LEGS ==========
+
+        items.insert(ITEM_LEATHER_PANTS, ItemDefinition {
+            id: ITEM_LEATHER_PANTS,
+            name: "Leather Pants".to_string(),
+            item_type: ItemType::Legs,
+            grants_ability: None,
+            stat_bonuses: ItemStatBonuses {
+                defense: 3.0,
+                max_health: 8.0,
+                ..Default::default()
+            },
+        });
+
+        items.insert(ITEM_CLOTH_PANTS, ItemDefinition {
+            id: ITEM_CLOTH_PANTS,
+            name: "Cloth Pants".to_string(),
+            item_type: ItemType::Legs,
+            grants_ability: None,
+            stat_bonuses: ItemStatBonuses {
+                defense: 1.5,
+                max_mana: 15.0,
+                attack_power: 3.0,
+                ..Default::default()
+            },
+        });
+
+        items.insert(ITEM_IRON_GREAVES, ItemDefinition {
+            id: ITEM_IRON_GREAVES,
+            name: "Iron Greaves".to_string(),
+            item_type: ItemType::Legs,
+            grants_ability: None,
+            stat_bonuses: ItemStatBonuses {
+                defense: 6.0,
+                max_health: 15.0,
+                ..Default::default()
+            },
+        });
+
+        // ========== ARMOR - BOOTS ==========
+
+        items.insert(ITEM_LEATHER_BOOTS, ItemDefinition {
+            id: ITEM_LEATHER_BOOTS,
+            name: "Leather Boots".to_string(),
+            item_type: ItemType::Boots,
+            grants_ability: None,
+            stat_bonuses: ItemStatBonuses {
+                defense: 1.5,
+                max_health: 5.0,
+                ..Default::default()
+            },
+        });
+
+        items.insert(ITEM_CLOTH_SHOES, ItemDefinition {
+            id: ITEM_CLOTH_SHOES,
+            name: "Cloth Shoes".to_string(),
+            item_type: ItemType::Boots,
+            grants_ability: None,
+            stat_bonuses: ItemStatBonuses {
+                defense: 0.5,
+                max_mana: 10.0,
+                attack_power: 1.0,
+                ..Default::default()
+            },
+        });
+
+        items.insert(ITEM_IRON_BOOTS, ItemDefinition {
+            id: ITEM_IRON_BOOTS,
+            name: "Iron Boots".to_string(),
+            item_type: ItemType::Boots,
+            grants_ability: None,
+            stat_bonuses: ItemStatBonuses {
+                defense: 3.0,
+                max_health: 10.0,
+                ..Default::default()
+            },
         });
 
         Self { items }
@@ -104,10 +275,72 @@ pub struct ItemDefinition {
     pub name: String,
     pub item_type: ItemType,
     pub grants_ability: Option<u32>,
+    pub stat_bonuses: ItemStatBonuses,
+}
+
+/// Stat bonuses provided by an item when equipped
+#[derive(Clone, Default)]
+pub struct ItemStatBonuses {
+    pub attack_power: f32,
+    pub defense: f32,
+    pub max_health: f32,
+    pub max_mana: f32,
+    pub crit_chance: f32,
+}
+
+impl ItemStatBonuses {
+    /// Add another set of bonuses to this one
+    pub fn add(&mut self, other: &ItemStatBonuses) {
+        self.attack_power += other.attack_power;
+        self.defense += other.defense;
+        self.max_health += other.max_health;
+        self.max_mana += other.max_mana;
+        self.crit_chance += other.crit_chance;
+    }
+}
+
+impl ItemDatabase {
+    /// Calculate total stat bonuses from equipped items
+    pub fn calculate_equipment_bonuses(&self, equipment: &Equipment) -> ItemStatBonuses {
+        let mut total = ItemStatBonuses::default();
+
+        // Add bonuses from each equipped item
+        if let Some(weapon_id) = equipment.weapon {
+            if let Some(item) = self.items.get(&weapon_id) {
+                total.add(&item.stat_bonuses);
+            }
+        }
+        if let Some(helmet_id) = equipment.helmet {
+            if let Some(item) = self.items.get(&helmet_id) {
+                total.add(&item.stat_bonuses);
+            }
+        }
+        if let Some(chest_id) = equipment.chest {
+            if let Some(item) = self.items.get(&chest_id) {
+                total.add(&item.stat_bonuses);
+            }
+        }
+        if let Some(legs_id) = equipment.legs {
+            if let Some(item) = self.items.get(&legs_id) {
+                total.add(&item.stat_bonuses);
+            }
+        }
+        if let Some(boots_id) = equipment.boots {
+            if let Some(item) = self.items.get(&boots_id) {
+                total.add(&item.stat_bonuses);
+            }
+        }
+
+        total
+    }
 }
 
 pub enum ItemType {
     Weapon,
+    Helmet,
+    Chest,
+    Legs,
+    Boots,
     Consumable,
     QuestItem,
 }

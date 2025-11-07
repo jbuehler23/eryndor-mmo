@@ -72,6 +72,9 @@ pub fn spawn_character_components(
     position: Position,
     health: Health,
     mana: Mana,
+    equipment: Equipment,
+    inventory: Inventory,
+    quest_log: QuestLog,
     client_entity: Entity,
     character_db_id: i64,
 ) -> Entity {
@@ -121,18 +124,15 @@ pub fn spawn_character_components(
         InCombat(false),
     )).id();
 
-    // Equipment starts empty - players must complete the first quest to get their weapon
-    let equipment = Equipment::default();
-
     commands.entity(character_entity).insert((
-        Inventory::new(MAX_INVENTORY_SLOTS),
+        inventory,
         equipment,
         hotbar,
         learned_abilities,
     ));
 
     commands.entity(character_entity).insert((
-        QuestLog::default(),
+        quest_log,
         AbilityCooldowns::default(),
         visual,
         OwnedBy(client_entity),

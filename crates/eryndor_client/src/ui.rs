@@ -12,6 +12,8 @@ pub struct UiState {
     pub selected_class: CharacterClass,
     pub show_create_character: bool,
     pub show_inventory: bool,
+    pub show_equipment: bool,
+    pub show_character_stats: bool,
     pub show_esc_menu: bool,
     pub quest_dialogue: Option<QuestDialogueData>,
 }
@@ -168,8 +170,9 @@ pub fn game_ui(
     mut ui_state: ResMut<UiState>,
     mut client_state: ResMut<MyClientState>,
     mut commands: Commands,
-    player_query: Query<(Entity, &Health, &Mana, &CurrentTarget, &Hotbar, &Inventory, &LearnedAbilities, &QuestLog), With<Player>>,
+    player_query: Query<(Entity, &Health, &Mana, &CurrentTarget, &Hotbar, &Inventory, &Equipment, &CombatStats, &LearnedAbilities, &QuestLog, &Character), With<Player>>,
     target_query: Query<(&Health, Option<&Character>, Option<&NpcName>)>,
+    item_db: Res<crate::item_cache::ClientItemDatabase>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else { return };
 
@@ -178,7 +181,7 @@ pub fn game_ui(
     };
 
     // Silently wait for entity to be replicated with all components
-    let Ok((_, health, mana, current_target, hotbar, inventory, _learned_abilities, quest_log)) = player_query.get(player_entity) else {
+    let Ok((_, health, mana, current_target, hotbar, inventory, equipment, combat_stats, _learned_abilities, quest_log, character)) = player_query.get(player_entity) else {
         return
     };
 
@@ -242,16 +245,102 @@ pub fn game_ui(
             });
         });
 
-    // Inventory button
+    // Action buttons (top right)
     egui::Window::new("Actions")
-        .fixed_pos([1180.0, 10.0])
-        .fixed_size([90.0, 60.0])
+        .fixed_pos([1090.0, 10.0])
+        .fixed_size([180.0, 120.0])
         .title_bar(false)
         .show(ctx, |ui| {
+            if ui.button("Equipment").clicked() {
+                ui_state.show_equipment = !ui_state.show_equipment;
+            }
+            if ui.button("Character").clicked() {
+                ui_state.show_character_stats = !ui_state.show_character_stats;
+            }
             if ui.button("Inventory").clicked() {
                 ui_state.show_inventory = !ui_state.show_inventory;
             }
         });
+
+    // Equipment window
+    if ui_state.show_equipment {
+        egui::Window::new("Equipment")
+            .collapsible(false)
+            .resizable(false)
+            .default_width(250.0)
+            .show(ctx, |ui| {
+                ui.heading("Equipment Slots");
+                ui.separator();
+
+                // Helper function to show an equipment slot
+                let show_slot = |ui: &mut egui::Ui, label: &str, item_id: Option<u32>| {
+                    ui.horizontal(|ui| {
+                        ui.label(format!("{}:", label));
+                        if let Some(id) = item_id {
+                            let item_name = item_db.get_item_name(id);
+                            ui.label(&item_name);
+                        } else {
+                            ui.label("<Empty>");
+                        }
+                    });
+                };
+
+                show_slot(ui, "Weapon", equipment.weapon);
+                show_slot(ui, "Helmet", equipment.helmet);
+                show_slot(ui, "Chest", equipment.chest);
+                show_slot(ui, "Legs", equipment.legs);
+                show_slot(ui, "Boots", equipment.boots);
+
+                ui.add_space(10.0);
+                ui.label("Right-click items in inventory to equip them.");
+            });
+    }
+
+    // Character Stats window
+    if ui_state.show_character_stats {
+        egui::Window::new("Character Stats")
+            .collapsible(false)
+            .resizable(false)
+            .default_width(300.0)
+            .show(ctx, |ui| {
+                ui.heading(&character.name);
+                ui.label(format!("Class: {} | Level: {}", character.class.as_str(), character.level));
+                ui.separator();
+
+                // Calculate equipment bonuses
+                let equipment_bonuses = item_db.calculate_equipment_bonuses(equipment);
+
+                // Base stats
+                ui.label(format!("Attack Power: {:.1} (+{:.1})",
+                    combat_stats.attack_power,
+                    equipment_bonuses.attack_power));
+                ui.label(format!("Defense: {:.1} (+{:.1})",
+                    combat_stats.defense,
+                    equipment_bonuses.defense));
+                ui.label(format!("Crit Chance: {:.1}% (+{:.1}%)",
+                    combat_stats.crit_chance * 100.0,
+                    equipment_bonuses.crit_chance * 100.0));
+
+                ui.add_space(5.0);
+
+                ui.label(format!("Max Health: {:.0} (+{:.0})",
+                    health.max,
+                    equipment_bonuses.max_health));
+                ui.label(format!("Max Mana: {:.0} (+{:.0})",
+                    mana.max,
+                    equipment_bonuses.max_mana));
+
+                ui.add_space(10.0);
+                ui.separator();
+                ui.label("Total Stats (with equipment):");
+                ui.label(format!("Attack Power: {:.1}",
+                    combat_stats.attack_power + equipment_bonuses.attack_power));
+                ui.label(format!("Defense: {:.1}",
+                    combat_stats.defense + equipment_bonuses.defense));
+                ui.label(format!("Crit Chance: {:.1}%",
+                    (combat_stats.crit_chance + equipment_bonuses.crit_chance) * 100.0));
+            });
+    }
 
     // Inventory window
     if ui_state.show_inventory {

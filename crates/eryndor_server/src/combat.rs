@@ -61,6 +61,7 @@ pub fn process_auto_attacks(
     ), With<Player>>,
     mut targets: Query<(&Position, &mut Health, &CombatStats), With<Enemy>>,
     all_enemies: Query<Entity, With<Enemy>>,
+    item_db: Res<crate::game_data::ItemDatabase>,
     time: Res<Time>,
 ) {
     for (attacker_entity, attacker_pos, current_target, attacker_stats, mut auto_attack, equipment) in &mut attackers {
@@ -131,15 +132,22 @@ pub fn process_auto_attacks(
 
         info!("IN RANGE! Attacking {:?} at distance {:.1}", target_entity, distance);
 
-        // Calculate damage: base attack * weapon multiplier
-        let base_damage = attacker_stats.attack_power * weapon_stats.damage_multiplier;
+        // Calculate equipment bonuses
+        let equipment_bonuses = item_db.calculate_equipment_bonuses(equipment);
+
+        // Apply equipment bonuses to combat stats
+        let total_attack = attacker_stats.attack_power + equipment_bonuses.attack_power;
+        let total_crit = attacker_stats.crit_chance + equipment_bonuses.crit_chance;
+
+        // Calculate damage: total attack * weapon multiplier
+        let base_damage = total_attack * weapon_stats.damage_multiplier;
 
         // Apply defense mitigation
         let mitigation = target_stats.defense / (target_stats.defense + 100.0);
         let mut damage = base_damage * (1.0 - mitigation);
 
         // Critical hit check
-        let is_crit = rand::random::<f32>() < attacker_stats.crit_chance;
+        let is_crit = rand::random::<f32>() < total_crit;
         if is_crit {
             damage *= 1.5;
         }
@@ -181,9 +189,11 @@ pub fn handle_use_ability(
         &mut Mana,
         &mut AbilityCooldowns,
         &LearnedAbilities,
+        &Equipment,
     )>,
     mut targets: Query<(&Position, &mut Health, &CombatStats), Without<Player>>,
     ability_db: Res<AbilityDatabase>,
+    item_db: Res<crate::game_data::ItemDatabase>,
     time: Res<Time>,
 ) {
     let Some(client_entity) = trigger.client_id.entity() else { return };
@@ -200,7 +210,7 @@ pub fn handle_use_ability(
     };
 
     // Get attacker data
-    let Ok((attacker_pos, current_target, stats, mut mana, mut cooldowns, learned)) =
+    let Ok((attacker_pos, current_target, stats, mut mana, mut cooldowns, learned, equipment)) =
         attackers.get_mut(char_entity) else { return };
 
     // Check if ability is learned
@@ -244,13 +254,20 @@ pub fn handle_use_ability(
         return;
     }
 
+    // Calculate equipment bonuses
+    let equipment_bonuses = item_db.calculate_equipment_bonuses(equipment);
+
+    // Apply equipment bonuses to combat stats
+    let total_attack = stats.attack_power + equipment_bonuses.attack_power;
+    let total_crit = stats.crit_chance + equipment_bonuses.crit_chance;
+
     // Calculate damage
-    let base_damage = stats.attack_power * ability.damage_multiplier;
+    let base_damage = total_attack * ability.damage_multiplier;
     let mitigation = target_stats.defense / (target_stats.defense + 100.0);
     let mut damage = base_damage * (1.0 - mitigation);
 
     // Critical hit check
-    let is_crit = rand::random::<f32>() < stats.crit_chance;
+    let is_crit = rand::random::<f32>() < total_crit;
     if is_crit {
         damage *= 1.5;
     }

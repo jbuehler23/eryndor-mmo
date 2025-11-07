@@ -250,6 +250,25 @@ pub fn handle_select_character(
         Ok((character, position, health, mana)) => {
             info!("Spawning character: {}", character.name);
 
+            // Load equipment, inventory, and quest log from database
+            let equipment = runtime.block_on(database::load_equipment(pool, request.character_id))
+                .unwrap_or_else(|e| {
+                    warn!("Failed to load equipment: {}, using defaults", e);
+                    Equipment::default()
+                });
+
+            let inventory = runtime.block_on(database::load_inventory(pool, request.character_id))
+                .unwrap_or_else(|e| {
+                    warn!("Failed to load inventory: {}, using defaults", e);
+                    Inventory::new(MAX_INVENTORY_SLOTS)
+                });
+
+            let quest_log = runtime.block_on(database::load_quest_log(pool, request.character_id))
+                .unwrap_or_else(|e| {
+                    warn!("Failed to load quest log: {}, using defaults", e);
+                    QuestLog::default()
+                });
+
             // Use character module to spawn character with all components
             let character_entity = crate::character::spawn_character_components(
                 &mut commands,
@@ -257,6 +276,9 @@ pub fn handle_select_character(
                 position,
                 health,
                 mana,
+                equipment,
+                inventory,
+                quest_log,
                 client_entity,
                 request.character_id,
             );
@@ -291,7 +313,18 @@ pub fn handle_client_disconnect(
     mut commands: Commands,
     mut disconnected: RemovedComponents<ConnectedClient>,
     authenticated: Query<&Authenticated>,
-    characters: Query<(Entity, &OwnedBy, &Character, &Position, &Health, &Mana, &CharacterDatabaseId)>,
+    characters: Query<(
+        Entity,
+        &OwnedBy,
+        &Character,
+        &Position,
+        &Health,
+        &Mana,
+        &CharacterDatabaseId,
+        &Equipment,
+        &Inventory,
+        &QuestLog,
+    )>,
     db: Res<DatabaseConnection>,
 ) {
     let Some(pool) = db.pool() else { return };
@@ -306,14 +339,16 @@ pub fn handle_client_disconnect(
 
         // Find and despawn their character using OwnedBy component
         let mut found_character = false;
-        for (entity, owned_by, character, position, health, mana, db_id) in characters.iter() {
+        for (entity, owned_by, character, position, health, mana, db_id, equipment, inventory, quest_log) in characters.iter() {
             if owned_by.0 == client_entity {
                 found_character = true;
                 info!("Saving character '{}' (DB ID: {}) at position ({:.1}, {:.1})",
                     character.name, db_id.0, position.0.x, position.0.y);
 
-                // Save character to database
+                // Save all character data to database
                 let runtime = tokio::runtime::Runtime::new().unwrap();
+
+                // Save basic character data
                 match runtime.block_on(database::save_character(
                     pool,
                     db_id.0,
@@ -321,8 +356,26 @@ pub fn handle_client_disconnect(
                     health,
                     mana,
                 )) {
-                    Ok(_) => info!("Character '{}' saved successfully", character.name),
+                    Ok(_) => info!("Character '{}' basic data saved", character.name),
                     Err(e) => error!("Failed to save character '{}': {}", character.name, e),
+                }
+
+                // Save equipment
+                match runtime.block_on(database::save_equipment(pool, db_id.0, equipment)) {
+                    Ok(_) => info!("Character '{}' equipment saved", character.name),
+                    Err(e) => error!("Failed to save equipment for '{}': {}", character.name, e),
+                }
+
+                // Save inventory
+                match runtime.block_on(database::save_inventory(pool, db_id.0, inventory)) {
+                    Ok(_) => info!("Character '{}' inventory saved", character.name),
+                    Err(e) => error!("Failed to save inventory for '{}': {}", character.name, e),
+                }
+
+                // Save quest log
+                match runtime.block_on(database::save_quest_log(pool, db_id.0, quest_log)) {
+                    Ok(_) => info!("Character '{}' quest log saved", character.name),
+                    Err(e) => error!("Failed to save quest log for '{}': {}", character.name, e),
                 }
 
                 // Despawn character - this will replicate to all clients
@@ -342,7 +395,18 @@ pub fn handle_disconnect_character(
     trigger: On<FromClient<DisconnectCharacterRequest>>,
     mut commands: Commands,
     clients: Query<&Authenticated>,
-    characters: Query<(Entity, &OwnedBy, &Character, &Position, &Health, &Mana, &CharacterDatabaseId)>,
+    characters: Query<(
+        Entity,
+        &OwnedBy,
+        &Character,
+        &Position,
+        &Health,
+        &Mana,
+        &CharacterDatabaseId,
+        &Equipment,
+        &Inventory,
+        &QuestLog,
+    )>,
     db: Res<DatabaseConnection>,
 ) {
     let Some(pool) = db.pool() else { return };
@@ -358,12 +422,14 @@ pub fn handle_disconnect_character(
     info!("Client {:?} (Account ID: {}) requested disconnect from character", client_entity, auth.account_id);
 
     // Find and save/despawn their character
-    for (entity, owned_by, character, position, health, mana, db_id) in characters.iter() {
+    for (entity, owned_by, character, position, health, mana, db_id, equipment, inventory, quest_log) in characters.iter() {
         if owned_by.0 == client_entity {
             info!("Disconnecting character '{}' (DB ID: {}) from client {:?}", character.name, db_id.0, client_entity);
 
-            // Save character to database
+            // Save all character data to database
             let runtime = tokio::runtime::Runtime::new().unwrap();
+
+            // Save basic character data
             match runtime.block_on(database::save_character(
                 pool,
                 db_id.0,
@@ -371,8 +437,26 @@ pub fn handle_disconnect_character(
                 health,
                 mana,
             )) {
-                Ok(_) => info!("Character '{}' saved successfully", character.name),
+                Ok(_) => info!("Character '{}' basic data saved", character.name),
                 Err(e) => error!("Failed to save character '{}': {}", character.name, e),
+            }
+
+            // Save equipment
+            match runtime.block_on(database::save_equipment(pool, db_id.0, equipment)) {
+                Ok(_) => info!("Character '{}' equipment saved", character.name),
+                Err(e) => error!("Failed to save equipment for '{}': {}", character.name, e),
+            }
+
+            // Save inventory
+            match runtime.block_on(database::save_inventory(pool, db_id.0, inventory)) {
+                Ok(_) => info!("Character '{}' inventory saved", character.name),
+                Err(e) => error!("Failed to save inventory for '{}': {}", character.name, e),
+            }
+
+            // Save quest log
+            match runtime.block_on(database::save_quest_log(pool, db_id.0, quest_log)) {
+                Ok(_) => info!("Character '{}' quest log saved", character.name),
+                Err(e) => error!("Failed to save quest log for '{}': {}", character.name, e),
             }
 
             // Despawn character - this will replicate to all clients

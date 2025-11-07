@@ -54,9 +54,30 @@ pub const ABILITY_HEAVY_SLASH: u32 = 3;
 // ITEM IDS
 // ============================================================================
 
+// Weapons
 pub const ITEM_DAGGER: u32 = 1;
 pub const ITEM_WAND: u32 = 2;
 pub const ITEM_SWORD: u32 = 3;
+
+// Armor - Helmets
+pub const ITEM_LEATHER_CAP: u32 = 10;
+pub const ITEM_CLOTH_HAT: u32 = 11;
+pub const ITEM_IRON_HELM: u32 = 12;
+
+// Armor - Chest
+pub const ITEM_LEATHER_TUNIC: u32 = 20;
+pub const ITEM_CLOTH_ROBE: u32 = 21;
+pub const ITEM_IRON_CHESTPLATE: u32 = 22;
+
+// Armor - Legs
+pub const ITEM_LEATHER_PANTS: u32 = 30;
+pub const ITEM_CLOTH_PANTS: u32 = 31;
+pub const ITEM_IRON_GREAVES: u32 = 32;
+
+// Armor - Boots
+pub const ITEM_LEATHER_BOOTS: u32 = 40;
+pub const ITEM_CLOTH_SHOES: u32 = 41;
+pub const ITEM_IRON_BOOTS: u32 = 42;
 
 // ============================================================================
 // QUEST IDS

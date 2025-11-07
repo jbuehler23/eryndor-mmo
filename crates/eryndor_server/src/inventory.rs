@@ -127,6 +127,7 @@ pub fn handle_equip_item(
     mut commands: Commands,
     clients: Query<&ActiveCharacterEntity>,
     mut players: Query<(&mut Inventory, &mut Equipment)>,
+    item_db: Res<crate::game_data::ItemDatabase>,
 ) {
     let Some(client_entity) = trigger.client_id.entity() else { return };
     let request = trigger.event();
@@ -141,16 +142,56 @@ pub fn handle_equip_item(
     // Get item from inventory
     if request.slot_index < inventory.slots.len() {
         if let Some(item_stack) = &inventory.slots[request.slot_index] {
-            // For now, just equip as weapon (POC)
-            equipment.weapon = Some(item_stack.item_id);
+            let item_id = item_stack.item_id;
 
-            commands.server_trigger(ToClients {
-                mode: SendMode::Direct(ClientId::Client(client_entity)),
-                message: NotificationEvent {
-                    message: "Weapon equipped!".to_string(),
-                    notification_type: NotificationType::Success,
-                },
-            });
+            // Look up item definition to determine slot
+            if let Some(item_def) = item_db.items.get(&item_id) {
+                use crate::game_data::ItemType;
+
+                let (slot_name, equipped) = match item_def.item_type {
+                    ItemType::Weapon => {
+                        equipment.weapon = Some(item_id);
+                        ("Weapon", true)
+                    }
+                    ItemType::Helmet => {
+                        equipment.helmet = Some(item_id);
+                        ("Helmet", true)
+                    }
+                    ItemType::Chest => {
+                        equipment.chest = Some(item_id);
+                        ("Chest", true)
+                    }
+                    ItemType::Legs => {
+                        equipment.legs = Some(item_id);
+                        ("Legs", true)
+                    }
+                    ItemType::Boots => {
+                        equipment.boots = Some(item_id);
+                        ("Boots", true)
+                    }
+                    _ => {
+                        commands.server_trigger(ToClients {
+                            mode: SendMode::Direct(ClientId::Client(client_entity)),
+                            message: NotificationEvent {
+                                message: "This item cannot be equipped!".to_string(),
+                                notification_type: NotificationType::Warning,
+                            },
+                        });
+                        return;
+                    }
+                };
+
+                if equipped {
+                    info!("Player equipped {} in {} slot", item_def.name, slot_name);
+                    commands.server_trigger(ToClients {
+                        mode: SendMode::Direct(ClientId::Client(client_entity)),
+                        message: NotificationEvent {
+                            message: format!("{} equipped!", item_def.name),
+                            notification_type: NotificationType::Success,
+                        },
+                    });
+                }
+            }
         }
     }
 }
