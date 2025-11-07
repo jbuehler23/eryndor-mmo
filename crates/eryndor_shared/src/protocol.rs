@@ -86,6 +86,22 @@ pub struct EquipItemRequest {
     pub slot_index: usize,
 }
 
+/// Unequip item from equipment slot
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct UnequipItemRequest {
+    pub slot: EquipmentSlot,
+}
+
+/// Equipment slot enum
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EquipmentSlot {
+    Weapon,
+    Helmet,
+    Chest,
+    Legs,
+    Boots,
+}
+
 /// Interact with NPC
 #[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
 pub struct InteractNpcRequest {

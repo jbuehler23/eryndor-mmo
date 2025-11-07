@@ -272,27 +272,37 @@ pub fn game_ui(
                 ui.heading("Equipment Slots");
                 ui.separator();
 
-                // Helper function to show an equipment slot
-                let show_slot = |ui: &mut egui::Ui, label: &str, item_id: Option<u32>| {
+                // Helper function to show an equipment slot with context menu
+                let mut show_slot = |ui: &mut egui::Ui, label: &str, item_id: Option<u32>, slot: EquipmentSlot| {
                     ui.horizontal(|ui| {
                         ui.label(format!("{}:", label));
-                        if let Some(id) = item_id {
+                        let response = if let Some(id) = item_id {
                             let item_name = item_db.get_item_name(id);
-                            ui.label(&item_name);
+                            ui.label(&item_name)
                         } else {
-                            ui.label("<Empty>");
+                            ui.label("<Empty>")
+                        };
+
+                        // Add context menu for unequipping
+                        if item_id.is_some() {
+                            response.context_menu(|ui| {
+                                if ui.button("Unequip").clicked() {
+                                    commands.client_trigger(UnequipItemRequest { slot });
+                                    ui.close_menu();
+                                }
+                            });
                         }
                     });
                 };
 
-                show_slot(ui, "Weapon", equipment.weapon);
-                show_slot(ui, "Helmet", equipment.helmet);
-                show_slot(ui, "Chest", equipment.chest);
-                show_slot(ui, "Legs", equipment.legs);
-                show_slot(ui, "Boots", equipment.boots);
+                show_slot(ui, "Weapon", equipment.weapon, EquipmentSlot::Weapon);
+                show_slot(ui, "Helmet", equipment.helmet, EquipmentSlot::Helmet);
+                show_slot(ui, "Chest", equipment.chest, EquipmentSlot::Chest);
+                show_slot(ui, "Legs", equipment.legs, EquipmentSlot::Legs);
+                show_slot(ui, "Boots", equipment.boots, EquipmentSlot::Boots);
 
                 ui.add_space(10.0);
-                ui.label("Right-click items in inventory to equip them.");
+                ui.label("Right-click equipped items to unequip them.");
             });
     }
 
@@ -347,11 +357,42 @@ pub fn game_ui(
         egui::Window::new("Inventory")
             .collapsible(false)
             .show(ctx, |ui| {
+                ui.label("Right-click items to equip/unequip");
+                ui.separator();
+
+                // Build set of equipped item IDs to hide them from inventory
+                let mut equipped_ids = std::collections::HashSet::new();
+                if let Some(id) = equipment.weapon { equipped_ids.insert(id); }
+                if let Some(id) = equipment.helmet { equipped_ids.insert(id); }
+                if let Some(id) = equipment.chest { equipped_ids.insert(id); }
+                if let Some(id) = equipment.legs { equipped_ids.insert(id); }
+                if let Some(id) = equipment.boots { equipped_ids.insert(id); }
+
                 egui::Grid::new("inventory_grid").show(ui, |ui| {
                     for (i, slot) in inventory.slots.iter().enumerate() {
                         if let Some(item_stack) = slot {
-                            if ui.button(format!("Item {}\nx{}", item_stack.item_id, item_stack.quantity)).clicked() {
-                                // Right-click to drop (simplified for POC)
+                            // Hide equipped items from inventory display
+                            if !equipped_ids.contains(&item_stack.item_id) {
+                                let item_name = item_db.get_item_name(item_stack.item_id);
+                                let response = ui.button(format!("{}\nx{}", item_name, item_stack.quantity));
+
+                                // Add context menu for equipping/dropping
+                                response.context_menu(|ui| {
+                                    if ui.button("Equip").clicked() {
+                                        commands.client_trigger(EquipItemRequest {
+                                            slot_index: i,
+                                        });
+                                        ui.close_menu();
+                                    }
+                                    if ui.button("Drop").clicked() {
+                                        commands.client_trigger(DropItemRequest {
+                                            slot_index: i,
+                                        });
+                                        ui.close_menu();
+                                    }
+                                });
+                            } else {
+                                ui.label("[Equipped]");
                             }
                         } else {
                             ui.label("Empty");

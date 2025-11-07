@@ -148,26 +148,31 @@ pub fn handle_equip_item(
             if let Some(item_def) = item_db.items.get(&item_id) {
                 use crate::game_data::ItemType;
 
-                let (slot_name, equipped) = match item_def.item_type {
+                let (slot_name, equipped, old_item) = match item_def.item_type {
                     ItemType::Weapon => {
+                        let old = equipment.weapon.take();
                         equipment.weapon = Some(item_id);
-                        ("Weapon", true)
+                        ("Weapon", true, old)
                     }
                     ItemType::Helmet => {
+                        let old = equipment.helmet.take();
                         equipment.helmet = Some(item_id);
-                        ("Helmet", true)
+                        ("Helmet", true, old)
                     }
                     ItemType::Chest => {
+                        let old = equipment.chest.take();
                         equipment.chest = Some(item_id);
-                        ("Chest", true)
+                        ("Chest", true, old)
                     }
                     ItemType::Legs => {
+                        let old = equipment.legs.take();
                         equipment.legs = Some(item_id);
-                        ("Legs", true)
+                        ("Legs", true, old)
                     }
                     ItemType::Boots => {
+                        let old = equipment.boots.take();
                         equipment.boots = Some(item_id);
-                        ("Boots", true)
+                        ("Boots", true, old)
                     }
                     _ => {
                         commands.server_trigger(ToClients {
@@ -182,6 +187,12 @@ pub fn handle_equip_item(
                 };
 
                 if equipped {
+                    // Put the old item back in the inventory slot (swap)
+                    inventory.slots[request.slot_index] = old_item.map(|id| ItemStack {
+                        item_id: id,
+                        quantity: 1,
+                    });
+
                     info!("Player equipped {} in {} slot", item_def.name, slot_name);
                     commands.server_trigger(ToClients {
                         mode: SendMode::Direct(ClientId::Client(client_entity)),
@@ -192,6 +203,72 @@ pub fn handle_equip_item(
                     });
                 }
             }
+        }
+    }
+}
+
+pub fn handle_unequip_item(
+    trigger: On<FromClient<UnequipItemRequest>>,
+    mut commands: Commands,
+    clients: Query<&ActiveCharacterEntity>,
+    mut players: Query<(&mut Inventory, &mut Equipment)>,
+    item_db: Res<crate::game_data::ItemDatabase>,
+) {
+    let Some(client_entity) = trigger.client_id.entity() else { return };
+    let request = trigger.event();
+
+    // Get client's character
+    let Ok(active_char) = clients.get(client_entity) else { return };
+    let char_entity = active_char.0;
+
+    // Get player data
+    let Ok((mut inventory, mut equipment)) = players.get_mut(char_entity) else { return };
+
+    // Get the item ID from the equipment slot
+    let item_id_opt = match request.slot {
+        EquipmentSlot::Weapon => equipment.weapon.take(),
+        EquipmentSlot::Helmet => equipment.helmet.take(),
+        EquipmentSlot::Chest => equipment.chest.take(),
+        EquipmentSlot::Legs => equipment.legs.take(),
+        EquipmentSlot::Boots => equipment.boots.take(),
+    };
+
+    if let Some(item_id) = item_id_opt {
+        // Try to add the item back to inventory
+        let item_stack = ItemStack {
+            item_id,
+            quantity: 1,
+        };
+        if inventory.add_item(item_stack) {
+            let item_name = item_db.items.get(&item_id)
+                .map(|i| i.name.clone())
+                .unwrap_or_else(|| format!("Item {}", item_id));
+
+            info!("Player unequipped {} from {:?} slot", item_name, request.slot);
+            commands.server_trigger(ToClients {
+                mode: SendMode::Direct(ClientId::Client(client_entity)),
+                message: NotificationEvent {
+                    message: format!("{} unequipped!", item_name),
+                    notification_type: NotificationType::Success,
+                },
+            });
+        } else {
+            // Inventory is full - re-equip the item
+            match request.slot {
+                EquipmentSlot::Weapon => equipment.weapon = Some(item_id),
+                EquipmentSlot::Helmet => equipment.helmet = Some(item_id),
+                EquipmentSlot::Chest => equipment.chest = Some(item_id),
+                EquipmentSlot::Legs => equipment.legs = Some(item_id),
+                EquipmentSlot::Boots => equipment.boots = Some(item_id),
+            }
+
+            commands.server_trigger(ToClients {
+                mode: SendMode::Direct(ClientId::Client(client_entity)),
+                message: NotificationEvent {
+                    message: "Inventory is full!".to_string(),
+                    notification_type: NotificationType::Warning,
+                },
+            });
         }
     }
 }

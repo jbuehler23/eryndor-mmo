@@ -74,6 +74,7 @@ fn main() {
         .add_mapped_client_event::<PickupItemRequest>(Channel::Ordered)
         .add_client_event::<DropItemRequest>(Channel::Ordered)
         .add_client_event::<EquipItemRequest>(Channel::Ordered)
+        .add_client_event::<UnequipItemRequest>(Channel::Ordered)
         .add_mapped_client_event::<InteractNpcRequest>(Channel::Ordered)
         .add_client_event::<AcceptQuestRequest>(Channel::Ordered)
         .add_client_event::<CompleteQuestRequest>(Channel::Ordered)
