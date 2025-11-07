@@ -121,9 +121,8 @@ pub fn spawn_character_components(
         InCombat(false),
     )).id();
 
-    // Give starting weapon based on class
-    let mut equipment = Equipment::default();
-    equipment.weapon = Some(class.starting_weapon());
+    // Equipment starts empty - players must complete the first quest to get their weapon
+    let equipment = Equipment::default();
 
     commands.entity(character_entity).insert((
         Inventory::new(MAX_INVENTORY_SLOTS),

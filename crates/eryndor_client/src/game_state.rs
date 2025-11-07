@@ -199,16 +199,16 @@ pub fn handle_character_despawn(
     }
 }
 
-/// Cleanup all replicated entities when leaving InGame state
-/// This prevents stale entities from previous sessions
+/// Cleanup player entities when leaving InGame state
+/// World entities (NPCs, enemies, items) persist across character sessions
 pub fn cleanup_game_entities(
     mut commands: Commands,
-    replicated_entities: Query<Entity, With<Replicated>>,
+    player_entities: Query<Entity, (With<Replicated>, With<Player>)>,
 ) {
-    let count = replicated_entities.iter().count();
+    let count = player_entities.iter().count();
     if count > 0 {
-        info!("Cleaning up {} replicated entities", count);
-        for entity in &replicated_entities {
+        info!("Cleaning up {} player entities", count);
+        for entity in &player_entities {
             commands.entity(entity).despawn();
         }
     }

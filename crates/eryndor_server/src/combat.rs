@@ -69,6 +69,11 @@ pub fn process_auto_attacks(
             continue;
         }
 
+        // Debug: Log that we're processing auto-attack
+        if auto_attack.cooldown_timer <= 0.0 {
+            info!("Processing auto-attack for {:?} - weapon: {:?}", attacker_entity, equipment.weapon);
+        }
+
         // Tick down cooldown timer
         auto_attack.cooldown_timer -= time.delta_secs();
 
@@ -93,24 +98,38 @@ pub fn process_auto_attacks(
         };
 
         // Get weapon stats from equipped weapon (default to unarmed/fists if no weapon)
-        let weapon_stats = equipment.weapon
-            .and_then(|item_id| crate::weapon::WeaponType::from_item_id(item_id))
-            .map(|weapon_type| weapon_type.stats())
-            .unwrap_or_else(|| {
-                // Unarmed/fists - weak but fast
+        let weapon_stats = if let Some(weapon_id) = equipment.weapon {
+            // Has equipped weapon
+            if let Some(weapon_type) = crate::weapon::WeaponType::from_item_id(weapon_id) {
+                weapon_type.stats()
+            } else {
+                warn!("Unknown weapon item ID: {}, falling back to unarmed", weapon_id);
+                // Unarmed fallback
                 crate::weapon::WeaponStats {
-                    weapon_type: crate::weapon::WeaponType::Dagger, // Use dagger as base
+                    weapon_type: crate::weapon::WeaponType::Dagger,
                     attack_speed: 1.5,
-                    range: 20.0,
+                    range: MELEE_RANGE,
                     damage_multiplier: 0.5,
                 }
-            });
+            }
+        } else {
+            // No weapon equipped - use unarmed combat
+            crate::weapon::WeaponStats {
+                weapon_type: crate::weapon::WeaponType::Dagger,
+                attack_speed: 1.5,
+                range: MELEE_RANGE,
+                damage_multiplier: 0.5,
+            }
+        };
 
         // Check if target is in range
         let distance = attacker_pos.0.distance(target_pos.0);
         if distance > weapon_stats.range {
+            info!("Target {:?} out of range: {:.1} > {:.1}", target_entity, distance, weapon_stats.range);
             continue;
         }
+
+        info!("IN RANGE! Attacking {:?} at distance {:.1}", target_entity, distance);
 
         // Calculate damage: base attack * weapon multiplier
         let base_damage = attacker_stats.attack_power * weapon_stats.damage_multiplier;

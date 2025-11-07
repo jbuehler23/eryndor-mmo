@@ -347,16 +347,20 @@ pub async fn load_equipment(pool: &SqlitePool, character_id: i64) -> Result<Equi
 
     match result {
         Ok(Some(row)) => {
-            Ok(Equipment {
+            let equipment = Equipment {
                 weapon: row.get(0),
                 helmet: row.get(1),
                 chest: row.get(2),
                 legs: row.get(3),
                 boots: row.get(4),
-            })
+            };
+            info!("Loaded equipment for character {}: weapon={:?}, helmet={:?}, chest={:?}, legs={:?}, boots={:?}",
+                character_id, equipment.weapon, equipment.helmet, equipment.chest, equipment.legs, equipment.boots);
+            Ok(equipment)
         }
         Ok(None) => {
             // No equipment row exists, return empty equipment
+            info!("No equipment found for character {} - using default", character_id);
             Ok(Equipment::default())
         }
         Err(e) => Err(format!("Failed to load equipment: {}", e)),
@@ -364,6 +368,9 @@ pub async fn load_equipment(pool: &SqlitePool, character_id: i64) -> Result<Equi
 }
 
 pub async fn save_equipment(pool: &SqlitePool, character_id: i64, equipment: &Equipment) -> Result<(), String> {
+    info!("Saving equipment for character {}: weapon={:?}, helmet={:?}, chest={:?}, legs={:?}, boots={:?}",
+        character_id, equipment.weapon, equipment.helmet, equipment.chest, equipment.legs, equipment.boots);
+
     let result = sqlx::query(
         "INSERT INTO character_equipment (character_id, weapon, helmet, chest, legs, boots)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6)
@@ -380,7 +387,10 @@ pub async fn save_equipment(pool: &SqlitePool, character_id: i64, equipment: &Eq
     .await;
 
     match result {
-        Ok(_) => Ok(()),
+        Ok(_) => {
+            info!("Successfully saved equipment for character {}", character_id);
+            Ok(())
+        }
         Err(e) => Err(format!("Failed to save equipment: {}", e)),
     }
 }
@@ -400,6 +410,8 @@ pub async fn load_inventory(pool: &SqlitePool, character_id: i64) -> Result<Inve
     match result {
         Ok(rows) => {
             let mut inventory = Inventory::new(20); // Default 20 slots
+            let item_count = rows.len();
+
             for row in rows {
                 let slot_index: i32 = row.get(0);
                 let item_id: i32 = row.get(1);
@@ -412,6 +424,8 @@ pub async fn load_inventory(pool: &SqlitePool, character_id: i64) -> Result<Inve
                     });
                 }
             }
+
+            info!("Loaded {} items from inventory for character {}", item_count, character_id);
             Ok(inventory)
         }
         Err(e) => Err(format!("Failed to load inventory: {}", e)),
@@ -419,6 +433,10 @@ pub async fn load_inventory(pool: &SqlitePool, character_id: i64) -> Result<Inve
 }
 
 pub async fn save_inventory(pool: &SqlitePool, character_id: i64, inventory: &Inventory) -> Result<(), String> {
+    // Count non-empty slots
+    let item_count = inventory.slots.iter().filter(|s| s.is_some()).count();
+    info!("Saving {} items to inventory for character {}", item_count, character_id);
+
     // Delete all existing inventory items for this character
     let delete_result = sqlx::query("DELETE FROM character_inventory WHERE character_id = ?1")
         .bind(character_id)
@@ -449,6 +467,7 @@ pub async fn save_inventory(pool: &SqlitePool, character_id: i64, inventory: &In
         }
     }
 
+    info!("Successfully saved inventory for character {}", character_id);
     Ok(())
 }
 
@@ -471,6 +490,7 @@ pub async fn load_learned_abilities(pool: &SqlitePool, character_id: i64) -> Res
                 let ability_id: i32 = row.get(0);
                 abilities.learn(ability_id as u32);
             }
+            info!("Loaded {} learned abilities for character {}", abilities.abilities.len(), character_id);
             Ok(abilities)
         }
         Err(e) => Err(format!("Failed to load learned abilities: {}", e)),

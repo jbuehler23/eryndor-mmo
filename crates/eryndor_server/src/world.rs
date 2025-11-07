@@ -63,7 +63,7 @@ pub fn spawn_world(mut commands: Commands) {
             // Add spawn point for respawn system
             crate::spawn::SpawnPoint {
                 position: *pos,
-                respawn_delay: 30.0, // 30 seconds
+                respawn_delay: 5.0, // 5 seconds
             },
         ));
 
