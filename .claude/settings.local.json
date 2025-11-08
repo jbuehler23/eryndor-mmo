@@ -21,7 +21,8 @@
       "Bash(find:*)",
       "Bash(cat:*)",
       "WebFetch(domain:cbournhonesque.github.io)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(sqlite3:*)"
     ],
     "deny": [],
     "ask": []

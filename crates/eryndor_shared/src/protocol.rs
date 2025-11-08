@@ -259,3 +259,28 @@ pub struct QuestDialogueEvent {
     pub objectives_text: String,
     pub rewards_text: String,
 }
+
+/// Level up event - notifies client of level up
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct LevelUpEvent {
+    pub new_level: u32,
+    pub health_increase: f32,
+    pub mana_increase: f32,
+    pub attack_increase: f32,
+    pub defense_increase: f32,
+}
+
+/// Proficiency level up event
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct ProficiencyLevelUpEvent {
+    pub proficiency_type: ProficiencyType,
+    pub weapon_or_armor: String,
+    pub new_level: u32,
+    pub bonus_info: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
+pub enum ProficiencyType {
+    Weapon,
+    Armor,
+}

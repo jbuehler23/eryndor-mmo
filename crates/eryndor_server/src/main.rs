@@ -48,6 +48,11 @@ fn main() {
         .replicate::<Character>()
         .replicate::<OwnedBy>()
         .replicate::<SharedPosition>()
+        .replicate::<Experience>()
+        .replicate::<WeaponProficiencyExp>()
+        .replicate::<ArmorProficiency>()
+        .replicate::<ArmorProficiencyExp>()
+        .replicate::<UnlockedArmorPassives>()
         .replicate::<Velocity>()
         .replicate::<MoveSpeed>()
         .replicate::<Health>()
@@ -99,6 +104,8 @@ fn main() {
         .add_mapped_server_event::<DeathEvent>(Channel::Ordered)
         .add_server_event::<NotificationEvent>(Channel::Ordered)
         .add_server_event::<QuestDialogueEvent>(Channel::Ordered)
+        .add_server_event::<LevelUpEvent>(Channel::Ordered)
+        .add_server_event::<ProficiencyLevelUpEvent>(Channel::Ordered)
         // Register observers for client triggers
         .add_observer(auth::handle_login)
         .add_observer(auth::handle_create_account)
@@ -134,6 +141,8 @@ fn main() {
             combat::process_auto_attacks,
             combat::update_ability_cooldowns,
             combat::check_deaths,
+            combat::check_level_ups,
+            combat::check_weapon_proficiency_level_ups,
             combat::enemy_ai,
             // Quests
             quest::update_quest_progress,

@@ -535,6 +535,131 @@ pub enum InteractionType {
 }
 
 // ============================================================================
+// PROGRESSION COMPONENTS
+// ============================================================================
+
+/// Experience and leveling
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+pub struct Experience {
+    pub current_xp: u32,
+    pub xp_to_next_level: u32,
+}
+
+impl Experience {
+    pub fn new(level: u32) -> Self {
+        Self {
+            current_xp: 0,
+            xp_to_next_level: Self::xp_for_level(level + 1),
+        }
+    }
+
+    /// Calculate XP needed for a given level
+    /// Formula: 100 * level^1.5
+    pub fn xp_for_level(level: u32) -> u32 {
+        (100.0 * (level as f32).powf(1.5)) as u32
+    }
+
+    /// Add XP and return true if leveled up
+    pub fn add_xp(&mut self, amount: u32, current_level: u32) -> bool {
+        self.current_xp += amount;
+        if self.current_xp >= self.xp_to_next_level {
+            self.current_xp -= self.xp_to_next_level;
+            self.xp_to_next_level = Self::xp_for_level(current_level + 2);
+            true
+        } else {
+            false
+        }
+    }
+}
+
+/// Weapon proficiency experience tracking
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+pub struct WeaponProficiencyExp {
+    pub sword_xp: u32,
+    pub dagger_xp: u32,
+    pub staff_xp: u32,
+    pub mace_xp: u32,
+    pub bow_xp: u32,
+    pub axe_xp: u32,
+}
+
+impl Default for WeaponProficiencyExp {
+    fn default() -> Self {
+        Self {
+            sword_xp: 0,
+            dagger_xp: 0,
+            staff_xp: 0,
+            mace_xp: 0,
+            bow_xp: 0,
+            axe_xp: 0,
+        }
+    }
+}
+
+impl WeaponProficiencyExp {
+    /// Calculate XP required for a given weapon proficiency level
+    /// Similar scaling to character XP but faster progression
+    pub fn xp_for_level(level: u32) -> u32 {
+        if level <= 1 {
+            0
+        } else {
+            // Weapon proficiency levels up faster than character levels
+            50 * level * level
+        }
+    }
+}
+
+/// Armor proficiency levels
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+pub struct ArmorProficiency {
+    pub light: u32,
+    pub medium: u32,
+    pub heavy: u32,
+}
+
+impl Default for ArmorProficiency {
+    fn default() -> Self {
+        Self {
+            light: 1,
+            medium: 1,
+            heavy: 1,
+        }
+    }
+}
+
+/// Armor proficiency experience tracking
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+pub struct ArmorProficiencyExp {
+    pub light_xp: u32,
+    pub medium_xp: u32,
+    pub heavy_xp: u32,
+}
+
+impl Default for ArmorProficiencyExp {
+    fn default() -> Self {
+        Self {
+            light_xp: 0,
+            medium_xp: 0,
+            heavy_xp: 0,
+        }
+    }
+}
+
+/// Unlocked armor passive skills
+#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+pub struct UnlockedArmorPassives {
+    pub passives: HashSet<u32>,
+}
+
+impl Default for UnlockedArmorPassives {
+    fn default() -> Self {
+        Self {
+            passives: HashSet::new(),
+        }
+    }
+}
+
+// ============================================================================
 // WORLD ITEM COMPONENTS
 // ============================================================================
 

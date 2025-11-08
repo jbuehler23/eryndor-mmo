@@ -58,13 +58,14 @@ pub fn process_auto_attacks(
         &CombatStats,
         &mut AutoAttack,
         &Equipment,
+        &mut WeaponProficiencyExp,
     ), With<Player>>,
     mut targets: Query<(&Position, &mut Health, &CombatStats), With<Enemy>>,
     all_enemies: Query<Entity, With<Enemy>>,
     item_db: Res<crate::game_data::ItemDatabase>,
     time: Res<Time>,
 ) {
-    for (attacker_entity, attacker_pos, current_target, attacker_stats, mut auto_attack, equipment) in &mut attackers {
+    for (attacker_entity, attacker_pos, current_target, attacker_stats, mut auto_attack, equipment, mut weapon_exp) in &mut attackers {
         // Skip if auto-attack is disabled
         if !auto_attack.enabled {
             continue;
@@ -163,6 +164,35 @@ pub fn process_auto_attacks(
             "Auto-attack: {:?} hit {:?} for {:.1} damage (crit: {})",
             attacker_entity, target_entity, damage, is_crit
         );
+
+        // Award weapon proficiency XP for successful attack
+        let weapon_xp_gain = 5; // TODO: Make this dynamic based on enemy level/difficulty
+        match weapon_stats.weapon_type {
+            crate::weapon::WeaponType::Sword => {
+                weapon_exp.sword_xp += weapon_xp_gain;
+                info!("Awarded {} Sword XP (total: {})", weapon_xp_gain, weapon_exp.sword_xp);
+            },
+            crate::weapon::WeaponType::Dagger => {
+                weapon_exp.dagger_xp += weapon_xp_gain;
+                info!("Awarded {} Dagger XP (total: {})", weapon_xp_gain, weapon_exp.dagger_xp);
+            },
+            crate::weapon::WeaponType::Staff => {
+                weapon_exp.staff_xp += weapon_xp_gain;
+                info!("Awarded {} Staff XP (total: {})", weapon_xp_gain, weapon_exp.staff_xp);
+            },
+            crate::weapon::WeaponType::Mace => {
+                weapon_exp.mace_xp += weapon_xp_gain;
+                info!("Awarded {} Mace XP (total: {})", weapon_xp_gain, weapon_exp.mace_xp);
+            },
+            crate::weapon::WeaponType::Bow => {
+                weapon_exp.bow_xp += weapon_xp_gain;
+                info!("Awarded {} Bow XP (total: {})", weapon_xp_gain, weapon_exp.bow_xp);
+            },
+            crate::weapon::WeaponType::Axe => {
+                weapon_exp.axe_xp += weapon_xp_gain;
+                info!("Awarded {} Axe XP (total: {})", weapon_xp_gain, weapon_exp.axe_xp);
+            },
+        }
 
         // Send combat event to all clients for VFX
         commands.server_trigger(ToClients {
@@ -316,7 +346,14 @@ pub fn update_ability_cooldowns(
 pub fn check_deaths(
     mut commands: Commands,
     query: Query<(Entity, &Health, Option<&Enemy>, Option<&Player>), Changed<Health>>,
-    mut players: Query<(&CurrentTarget, &mut AutoAttack, &mut InCombat)>,
+    mut players: Query<(
+        Entity,
+        &CurrentTarget,
+        &mut AutoAttack,
+        &mut InCombat,
+        &Character,
+        &mut Experience,
+    )>,
 ) {
     for (entity, health, is_enemy, is_player) in &query {
         if health.is_dead() {
@@ -330,9 +367,22 @@ pub fn check_deaths(
             });
 
             if is_enemy.is_some() {
-                // Exit combat for any players targeting this enemy
-                for (current_target, mut auto_attack, mut in_combat) in &mut players {
+                // Grant XP to all players who had this enemy as their target
+                for (_player_entity, current_target, mut auto_attack, mut in_combat, character, mut experience) in &mut players {
                     if current_target.0 == Some(entity) {
+                        // Grant 50 base XP for killing an enemy
+                        let xp_gained = 50;
+                        let leveled_up = experience.add_xp(xp_gained, character.level);
+
+                        info!("{} gained {} XP for killing enemy", character.name, xp_gained);
+
+                        // If the player leveled up, trigger level-up event
+                        if leveled_up {
+                            // Note: Level-up will be handled in the check_level_ups system
+                            info!("{} leveled up!", character.name);
+                        }
+
+                        // Exit combat
                         auto_attack.enabled = false;
                         in_combat.0 = false;
                         info!("Player exited combat - target died");
@@ -349,6 +399,116 @@ pub fn check_deaths(
                 info!("Player respawned");
             }
         }
+    }
+}
+
+/// Check for level-ups and apply stat increases
+pub fn check_level_ups(
+    mut commands: Commands,
+    mut query: Query<(
+        Entity,
+        &mut Character,
+        &mut Experience,
+        &mut Health,
+        &mut Mana,
+        &mut CombatStats,
+    ), Changed<Experience>>,
+) {
+    for (_entity, mut character, mut experience, mut health, mut mana, mut stats) in &mut query {
+        // Check if player should level up
+        while experience.current_xp >= experience.xp_to_next_level {
+            // Level up!
+            let old_level = character.level;
+            character.level += 1;
+
+            // Calculate stat increases based on class
+            let (health_increase, mana_increase, attack_increase, defense_increase) = match character.class {
+                CharacterClass::Knight => (20.0, 5.0, 3.0, 2.0),
+                CharacterClass::Mage => (10.0, 20.0, 2.0, 1.0),
+                CharacterClass::Rogue => (15.0, 10.0, 4.0, 1.5),
+            };
+
+            // Apply stat increases
+            health.max += health_increase;
+            health.current = health.max; // Fully heal on level-up
+            mana.max += mana_increase;
+            mana.current = mana.max; // Restore mana on level-up
+            stats.attack_power += attack_increase;
+            stats.defense += defense_increase;
+
+            // Update experience thresholds
+            experience.current_xp -= experience.xp_to_next_level;
+            experience.xp_to_next_level = Experience::xp_for_level(character.level + 1);
+
+            info!(
+                "{} leveled up! {} -> {} (HP: +{:.0}, MP: +{:.0}, ATK: +{:.0}, DEF: +{:.0})",
+                character.name, old_level, character.level,
+                health_increase, mana_increase, attack_increase, defense_increase
+            );
+
+            // Send level-up event to all clients (they can filter by character)
+            commands.server_trigger(ToClients {
+                mode: SendMode::Broadcast,
+                message: LevelUpEvent {
+                    new_level: character.level,
+                    health_increase,
+                    mana_increase,
+                    attack_increase,
+                    defense_increase,
+                },
+            });
+        }
+    }
+}
+
+/// Check for weapon proficiency level-ups
+pub fn check_weapon_proficiency_level_ups(
+    mut commands: Commands,
+    mut query: Query<(
+        Entity,
+        &Character,
+        &mut WeaponProficiency,
+        &mut WeaponProficiencyExp,
+    ), Changed<WeaponProficiencyExp>>,
+) {
+    for (_entity, character, mut proficiency, mut prof_exp) in &mut query {
+        info!("Checking weapon proficiency level-ups for {} - Dagger: {}/{}",
+            character.name, prof_exp.dagger_xp, WeaponProficiencyExp::xp_for_level(proficiency.dagger + 1));
+        // Helper macro to check level-up for a weapon type
+        macro_rules! check_weapon_level_up {
+            ($weapon_name:expr, $xp:expr, $level:expr) => {
+                while $xp >= WeaponProficiencyExp::xp_for_level($level + 1) {
+                    $level += 1;
+                    let bonus_info = match $level {
+                        10 => format!("+2% damage with {}", $weapon_name),
+                        20 => format!("+5% attack speed with {}", $weapon_name),
+                        30 => format!("+3% crit chance with {}", $weapon_name),
+                        40 => format!("+4% damage with {}", $weapon_name),
+                        50 => format!("+10% attack speed with {}", $weapon_name),
+                        _ => format!("Improved mastery with {}", $weapon_name),
+                    };
+
+                    info!("{} - {} proficiency level up! Level {}", character.name, $weapon_name, $level);
+
+                    commands.server_trigger(ToClients {
+                        mode: SendMode::Broadcast,
+                        message: ProficiencyLevelUpEvent {
+                            proficiency_type: ProficiencyType::Weapon,
+                            weapon_or_armor: $weapon_name.to_string(),
+                            new_level: $level,
+                            bonus_info,
+                        },
+                    });
+                }
+            };
+        }
+
+        check_weapon_level_up!("Sword", prof_exp.sword_xp, proficiency.sword);
+        check_weapon_level_up!("Dagger", prof_exp.dagger_xp, proficiency.dagger);
+        check_weapon_level_up!("Staff", prof_exp.staff_xp, proficiency.staff);
+        check_weapon_level_up!("Mace", prof_exp.mace_xp, proficiency.mace);
+        check_weapon_level_up!("Bow", prof_exp.bow_xp, proficiency.bow);
+        check_weapon_level_up!("Axe", prof_exp.axe_xp, proficiency.axe);
     }
 }
 

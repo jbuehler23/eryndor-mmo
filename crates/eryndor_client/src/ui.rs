@@ -171,6 +171,7 @@ pub fn game_ui(
     mut client_state: ResMut<MyClientState>,
     mut commands: Commands,
     player_query: Query<(Entity, &Health, &Mana, &CurrentTarget, &Hotbar, &Inventory, &Equipment, &CombatStats, &LearnedAbilities, &QuestLog, &Character), With<Player>>,
+    progression_query: Query<(&Experience, &WeaponProficiency, &ArmorProficiency)>,
     target_query: Query<(&Health, Option<&Character>, Option<&NpcName>)>,
     item_db: Res<crate::item_cache::ClientItemDatabase>,
 ) {
@@ -182,6 +183,11 @@ pub fn game_ui(
 
     // Silently wait for entity to be replicated with all components
     let Ok((_, health, mana, current_target, hotbar, inventory, equipment, combat_stats, _learned_abilities, quest_log, character)) = player_query.get(player_entity) else {
+        return
+    };
+
+    // Get progression components (separate query to avoid hitting Bevy's query limit)
+    let Ok((experience, weapon_prof, armor_prof)) = progression_query.get(player_entity) else {
         return
     };
 
@@ -315,6 +321,14 @@ pub fn game_ui(
             .show(ctx, |ui| {
                 ui.heading(&character.name);
                 ui.label(format!("Class: {} | Level: {}", character.class.as_str(), character.level));
+
+                // XP Progress Bar
+                ui.add_space(5.0);
+                let xp_percent = experience.current_xp as f32 / experience.xp_to_next_level as f32;
+                ui.label("Experience:");
+                ui.add(egui::ProgressBar::new(xp_percent)
+                    .text(format!("{} / {} XP", experience.current_xp, experience.xp_to_next_level)));
+
                 ui.separator();
 
                 // Calculate equipment bonuses
@@ -349,6 +363,25 @@ pub fn game_ui(
                     combat_stats.defense + equipment_bonuses.defense));
                 ui.label(format!("Crit Chance: {:.1}%",
                     (combat_stats.crit_chance + equipment_bonuses.crit_chance) * 100.0));
+
+                // Weapon Proficiencies
+                ui.add_space(10.0);
+                ui.separator();
+                ui.label("Weapon Proficiencies:");
+                ui.label(format!("  Sword: {}", weapon_prof.sword));
+                ui.label(format!("  Dagger: {}", weapon_prof.dagger));
+                ui.label(format!("  Staff: {}", weapon_prof.staff));
+                ui.label(format!("  Mace: {}", weapon_prof.mace));
+                ui.label(format!("  Bow: {}", weapon_prof.bow));
+                ui.label(format!("  Axe: {}", weapon_prof.axe));
+
+                // Armor Proficiencies
+                ui.add_space(10.0);
+                ui.separator();
+                ui.label("Armor Proficiencies:");
+                ui.label(format!("  Light: {}", armor_prof.light));
+                ui.label(format!("  Medium: {}", armor_prof.medium));
+                ui.label(format!("  Heavy: {}", armor_prof.heavy));
             });
     }
 

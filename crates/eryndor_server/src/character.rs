@@ -109,6 +109,9 @@ pub fn spawn_character_components(
         }
     }
 
+    // Get character level before moving the character value
+    let char_level = character.level;
+
     // Spawn character entity (split to avoid bundle size limit)
     let character_entity = commands.spawn((
         Replicated,
@@ -142,6 +145,15 @@ pub fn spawn_character_components(
     commands.entity(character_entity).insert((
         AutoAttack::default(),
         proficiency,
+    ));
+
+    // Progression components
+    commands.entity(character_entity).insert((
+        Experience::new(char_level),
+        WeaponProficiencyExp::default(),
+        ArmorProficiency::default(),
+        ArmorProficiencyExp::default(),
+        UnlockedArmorPassives::default(),
     ));
 
     // Physics components (separate insert to avoid bundle size limit)

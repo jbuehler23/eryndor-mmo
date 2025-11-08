@@ -199,6 +199,46 @@ pub fn handle_character_despawn(
     }
 }
 
+/// Handle level up event from server
+pub fn handle_level_up(
+    trigger: On<LevelUpEvent>,
+    mut client_state: ResMut<MyClientState>,
+) {
+    let event = trigger.event();
+    info!("Received LevelUpEvent: level {}", event.new_level);
+    let message = format!(
+        "LEVEL UP! You are now level {}!\n+{} HP | +{} Mana | +{} Attack | +{} Defense",
+        event.new_level,
+        event.health_increase,
+        event.mana_increase,
+        event.attack_increase,
+        event.defense_increase
+    );
+    info!("{}", message);
+    client_state.notifications.push(message);
+}
+
+/// Handle proficiency level up event from server
+pub fn handle_proficiency_level_up(
+    trigger: On<ProficiencyLevelUpEvent>,
+    mut client_state: ResMut<MyClientState>,
+) {
+    let event = trigger.event();
+    let prof_type = match event.proficiency_type {
+        ProficiencyType::Weapon => "Weapon",
+        ProficiencyType::Armor => "Armor",
+    };
+    let message = format!(
+        "{} Proficiency Level Up! {} is now level {}!\n{}",
+        prof_type,
+        event.weapon_or_armor,
+        event.new_level,
+        event.bonus_info
+    );
+    info!("{}", message);
+    client_state.notifications.push(message);
+}
+
 /// Cleanup player entities when leaving InGame state
 /// World entities (NPCs, enemies, items) persist across character sessions
 pub fn cleanup_game_entities(

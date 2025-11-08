@@ -269,6 +269,23 @@ pub fn handle_select_character(
                     QuestLog::default()
                 });
 
+            // Load progression data
+            let (experience, weapon_prof, weapon_exp, armor_prof, armor_exp, unlocked_passives) =
+                runtime.block_on(database::load_progression(pool, request.character_id))
+                .unwrap_or_else(|e| {
+                    warn!("Failed to load progression: {}, using defaults", e);
+                    // Return defaults based on character level
+                    let level = 1; // Will be overridden by Experience::new
+                    (
+                        Experience::new(level),
+                        WeaponProficiency::default(),
+                        WeaponProficiencyExp::default(),
+                        ArmorProficiency::default(),
+                        ArmorProficiencyExp::default(),
+                        UnlockedArmorPassives::default(),
+                    )
+                });
+
             // Use character module to spawn character with all components
             let character_entity = crate::character::spawn_character_components(
                 &mut commands,
@@ -282,6 +299,16 @@ pub fn handle_select_character(
                 client_entity,
                 request.character_id,
             );
+
+            // Override default progression components with loaded data
+            commands.entity(character_entity).insert((
+                experience,
+                weapon_prof,
+                weapon_exp,
+                armor_prof,
+                armor_exp,
+                unlocked_passives,
+            ));
 
             // Link client to character
             commands.entity(client_entity).insert(ActiveCharacterEntity(character_entity));
@@ -325,6 +352,14 @@ pub fn handle_client_disconnect(
         &Inventory,
         &QuestLog,
     )>,
+    progression: Query<(
+        &Experience,
+        &WeaponProficiency,
+        &WeaponProficiencyExp,
+        &ArmorProficiency,
+        &ArmorProficiencyExp,
+        &UnlockedArmorPassives,
+    )>,
     db: Res<DatabaseConnection>,
 ) {
     let Some(pool) = db.pool() else { return };
@@ -341,6 +376,12 @@ pub fn handle_client_disconnect(
         let mut found_character = false;
         for (entity, owned_by, character, position, health, mana, db_id, equipment, inventory, quest_log) in characters.iter() {
             if owned_by.0 == client_entity {
+                // Get progression components
+                let Ok((experience, weapon_prof, weapon_exp, armor_prof, armor_exp, unlocked_passives)) =
+                    progression.get(entity) else {
+                    error!("Failed to get progression components for character '{}'", character.name);
+                    continue;
+                };
                 found_character = true;
                 info!("Saving character '{}' (DB ID: {}) at position ({:.1}, {:.1})",
                     character.name, db_id.0, position.0.x, position.0.y);
@@ -378,6 +419,21 @@ pub fn handle_client_disconnect(
                     Err(e) => error!("Failed to save quest log for '{}': {}", character.name, e),
                 }
 
+                // Save progression data
+                match runtime.block_on(database::save_progression(
+                    pool,
+                    db_id.0,
+                    experience,
+                    weapon_prof,
+                    weapon_exp,
+                    armor_prof,
+                    armor_exp,
+                    unlocked_passives,
+                )) {
+                    Ok(_) => info!("Character '{}' progression saved", character.name),
+                    Err(e) => error!("Failed to save progression for '{}': {}", character.name, e),
+                }
+
                 // Despawn character - this will replicate to all clients
                 commands.entity(entity).despawn();
                 info!("Character '{}' despawned from world (will replicate to all clients)", character.name);
@@ -407,6 +463,14 @@ pub fn handle_disconnect_character(
         &Inventory,
         &QuestLog,
     )>,
+    progression: Query<(
+        &Experience,
+        &WeaponProficiency,
+        &WeaponProficiencyExp,
+        &ArmorProficiency,
+        &ArmorProficiencyExp,
+        &UnlockedArmorPassives,
+    )>,
     db: Res<DatabaseConnection>,
 ) {
     let Some(pool) = db.pool() else { return };
@@ -424,6 +488,14 @@ pub fn handle_disconnect_character(
     // Find and save/despawn their character
     for (entity, owned_by, character, position, health, mana, db_id, equipment, inventory, quest_log) in characters.iter() {
         if owned_by.0 == client_entity {
+            // Get progression components
+            let Ok((experience, weapon_prof, weapon_exp, armor_prof, armor_exp, unlocked_passives)) =
+                progression.get(entity) else {
+                error!("Failed to get progression components for character '{}'", character.name);
+                // Remove ActiveCharacterEntity link even if we fail to save progression
+                commands.entity(client_entity).remove::<ActiveCharacterEntity>();
+                return;
+            };
             info!("Disconnecting character '{}' (DB ID: {}) from client {:?}", character.name, db_id.0, client_entity);
 
             // Save all character data to database
@@ -457,6 +529,21 @@ pub fn handle_disconnect_character(
             match runtime.block_on(database::save_quest_log(pool, db_id.0, quest_log)) {
                 Ok(_) => info!("Character '{}' quest log saved", character.name),
                 Err(e) => error!("Failed to save quest log for '{}': {}", character.name, e),
+            }
+
+            // Save progression data
+            match runtime.block_on(database::save_progression(
+                pool,
+                db_id.0,
+                experience,
+                weapon_prof,
+                weapon_exp,
+                armor_prof,
+                armor_exp,
+                unlocked_passives,
+            )) {
+                Ok(_) => info!("Character '{}' progression saved", character.name),
+                Err(e) => error!("Failed to save progression for '{}': {}", character.name, e),
             }
 
             // Despawn character - this will replicate to all clients
