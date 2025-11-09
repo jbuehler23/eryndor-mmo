@@ -62,6 +62,7 @@ pub fn process_auto_attacks(
     ), With<Player>>,
     mut targets: Query<(&Position, &mut Health, &CombatStats), With<Enemy>>,
     all_enemies: Query<Entity, With<Enemy>>,
+    mut enemy_ai: Query<(&mut AiState, &mut CurrentTarget), With<Enemy>>,
     item_db: Res<crate::game_data::ItemDatabase>,
     time: Res<Time>,
 ) {
@@ -156,6 +157,9 @@ pub fn process_auto_attacks(
         // Apply damage
         target_health.current = (target_health.current - damage).max(0.0);
 
+        // Make enemy aggro on the attacker
+        aggro_enemy(target_entity, attacker_entity, &mut enemy_ai);
+
         // Reset cooldown based on weapon attack speed
         // attack_speed is attacks per second, so cooldown = 1.0 / attack_speed
         auto_attack.cooldown_timer = 1.0 / weapon_stats.attack_speed;
@@ -212,11 +216,38 @@ pub fn process_auto_attacks(
     }
 }
 
+/// Helper function to make an enemy aggro on an attacker
+fn aggro_enemy(
+    target_entity: Entity,
+    attacker_entity: Entity,
+    enemies: &mut Query<(&mut AiState, &mut CurrentTarget), With<Enemy>>,
+) {
+    if let Ok((mut ai_state, mut current_target)) = enemies.get_mut(target_entity) {
+        // If enemy is idle or attacking someone else, switch to chasing the attacker
+        match *ai_state {
+            AiState::Idle => {
+                *ai_state = AiState::Chasing(attacker_entity);
+                current_target.0 = Some(attacker_entity);
+                info!("Enemy {:?} aggroed on attacker {:?}", target_entity, attacker_entity);
+            }
+            AiState::Chasing(current_target_entity) | AiState::Attacking(current_target_entity) => {
+                // Only switch targets if not already targeting this attacker
+                if current_target_entity != attacker_entity {
+                    *ai_state = AiState::Chasing(attacker_entity);
+                    current_target.0 = Some(attacker_entity);
+                    info!("Enemy {:?} switched target to {:?}", target_entity, attacker_entity);
+                }
+            }
+        }
+    }
+}
+
 pub fn handle_use_ability(
     trigger: On<FromClient<UseAbilityRequest>>,
     mut commands: Commands,
     clients: Query<&ActiveCharacterEntity>,
     mut attackers: Query<(
+        Entity,
         &Position,
         &CurrentTarget,
         &CombatStats,
@@ -226,6 +257,7 @@ pub fn handle_use_ability(
         &Equipment,
     )>,
     mut targets: Query<(&Position, &mut Health, &CombatStats), With<Enemy>>,
+    mut enemy_ai: Query<(&mut AiState, &mut CurrentTarget), With<Enemy>>,
     ability_db: Res<AbilityDatabase>,
     item_db: Res<crate::game_data::ItemDatabase>,
     time: Res<Time>,
@@ -250,7 +282,7 @@ pub fn handle_use_ability(
     info!("Found ability: {} ({})", ability.name, ability.id);
 
     // Get attacker data
-    let Ok((attacker_pos, current_target, stats, mut mana, mut cooldowns, learned, equipment)) =
+    let Ok((attacker_entity, attacker_pos, current_target, stats, mut mana, mut cooldowns, learned, equipment)) =
         attackers.get_mut(char_entity) else {
             warn!("Could not get attacker components for {:?}", char_entity);
             return
@@ -405,6 +437,9 @@ pub fn handle_use_ability(
     if total_damage > 0.0 {
         target_health.current = (target_health.current - total_damage).max(0.0);
     }
+
+    // Make enemy aggro on the attacker when ability is used
+    aggro_enemy(target_entity, attacker_entity, &mut enemy_ai);
 
     // Consume mana
     mana.current -= ability.mana_cost;

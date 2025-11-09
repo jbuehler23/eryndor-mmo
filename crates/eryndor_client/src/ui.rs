@@ -293,12 +293,17 @@ pub fn game_ui(
                 let mut show_slot = |ui: &mut egui::Ui, label: &str, item_id: Option<u32>, slot: EquipmentSlot| {
                     ui.horizontal(|ui| {
                         ui.label(format!("{}:", label));
-                        let response = if let Some(id) = item_id {
+                        let mut response = if let Some(id) = item_id {
                             let item_name = item_db.get_item_name(id);
                             ui.label(&item_name)
                         } else {
                             ui.label("<Empty>")
                         };
+
+                        // Add tooltip on hover for equipped items
+                        if let Some(id) = item_id {
+                            response = show_item_tooltip(response, id, &item_db, true);
+                        }
 
                         // Add context menu for unequipping
                         if item_id.is_some() {
@@ -434,7 +439,10 @@ pub fn game_ui(
                             // Hide equipped items from inventory display
                             if !equipped_ids.contains(&item_stack.item_id) {
                                 let item_name = item_db.get_item_name(item_stack.item_id);
-                                let response = ui.button(format!("{}\nx{}", item_name, item_stack.quantity));
+                                let mut response = ui.button(format!("{}\nx{}", item_name, item_stack.quantity));
+
+                                // Add tooltip on hover
+                                response = show_item_tooltip(response, item_stack.item_id, &item_db, false);
 
                                 // Add context menu for equipping/dropping
                                 response.context_menu(|ui| {
