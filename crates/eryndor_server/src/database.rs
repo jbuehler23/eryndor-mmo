@@ -436,6 +436,7 @@ pub async fn load_progression(
 pub async fn save_progression(
     pool: &SqlitePool,
     character_id: i64,
+    character_level: u32,
     experience: &Experience,
     weapon_prof: &WeaponProficiency,
     weapon_exp: &WeaponProficiencyExp,
@@ -448,16 +449,18 @@ pub async fn save_progression(
 
     let result = sqlx::query(
         "UPDATE characters SET
-            current_xp = ?1,
-            weapon_prof_sword = ?2, weapon_prof_dagger = ?3, weapon_prof_staff = ?4,
-            weapon_prof_mace = ?5, weapon_prof_bow = ?6, weapon_prof_axe = ?7,
-            weapon_exp_sword = ?8, weapon_exp_dagger = ?9, weapon_exp_staff = ?10,
-            weapon_exp_mace = ?11, weapon_exp_bow = ?12, weapon_exp_axe = ?13,
-            armor_prof_light = ?14, armor_prof_medium = ?15, armor_prof_heavy = ?16,
-            armor_exp_light = ?17, armor_exp_medium = ?18, armor_exp_heavy = ?19,
-            unlocked_armor_passives = ?20
-         WHERE id = ?21"
+            level = ?1,
+            current_xp = ?2,
+            weapon_prof_sword = ?3, weapon_prof_dagger = ?4, weapon_prof_staff = ?5,
+            weapon_prof_mace = ?6, weapon_prof_bow = ?7, weapon_prof_axe = ?8,
+            weapon_exp_sword = ?9, weapon_exp_dagger = ?10, weapon_exp_staff = ?11,
+            weapon_exp_mace = ?12, weapon_exp_bow = ?13, weapon_exp_axe = ?14,
+            armor_prof_light = ?15, armor_prof_medium = ?16, armor_prof_heavy = ?17,
+            armor_exp_light = ?18, armor_exp_medium = ?19, armor_exp_heavy = ?20,
+            unlocked_armor_passives = ?21
+         WHERE id = ?22"
     )
+    .bind(character_level as i32)
     .bind(experience.current_xp as i32)
     .bind(weapon_prof.sword)
     .bind(weapon_prof.dagger)

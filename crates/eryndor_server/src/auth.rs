@@ -423,6 +423,7 @@ pub fn handle_client_disconnect(
                 match runtime.block_on(database::save_progression(
                     pool,
                     db_id.0,
+                    character.level,
                     experience,
                     weapon_prof,
                     weapon_exp,
@@ -430,7 +431,7 @@ pub fn handle_client_disconnect(
                     armor_exp,
                     unlocked_passives,
                 )) {
-                    Ok(_) => info!("Character '{}' progression saved", character.name),
+                    Ok(_) => info!("Character '{}' progression saved (level: {})", character.name, character.level),
                     Err(e) => error!("Failed to save progression for '{}': {}", character.name, e),
                 }
 
@@ -535,6 +536,7 @@ pub fn handle_disconnect_character(
             match runtime.block_on(database::save_progression(
                 pool,
                 db_id.0,
+                character.level,
                 experience,
                 weapon_prof,
                 weapon_exp,
@@ -542,7 +544,7 @@ pub fn handle_disconnect_character(
                 armor_exp,
                 unlocked_passives,
             )) {
-                Ok(_) => info!("Character '{}' progression saved", character.name),
+                Ok(_) => info!("Character '{}' progression saved (level: {})", character.name, character.level),
                 Err(e) => error!("Failed to save progression for '{}': {}", character.name, e),
             }
 

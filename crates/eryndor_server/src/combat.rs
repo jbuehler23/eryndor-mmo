@@ -403,60 +403,76 @@ pub fn check_deaths(
 }
 
 /// Check for level-ups and apply stat increases
+/// Note: Experience::add_xp already handles XP math. This system detects when
+/// xp_to_next_level increased (indicating a level-up) and applies stat bonuses.
 pub fn check_level_ups(
     mut commands: Commands,
     mut query: Query<(
         Entity,
         &mut Character,
-        &mut Experience,
+        &Experience,
         &mut Health,
         &mut Mana,
         &mut CombatStats,
-    ), Changed<Experience>>,
+    ), (With<Player>, Changed<Experience>)>,
 ) {
-    for (_entity, mut character, mut experience, mut health, mut mana, mut stats) in &mut query {
-        // Check if player should level up
-        while experience.current_xp >= experience.xp_to_next_level {
-            // Level up!
+    for (_entity, mut character, experience, mut health, mut mana, mut stats) in &mut query {
+        // Calculate what level the player SHOULD be based on their XP threshold
+        // The xp_to_next_level is for (current_level + 1), so work backwards
+        let mut expected_level = 1;
+        for level in 1..100 {
+            if Experience::xp_for_level(level + 1) == experience.xp_to_next_level {
+                expected_level = level;
+                break;
+            }
+        }
+
+        // If character.level is behind expected_level, they leveled up
+        if expected_level > character.level {
             let old_level = character.level;
-            character.level += 1;
+            let levels_gained = expected_level - character.level;
 
-            // Calculate stat increases based on class
-            let (health_increase, mana_increase, attack_increase, defense_increase) = match character.class {
-                CharacterClass::Knight => (20.0, 5.0, 3.0, 2.0),
-                CharacterClass::Mage => (10.0, 20.0, 2.0, 1.0),
-                CharacterClass::Rogue => (15.0, 10.0, 4.0, 1.5),
-            };
+            info!("check_level_ups: {} leveled up from {} to {} (gained {} levels)",
+                character.name, old_level, expected_level, levels_gained);
 
-            // Apply stat increases
-            health.max += health_increase;
-            health.current = health.max; // Fully heal on level-up
-            mana.max += mana_increase;
-            mana.current = mana.max; // Restore mana on level-up
-            stats.attack_power += attack_increase;
-            stats.defense += defense_increase;
+            // Apply stat increases for each level gained
+            for _ in 0..levels_gained {
+                character.level += 1;
 
-            // Update experience thresholds
-            experience.current_xp -= experience.xp_to_next_level;
-            experience.xp_to_next_level = Experience::xp_for_level(character.level + 1);
+                // Calculate stat increases based on class
+                let (health_increase, mana_increase, attack_increase, defense_increase) = match character.class {
+                    CharacterClass::Knight => (20.0, 5.0, 3.0, 2.0),
+                    CharacterClass::Mage => (10.0, 20.0, 2.0, 1.0),
+                    CharacterClass::Rogue => (15.0, 10.0, 4.0, 1.5),
+                };
 
-            info!(
-                "{} leveled up! {} -> {} (HP: +{:.0}, MP: +{:.0}, ATK: +{:.0}, DEF: +{:.0})",
-                character.name, old_level, character.level,
-                health_increase, mana_increase, attack_increase, defense_increase
-            );
+                // Apply stat increases
+                health.max += health_increase;
+                health.current = health.max; // Fully heal on level-up
+                mana.max += mana_increase;
+                mana.current = mana.max; // Restore mana on level-up
+                stats.attack_power += attack_increase;
+                stats.defense += defense_increase;
 
-            // Send level-up event to all clients (they can filter by character)
-            commands.server_trigger(ToClients {
-                mode: SendMode::Broadcast,
-                message: LevelUpEvent {
-                    new_level: character.level,
-                    health_increase,
-                    mana_increase,
-                    attack_increase,
-                    defense_increase,
-                },
-            });
+                info!(
+                    "{} leveled up! {} -> {} (HP: +{:.0}, MP: +{:.0}, ATK: +{:.0}, DEF: +{:.0})",
+                    character.name, character.level - 1, character.level,
+                    health_increase, mana_increase, attack_increase, defense_increase
+                );
+
+                // Send level-up event to all clients
+                info!("Broadcasting LevelUpEvent for {} (level {})", character.name, character.level);
+                commands.server_trigger(ToClients {
+                    mode: SendMode::Broadcast,
+                    message: LevelUpEvent {
+                        new_level: character.level,
+                        health_increase,
+                        mana_increase,
+                        attack_increase,
+                        defense_increase,
+                    },
+                });
+            }
         }
     }
 }

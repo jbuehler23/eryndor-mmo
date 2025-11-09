@@ -171,7 +171,7 @@ pub fn game_ui(
     mut client_state: ResMut<MyClientState>,
     mut commands: Commands,
     player_query: Query<(Entity, &Health, &Mana, &CurrentTarget, &Hotbar, &Inventory, &Equipment, &CombatStats, &LearnedAbilities, &QuestLog, &Character), With<Player>>,
-    progression_query: Query<(&Experience, &WeaponProficiency, &ArmorProficiency)>,
+    progression_query: Query<(&Experience, &WeaponProficiency, &WeaponProficiencyExp, &ArmorProficiency)>,
     target_query: Query<(&Health, Option<&Character>, Option<&NpcName>)>,
     item_db: Res<crate::item_cache::ClientItemDatabase>,
 ) {
@@ -187,7 +187,7 @@ pub fn game_ui(
     };
 
     // Get progression components (separate query to avoid hitting Bevy's query limit)
-    let Ok((experience, weapon_prof, armor_prof)) = progression_query.get(player_entity) else {
+    let Ok((experience, weapon_prof, weapon_exp, armor_prof)) = progression_query.get(player_entity) else {
         return
     };
 
@@ -368,12 +368,28 @@ pub fn game_ui(
                 ui.add_space(10.0);
                 ui.separator();
                 ui.label("Weapon Proficiencies:");
-                ui.label(format!("  Sword: {}", weapon_prof.sword));
-                ui.label(format!("  Dagger: {}", weapon_prof.dagger));
-                ui.label(format!("  Staff: {}", weapon_prof.staff));
-                ui.label(format!("  Mace: {}", weapon_prof.mace));
-                ui.label(format!("  Bow: {}", weapon_prof.bow));
-                ui.label(format!("  Axe: {}", weapon_prof.axe));
+
+                // Helper macro to show proficiency with progress bar
+                macro_rules! show_weapon_prof {
+                    ($name:expr, $level:expr, $xp:expr) => {
+                        ui.label(format!("  {} (Level {})", $name, $level));
+                        let xp_needed = WeaponProficiencyExp::xp_for_level($level + 1);
+                        let progress = if xp_needed > 0 {
+                            $xp as f32 / xp_needed as f32
+                        } else {
+                            1.0
+                        };
+                        ui.add(egui::ProgressBar::new(progress)
+                            .text(format!("{} / {} XP", $xp, xp_needed)));
+                    };
+                }
+
+                show_weapon_prof!("Sword", weapon_prof.sword, weapon_exp.sword_xp);
+                show_weapon_prof!("Dagger", weapon_prof.dagger, weapon_exp.dagger_xp);
+                show_weapon_prof!("Staff", weapon_prof.staff, weapon_exp.staff_xp);
+                show_weapon_prof!("Mace", weapon_prof.mace, weapon_exp.mace_xp);
+                show_weapon_prof!("Bow", weapon_prof.bow, weapon_exp.bow_xp);
+                show_weapon_prof!("Axe", weapon_prof.axe, weapon_exp.axe_xp);
 
                 // Armor Proficiencies
                 ui.add_space(10.0);
