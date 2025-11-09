@@ -3,6 +3,7 @@ mod ui;
 mod input;
 mod game_state;
 mod item_cache;
+mod ability_cache;
 
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
@@ -35,6 +36,7 @@ fn main() {
         .init_resource::<input::InputState>()
         .init_resource::<ui::UiState>()
         .init_resource::<item_cache::ClientItemDatabase>()
+        .init_resource::<ability_cache::ClientAbilityDatabase>()
         // Register replicated components (same as server)
         .replicate::<Player>()
         .replicate::<Character>()
