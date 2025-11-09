@@ -163,6 +163,38 @@ impl Mana {
     }
 }
 
+/// Health regeneration rate
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+pub struct HealthRegen {
+    pub base_regen: f32,  // HP per second
+    pub in_combat_multiplier: f32,  // Multiplier when in combat (0.0 = no regen in combat, 0.3 = 30%)
+}
+
+impl Default for HealthRegen {
+    fn default() -> Self {
+        Self {
+            base_regen: 5.0,  // 5 HP/second out of combat
+            in_combat_multiplier: 0.0,  // No regen in combat by default
+        }
+    }
+}
+
+/// Mana regeneration rate
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+pub struct ManaRegen {
+    pub base_regen: f32,  // Mana per second
+    pub in_combat_multiplier: f32,  // Multiplier when in combat
+}
+
+impl Default for ManaRegen {
+    fn default() -> Self {
+        Self {
+            base_regen: 2.0,  // 2 mana/second
+            in_combat_multiplier: 0.5,  // 50% regen in combat (slower but not stopped)
+        }
+    }
+}
+
 /// Combat statistics
 #[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct CombatStats {

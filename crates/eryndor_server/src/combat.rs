@@ -62,7 +62,6 @@ pub fn process_auto_attacks(
     ), With<Player>>,
     mut targets: Query<(&Position, &mut Health, &CombatStats), With<Enemy>>,
     all_enemies: Query<Entity, With<Enemy>>,
-    mut enemy_ai: Query<(&mut AiState, &mut CurrentTarget), With<Enemy>>,
     item_db: Res<crate::game_data::ItemDatabase>,
     time: Res<Time>,
 ) {
@@ -158,7 +157,11 @@ pub fn process_auto_attacks(
         target_health.current = (target_health.current - damage).max(0.0);
 
         // Make enemy aggro on the attacker
-        aggro_enemy(target_entity, attacker_entity, &mut enemy_ai);
+        if let Ok(mut enemy) = commands.get_entity(target_entity) {
+            enemy.insert(AiState::Chasing(attacker_entity));
+            enemy.insert(CurrentTarget(Some(attacker_entity)));
+            info!("Enemy {:?} aggroed on attacker {:?}", target_entity, attacker_entity);
+        }
 
         // Reset cooldown based on weapon attack speed
         // attack_speed is attacks per second, so cooldown = 1.0 / attack_speed
@@ -216,32 +219,6 @@ pub fn process_auto_attacks(
     }
 }
 
-/// Helper function to make an enemy aggro on an attacker
-fn aggro_enemy(
-    target_entity: Entity,
-    attacker_entity: Entity,
-    enemies: &mut Query<(&mut AiState, &mut CurrentTarget), With<Enemy>>,
-) {
-    if let Ok((mut ai_state, mut current_target)) = enemies.get_mut(target_entity) {
-        // If enemy is idle or attacking someone else, switch to chasing the attacker
-        match *ai_state {
-            AiState::Idle => {
-                *ai_state = AiState::Chasing(attacker_entity);
-                current_target.0 = Some(attacker_entity);
-                info!("Enemy {:?} aggroed on attacker {:?}", target_entity, attacker_entity);
-            }
-            AiState::Chasing(current_target_entity) | AiState::Attacking(current_target_entity) => {
-                // Only switch targets if not already targeting this attacker
-                if current_target_entity != attacker_entity {
-                    *ai_state = AiState::Chasing(attacker_entity);
-                    current_target.0 = Some(attacker_entity);
-                    info!("Enemy {:?} switched target to {:?}", target_entity, attacker_entity);
-                }
-            }
-        }
-    }
-}
-
 pub fn handle_use_ability(
     trigger: On<FromClient<UseAbilityRequest>>,
     mut commands: Commands,
@@ -257,7 +234,6 @@ pub fn handle_use_ability(
         &Equipment,
     )>,
     mut targets: Query<(&Position, &mut Health, &CombatStats), With<Enemy>>,
-    mut enemy_ai: Query<(&mut AiState, &mut CurrentTarget), With<Enemy>>,
     ability_db: Res<AbilityDatabase>,
     item_db: Res<crate::game_data::ItemDatabase>,
     time: Res<Time>,
@@ -439,7 +415,11 @@ pub fn handle_use_ability(
     }
 
     // Make enemy aggro on the attacker when ability is used
-    aggro_enemy(target_entity, attacker_entity, &mut enemy_ai);
+    if let Ok(mut enemy) = commands.get_entity(target_entity) {
+        enemy.insert(AiState::Chasing(attacker_entity));
+        enemy.insert(CurrentTarget(Some(attacker_entity)));
+        info!("Enemy {:?} aggroed on ability user {:?}", target_entity, attacker_entity);
+    }
 
     // Consume mana
     mana.current -= ability.mana_cost;
@@ -475,6 +455,41 @@ pub fn update_ability_cooldowns(
     for mut cooldowns in &mut query {
         for timer in cooldowns.cooldowns.values_mut() {
             timer.tick(time.delta());
+        }
+    }
+}
+
+/// Regenerate health and mana over time
+pub fn regenerate_resources(
+    mut query: Query<(&mut Health, &mut Mana, &HealthRegen, &ManaRegen, &InCombat), With<Player>>,
+    time: Res<Time>,
+) {
+    for (mut health, mut mana, health_regen, mana_regen, in_combat) in &mut query {
+        let delta = time.delta_secs();
+
+        // Calculate health regen based on combat state
+        let health_multiplier = if in_combat.0 {
+            health_regen.in_combat_multiplier
+        } else {
+            1.0
+        };
+        let health_regen_amount = health_regen.base_regen * health_multiplier * delta;
+
+        // Calculate mana regen based on combat state
+        let mana_multiplier = if in_combat.0 {
+            mana_regen.in_combat_multiplier
+        } else {
+            1.0
+        };
+        let mana_regen_amount = mana_regen.base_regen * mana_multiplier * delta;
+
+        // Apply regeneration (don't exceed max values)
+        if health.current < health.max && health_regen_amount > 0.0 {
+            health.current = (health.current + health_regen_amount).min(health.max);
+        }
+
+        if mana.current < mana.max && mana_regen_amount > 0.0 {
+            mana.current = (mana.current + mana_regen_amount).min(mana.max);
         }
     }
 }
