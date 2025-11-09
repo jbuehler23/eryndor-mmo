@@ -269,6 +269,18 @@ pub fn handle_select_character(
                     QuestLog::default()
                 });
 
+            let hotbar = runtime.block_on(database::load_hotbar(pool, request.character_id))
+                .unwrap_or_else(|e| {
+                    warn!("Failed to load hotbar: {}, using defaults", e);
+                    Hotbar::default()
+                });
+
+            let learned_abilities = runtime.block_on(database::load_learned_abilities(pool, request.character_id))
+                .unwrap_or_else(|e| {
+                    warn!("Failed to load learned abilities: {}, using defaults", e);
+                    LearnedAbilities::default()
+                });
+
             // Load progression data
             let (experience, weapon_prof, weapon_exp, armor_prof, armor_exp, unlocked_passives) =
                 runtime.block_on(database::load_progression(pool, request.character_id))
@@ -308,6 +320,8 @@ pub fn handle_select_character(
                 armor_prof,
                 armor_exp,
                 unlocked_passives,
+                hotbar,
+                learned_abilities,
             ));
 
             // Link client to character

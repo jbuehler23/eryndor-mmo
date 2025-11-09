@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_replicon::prelude::*;
 use eryndor_shared::*;
 use crate::auth::ActiveCharacterEntity;
-use crate::game_data::AbilityDatabase;
+use crate::abilities::AbilityDatabase;
 use avian2d::prelude::LinearVelocity;
 
 pub fn handle_set_target(
@@ -72,9 +72,9 @@ pub fn process_auto_attacks(
         }
 
         // Debug: Log that we're processing auto-attack
-        if auto_attack.cooldown_timer <= 0.0 {
-            info!("Processing auto-attack for {:?} - weapon: {:?}", attacker_entity, equipment.weapon);
-        }
+        // if auto_attack.cooldown_timer <= 0.0 {
+        //     info!("Processing auto-attack for {:?} - weapon: {:?}", attacker_entity, equipment.weapon);
+        // }
 
         // Tick down cooldown timer
         auto_attack.cooldown_timer -= time.delta_secs();
@@ -127,11 +127,11 @@ pub fn process_auto_attacks(
         // Check if target is in range
         let distance = attacker_pos.0.distance(target_pos.0);
         if distance > weapon_stats.range {
-            info!("Target {:?} out of range: {:.1} > {:.1}", target_entity, distance, weapon_stats.range);
+            // info!("Target {:?} out of range: {:.1} > {:.1}", target_entity, distance, weapon_stats.range);
             continue;
         }
 
-        info!("IN RANGE! Attacking {:?} at distance {:.1}", target_entity, distance);
+        // info!("IN RANGE! Attacking {:?} at distance {:.1}", target_entity, distance);
 
         // Calculate equipment bonuses
         let equipment_bonuses = item_db.calculate_equipment_bonuses(equipment);
@@ -180,6 +180,10 @@ pub fn process_auto_attacks(
                 weapon_exp.staff_xp += weapon_xp_gain;
                 info!("Awarded {} Staff XP (total: {})", weapon_xp_gain, weapon_exp.staff_xp);
             },
+            crate::weapon::WeaponType::Wand => {
+                weapon_exp.wand_xp += weapon_xp_gain;
+                info!("Awarded {} Wand XP (total: {})", weapon_xp_gain, weapon_exp.wand_xp);
+            },
             crate::weapon::WeaponType::Mace => {
                 weapon_exp.mace_xp += weapon_xp_gain;
                 info!("Awarded {} Mace XP (total: {})", weapon_xp_gain, weapon_exp.mace_xp);
@@ -221,7 +225,7 @@ pub fn handle_use_ability(
         &LearnedAbilities,
         &Equipment,
     )>,
-    mut targets: Query<(&Position, &mut Health, &CombatStats), Without<Player>>,
+    mut targets: Query<(&Position, &mut Health, &CombatStats), With<Enemy>>,
     ability_db: Res<AbilityDatabase>,
     item_db: Res<crate::game_data::ItemDatabase>,
     time: Res<Time>,
@@ -229,35 +233,49 @@ pub fn handle_use_ability(
     let Some(client_entity) = trigger.client_id.entity() else { return };
     let request = trigger.event();
 
+    info!("SERVER RECEIVED UseAbilityRequest: ability_id = {}", request.ability_id);
+
     // Get client's character
-    let Ok(active_char) = clients.get(client_entity) else { return };
+    let Ok(active_char) = clients.get(client_entity) else {
+        warn!("Could not find ActiveCharacterEntity for client {:?}", client_entity);
+        return
+    };
     let char_entity = active_char.0;
 
     // Get ability definition
-    let Some(ability) = ability_db.abilities.get(&request.ability_id) else {
+    let Some(ability) = ability_db.get(request.ability_id) else {
         warn!("Unknown ability: {}", request.ability_id);
         return;
     };
+    info!("Found ability: {} ({})", ability.name, ability.id);
 
     // Get attacker data
     let Ok((attacker_pos, current_target, stats, mut mana, mut cooldowns, learned, equipment)) =
-        attackers.get_mut(char_entity) else { return };
+        attackers.get_mut(char_entity) else {
+            warn!("Could not get attacker components for {:?}", char_entity);
+            return
+        };
+    info!("Got attacker components");
 
     // Check if ability is learned
     if !learned.knows(ability.id) {
         warn!("Player doesn't know ability {}", ability.id);
         return;
     }
+    info!("Ability is learned");
 
     // Check cooldown
     if let Some(timer) = cooldowns.cooldowns.get(&ability.id) {
         if !timer.is_finished() {
+            info!("Ability on cooldown");
             return;
         }
     }
+    info!("Cooldown check passed");
 
     // Check mana
     if mana.current < ability.mana_cost {
+        info!("Not enough mana: {} < {}", mana.current, ability.mana_cost);
         commands.server_trigger(ToClients {
             mode: SendMode::Direct(ClientId::Client(client_entity)),
             message: NotificationEvent {
@@ -267,22 +285,31 @@ pub fn handle_use_ability(
         });
         return;
     }
+    info!("Mana check passed");
 
     // Check target
     let Some(target_entity) = current_target.0 else {
+        warn!("No target selected");
         return;
     };
+    info!("Has target: {:?}", target_entity);
 
     // Get target data
     let Ok((target_pos, mut target_health, target_stats)) = targets.get_mut(target_entity) else {
+        warn!("Could not get target components for {:?}", target_entity);
         return;
     };
+    info!("Got target components");
 
-    // Check range
+    // Check range (convert ability range from meters to pixels: 1 meter = 20 pixels)
+    const PIXELS_PER_METER: f32 = 20.0;
     let distance = attacker_pos.0.distance(target_pos.0);
-    if distance > ability.range {
+    let ability_range_pixels = ability.range * PIXELS_PER_METER;
+    if distance > ability_range_pixels {
+        warn!("Target out of range: {:.1} > {:.1}", distance, ability_range_pixels);
         return;
     }
+    info!("Range check passed: {:.1} <= {:.1}", distance, ability_range_pixels);
 
     // Calculate equipment bonuses
     let equipment_bonuses = item_db.calculate_equipment_bonuses(equipment);
@@ -291,19 +318,93 @@ pub fn handle_use_ability(
     let total_attack = stats.attack_power + equipment_bonuses.attack_power;
     let total_crit = stats.crit_chance + equipment_bonuses.crit_chance;
 
-    // Calculate damage
-    let base_damage = total_attack * ability.damage_multiplier;
-    let mitigation = target_stats.defense / (target_stats.defense + 100.0);
-    let mut damage = base_damage * (1.0 - mitigation);
+    // Process each ability effect
+    let mut total_damage = 0.0;
+    let mut is_crit = false;
+    let current_time = time.elapsed().as_secs_f32();
 
-    // Critical hit check
-    let is_crit = rand::random::<f32>() < total_crit;
-    if is_crit {
-        damage *= 1.5;
+    for ability_type in &ability.ability_types {
+        match ability_type {
+            AbilityType::DirectDamage { multiplier } => {
+                // Calculate damage
+                let base_damage = total_attack * multiplier;
+                let mitigation = target_stats.defense / (target_stats.defense + 100.0);
+                let mut damage = base_damage * (1.0 - mitigation);
+
+                // Critical hit check
+                let crit_roll = rand::random::<f32>() < total_crit;
+                if crit_roll {
+                    damage *= 1.5;
+                    is_crit = true;
+                }
+
+                total_damage += damage;
+            }
+            AbilityType::DamageOverTime { duration: _, ticks, damage_per_tick } => {
+                // Add DoT effect to target
+                let dot = ActiveDoT {
+                    ability_id: ability.id,
+                    caster: char_entity,
+                    damage_per_tick: *damage_per_tick,
+                    ticks_remaining: *ticks,
+                    next_tick_at: current_time + 1.0,
+                };
+
+                if let Ok(mut target) = commands.get_entity(target_entity) {
+                    target.insert(ActiveDoTs {
+                        dots: vec![dot],
+                    });
+                }
+            }
+            AbilityType::Buff { duration, stat_bonuses } => {
+                // Add buff to caster (self-buff)
+                let buff = ActiveBuff {
+                    ability_id: ability.id,
+                    stat_bonuses: stat_bonuses.clone(),
+                    expires_at: current_time + duration,
+                };
+
+                if let Ok(mut caster) = commands.get_entity(char_entity) {
+                    caster.insert(ActiveBuffs {
+                        buffs: vec![buff],
+                    });
+                }
+            }
+            AbilityType::Debuff { duration, effect } => {
+                // Add debuff to target
+                let debuff = ActiveDebuff {
+                    ability_id: ability.id,
+                    effect: effect.clone(),
+                    expires_at: current_time + duration,
+                };
+
+                if let Ok(mut target) = commands.get_entity(target_entity) {
+                    target.insert(ActiveDebuffs {
+                        debuffs: vec![debuff],
+                    });
+                }
+            }
+            AbilityType::AreaOfEffect { radius: _, max_targets: _ } => {
+                // TODO: Implement AoE - find multiple targets within radius
+                warn!("AoE abilities not yet implemented");
+            }
+            AbilityType::Mobility { distance: _, dash_speed: _ } => {
+                // TODO: Implement mobility - dash/teleport
+                warn!("Mobility abilities not yet implemented");
+            }
+            AbilityType::Heal { amount: _, is_percent: _ } => {
+                // TODO: Implement healing
+                // Currently causes borrow checker issues if we try to heal the caster
+                // while we already have a mutable borrow on the target
+                warn!("Heal abilities not yet implemented");
+            }
+        }
     }
 
-    // Apply damage
-    target_health.current = (target_health.current - damage).max(0.0);
+    // Apply total damage from all DirectDamage effects
+    if total_damage > 0.0 {
+        target_health.current = (target_health.current - total_damage).max(0.0);
+    }
 
     // Consume mana
     mana.current -= ability.mana_cost;
@@ -316,7 +417,7 @@ pub fn handle_use_ability(
 
     info!(
         "Player {:?} used ability {} on {:?} for {:.1} damage (crit: {})",
-        char_entity, ability.name, target_entity, damage, is_crit
+        char_entity, ability.name, target_entity, total_damage, is_crit
     );
 
     // Send combat event to all clients for VFX
@@ -325,7 +426,7 @@ pub fn handle_use_ability(
         message: CombatEvent {
             attacker: char_entity,
             target: target_entity,
-            damage,
+            damage: total_damage,
             ability_id: ability.id,
             is_crit,
         },

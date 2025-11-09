@@ -6,6 +6,7 @@ pub enum WeaponType {
     Sword,
     Dagger,
     Staff,
+    Wand,
     Mace,
     Bow,
     Axe,
@@ -38,9 +39,15 @@ impl WeaponType {
             },
             WeaponType::Staff => WeaponStats {
                 weapon_type: WeaponType::Staff,
-                attack_speed: 0.7,
-                range: 200.0,
-                damage_multiplier: 0.8,
+                attack_speed: 0.6,  // Slower than wand
+                range: 200.0,  // Ranged weapon
+                damage_multiplier: 1.1,  // More powerful than wand
+            },
+            WeaponType::Wand => WeaponStats {
+                weapon_type: WeaponType::Wand,
+                attack_speed: 1.3,  // Fast casting
+                range: 200.0,  // Ranged weapon
+                damage_multiplier: 0.7,  // Lower damage, faster attacks
             },
             WeaponType::Mace => WeaponStats {
                 weapon_type: WeaponType::Mace,
@@ -68,7 +75,7 @@ impl WeaponType {
         match item_id {
             ITEM_SWORD => Some(WeaponType::Sword),
             ITEM_DAGGER => Some(WeaponType::Dagger),
-            ITEM_WAND => Some(WeaponType::Staff), // Wand uses staff proficiency
+            ITEM_WAND => Some(WeaponType::Wand),
             _ => None,
         }
     }
@@ -83,7 +90,8 @@ pub fn get_starting_proficiencies(class: CharacterClass) -> Vec<(WeaponType, u32
             (WeaponType::Axe, 5),
         ],
         CharacterClass::Mage => vec![
-            (WeaponType::Staff, 10),
+            (WeaponType::Wand, 10),
+            (WeaponType::Staff, 5),
             (WeaponType::Dagger, 5),
         ],
         CharacterClass::Rogue => vec![

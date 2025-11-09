@@ -386,6 +386,7 @@ pub async fn load_progression(
                 sword: row.try_get(1).unwrap_or(0),
                 dagger: row.try_get(2).unwrap_or(0),
                 staff: row.try_get(3).unwrap_or(0),
+                wand: 1,  // Default wand proficiency (not in DB yet)
                 mace: row.try_get(4).unwrap_or(0),
                 bow: row.try_get(5).unwrap_or(0),
                 axe: row.try_get(6).unwrap_or(0),
@@ -396,6 +397,7 @@ pub async fn load_progression(
                 sword_xp: row.try_get(7).unwrap_or(0),
                 dagger_xp: row.try_get(8).unwrap_or(0),
                 staff_xp: row.try_get(9).unwrap_or(0),
+                wand_xp: 0,  // Default wand XP (not in DB yet)
                 mace_xp: row.try_get(10).unwrap_or(0),
                 bow_xp: row.try_get(11).unwrap_or(0),
                 axe_xp: row.try_get(12).unwrap_or(0),
@@ -725,10 +727,13 @@ pub async fn load_hotbar(pool: &SqlitePool, character_id: i64) -> Result<Hotbar,
     match result {
         Ok(rows) => {
             let mut hotbar = Hotbar::default();
+            info!("Loading hotbar for character {}, found {} rows", character_id, rows.len());
             for row in rows {
                 let slot_index: i32 = row.get(0);
                 let slot_type: i32 = row.get(1);
                 let slot_item_id: i32 = row.get(2);
+
+                info!("Hotbar slot {}: type={}, item_id={}", slot_index, slot_type, slot_item_id);
 
                 if slot_index >= 0 && (slot_index as usize) < hotbar.slots.len() {
                     // slot_type: 0 = Ability

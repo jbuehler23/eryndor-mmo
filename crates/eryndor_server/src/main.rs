@@ -1,3 +1,4 @@
+mod abilities;
 mod auth;
 mod character;
 mod combat;
@@ -40,7 +41,7 @@ fn main() {
         // Database
         .init_resource::<database::DatabaseConnection>()
         // Game data resources
-        .init_resource::<game_data::AbilityDatabase>()
+        .init_resource::<abilities::AbilityDatabase>()
         .init_resource::<game_data::ItemDatabase>()
         .init_resource::<game_data::QuestDatabase>()
         // Register replicated components
@@ -76,6 +77,9 @@ fn main() {
         .replicate::<WorldItem>()
         .replicate::<Interactable>()
         .replicate::<VisualShape>()
+        .replicate::<ActiveBuffs>()
+        .replicate::<ActiveDebuffs>()
+        .replicate::<ActiveDoTs>()
         // Register client -> server events (Events API)
         .add_client_event::<LoginRequest>(Channel::Ordered)
         .add_client_event::<CreateAccountRequest>(Channel::Ordered)
@@ -144,6 +148,10 @@ fn main() {
             combat::check_level_ups,
             combat::check_weapon_proficiency_level_ups,
             combat::enemy_ai,
+            // Ability effects
+            abilities::process_buffs,
+            abilities::process_debuffs,
+            abilities::process_dots,
             // Quests
             quest::update_quest_progress,
             // Respawn

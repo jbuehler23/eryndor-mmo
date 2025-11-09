@@ -103,6 +103,7 @@ pub fn spawn_character_components(
             crate::weapon::WeaponType::Sword => proficiency.sword = level,
             crate::weapon::WeaponType::Dagger => proficiency.dagger = level,
             crate::weapon::WeaponType::Staff => proficiency.staff = level,
+            crate::weapon::WeaponType::Wand => proficiency.wand = level,
             crate::weapon::WeaponType::Mace => proficiency.mace = level,
             crate::weapon::WeaponType::Bow => proficiency.bow = level,
             crate::weapon::WeaponType::Axe => proficiency.axe = level,

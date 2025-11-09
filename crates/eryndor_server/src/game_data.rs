@@ -1,62 +1,7 @@
 use bevy::prelude::*;
 use std::collections::HashMap;
 use eryndor_shared::*;
-
-// ============================================================================
-// ABILITY DEFINITIONS
-// ============================================================================
-
-#[derive(Resource)]
-pub struct AbilityDatabase {
-    pub abilities: HashMap<u32, AbilityDefinition>,
-}
-
-impl Default for AbilityDatabase {
-    fn default() -> Self {
-        let mut abilities = HashMap::new();
-
-        // Rogue - Quick Strike (Dagger)
-        abilities.insert(ABILITY_QUICK_STRIKE, AbilityDefinition {
-            id: ABILITY_QUICK_STRIKE,
-            name: "Quick Strike".to_string(),
-            damage_multiplier: 1.0,
-            cooldown: 1.0, // Fast attack
-            range: MELEE_RANGE,
-            mana_cost: 10.0,
-        });
-
-        // Mage - Fireball (Wand)
-        abilities.insert(ABILITY_FIREBALL, AbilityDefinition {
-            id: ABILITY_FIREBALL,
-            name: "Fireball".to_string(),
-            damage_multiplier: 1.5,
-            cooldown: 2.5,
-            range: RANGED_RANGE,
-            mana_cost: 25.0,
-        });
-
-        // Knight - Heavy Slash (Sword)
-        abilities.insert(ABILITY_HEAVY_SLASH, AbilityDefinition {
-            id: ABILITY_HEAVY_SLASH,
-            name: "Heavy Slash".to_string(),
-            damage_multiplier: 2.0,
-            cooldown: 3.0, // Slow but powerful
-            range: MELEE_RANGE,
-            mana_cost: 15.0,
-        });
-
-        Self { abilities }
-    }
-}
-
-pub struct AbilityDefinition {
-    pub id: u32,
-    pub name: String,
-    pub damage_multiplier: f32,
-    pub cooldown: f32,
-    pub range: f32,
-    pub mana_cost: f32,
-}
+use crate::abilities::*;
 
 // ============================================================================
 // ITEM DEFINITIONS
@@ -76,7 +21,7 @@ impl Default for ItemDatabase {
             id: ITEM_DAGGER,
             name: "Dagger".to_string(),
             item_type: ItemType::Weapon,
-            grants_ability: Some(ABILITY_QUICK_STRIKE),
+            grants_ability: Some(crate::abilities::ABILITY_QUICK_STRIKE),
             stat_bonuses: ItemStatBonuses {
                 attack_power: 8.0,
                 crit_chance: 0.10,
@@ -89,7 +34,7 @@ impl Default for ItemDatabase {
             id: ITEM_WAND,
             name: "Wand".to_string(),
             item_type: ItemType::Weapon,
-            grants_ability: Some(ABILITY_FIREBALL),
+            grants_ability: Some(crate::abilities::ABILITY_FIREBALL),
             stat_bonuses: ItemStatBonuses {
                 attack_power: 12.0,
                 max_mana: 20.0,
@@ -102,7 +47,7 @@ impl Default for ItemDatabase {
             id: ITEM_SWORD,
             name: "Sword".to_string(),
             item_type: ItemType::Weapon,
-            grants_ability: Some(ABILITY_HEAVY_SLASH),
+            grants_ability: Some(crate::abilities::ABILITY_HEAVY_SLASH),
             stat_bonuses: ItemStatBonuses {
                 attack_power: 10.0,
                 defense: 2.0,

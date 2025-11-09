@@ -68,6 +68,9 @@ fn main() {
         .replicate::<WorldItem>()
         .replicate::<Interactable>()
         .replicate::<VisualShape>()
+        .replicate::<ActiveBuffs>()
+        .replicate::<ActiveDebuffs>()
+        .replicate::<ActiveDoTs>()
         // Register client -> server events
         .add_client_event::<LoginRequest>(Channel::Ordered)
         .add_client_event::<CreateAccountRequest>(Channel::Ordered)
