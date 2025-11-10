@@ -576,6 +576,10 @@ impl Interactable {
     pub fn enemy() -> Self {
         Self::new(InteractionType::Enemy, 30.0)
     }
+
+    pub fn loot_container() -> Self {
+        Self::new(InteractionType::LootContainer, 40.0)
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -586,6 +590,7 @@ pub enum InteractionType {
     Harvest,
     Door,
     LoreObject,
+    LootContainer,
 }
 
 // ============================================================================
@@ -728,6 +733,20 @@ pub struct WorldItem {
 /// Gold drop marker - indicates a world item is gold currency
 #[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct GoldDrop(pub u32);
+
+/// Loot container - aggregates all drops from an enemy into a single entity
+#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+pub struct LootContainer {
+    pub contents: Vec<LootContents>,
+    pub source_name: String, // e.g., "Goblin", "Troll Warrior"
+}
+
+/// Individual items within a loot container
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum LootContents {
+    Gold(u32),
+    Item(ItemStack),
+}
 
 /// Visual representation data
 #[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]

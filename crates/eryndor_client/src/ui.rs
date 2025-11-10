@@ -16,6 +16,14 @@ pub struct UiState {
     pub show_character_stats: bool,
     pub show_esc_menu: bool,
     pub quest_dialogue: Option<QuestDialogueData>,
+    pub loot_window: Option<LootWindowData>,
+}
+
+#[derive(Clone)]
+pub struct LootWindowData {
+    pub container_entity: Entity,
+    pub contents: Vec<LootContents>,
+    pub source_name: String,
 }
 
 #[derive(Clone)]
@@ -170,9 +178,10 @@ pub fn game_ui(
     mut ui_state: ResMut<UiState>,
     mut client_state: ResMut<MyClientState>,
     mut commands: Commands,
-    player_query: Query<(Entity, &Health, &Mana, &CurrentTarget, &Hotbar, &Inventory, &Equipment, &CombatStats, &LearnedAbilities, &QuestLog, &Character, &Gold), With<Player>>,
+    player_query: Query<(Entity, &Health, &Mana, &CurrentTarget, &Hotbar, &Inventory, &Equipment, &CombatStats, &LearnedAbilities, &QuestLog, &Character, &Gold, &Position), With<Player>>,
     progression_query: Query<(&Experience, &WeaponProficiency, &WeaponProficiencyExp, &ArmorProficiency)>,
     target_query: Query<(&Health, Option<&Character>, Option<&NpcName>)>,
+    loot_query: Query<(Entity, &Position), With<LootContainer>>,
     item_db: Res<crate::item_cache::ClientItemDatabase>,
     ability_db: Res<crate::ability_cache::ClientAbilityDatabase>,
 ) {
@@ -183,7 +192,7 @@ pub fn game_ui(
     };
 
     // Silently wait for entity to be replicated with all components
-    let Ok((_, health, mana, current_target, hotbar, inventory, equipment, combat_stats, _learned_abilities, quest_log, character, gold)) = player_query.get(player_entity) else {
+    let Ok((_, health, mana, current_target, hotbar, inventory, equipment, combat_stats, _learned_abilities, quest_log, character, gold, player_pos)) = player_query.get(player_entity) else {
         return
     };
 
@@ -284,6 +293,29 @@ pub fn game_ui(
                 ui_state.show_inventory = !ui_state.show_inventory;
             }
         });
+
+    // Check for nearby loot containers and show hint
+    let mut nearest_loot_distance = f32::MAX;
+    for (_, loot_pos) in &loot_query {
+        let distance = player_pos.0.distance(loot_pos.0);
+        if distance < nearest_loot_distance {
+            nearest_loot_distance = distance;
+        }
+    }
+
+    // Show "Press E to Loot" hint at bottom center when near loot
+    if nearest_loot_distance <= PICKUP_RANGE {
+        egui::Window::new("Loot Hint")
+            .fixed_pos([540.0, 600.0])
+            .fixed_size([200.0, 40.0])
+            .title_bar(false)
+            .frame(egui::Frame::none().fill(egui::Color32::from_rgba_unmultiplied(0, 0, 0, 180)))
+            .show(ctx, |ui| {
+                ui.vertical_centered(|ui| {
+                    ui.colored_label(egui::Color32::YELLOW, "Press E to Loot");
+                });
+            });
+    }
 
     // Equipment window
     if ui_state.show_equipment {
@@ -409,6 +441,7 @@ pub fn game_ui(
                 show_weapon_prof!("Sword", weapon_prof.sword, weapon_exp.sword_xp);
                 show_weapon_prof!("Dagger", weapon_prof.dagger, weapon_exp.dagger_xp);
                 show_weapon_prof!("Staff", weapon_prof.staff, weapon_exp.staff_xp);
+                show_weapon_prof!("Wand", weapon_prof.wand, weapon_exp.wand_xp);
                 show_weapon_prof!("Mace", weapon_prof.mace, weapon_exp.mace_xp);
                 show_weapon_prof!("Bow", weapon_prof.bow, weapon_exp.bow_xp);
                 show_weapon_prof!("Axe", weapon_prof.axe, weapon_exp.axe_xp);
@@ -620,6 +653,103 @@ pub fn game_ui(
                 });
             });
     }
+
+    // Loot Container Window
+    if let Some(loot_data) = ui_state.loot_window.clone() {
+        let mut should_close = false;
+
+        // Check distance to loot container
+        let container_distance = if let Some((_, loot_pos)) = loot_query.iter()
+            .find(|(entity, _)| *entity == loot_data.container_entity)
+        {
+            player_pos.0.distance(loot_pos.0)
+        } else {
+            f32::MAX // Container doesn't exist anymore
+        };
+
+        let in_range = container_distance <= PICKUP_RANGE;
+
+        egui::Window::new(format!("Loot: {}", loot_data.source_name))
+            .collapsible(false)
+            .resizable(false)
+            .default_width(300.0)
+            .show(ctx, |ui| {
+                ui.label(format!("{} items", loot_data.contents.len()));
+
+                // Show distance warning if too far
+                if !in_range && container_distance < f32::MAX {
+                    ui.colored_label(egui::Color32::RED, "Too far away!");
+                } else if container_distance == f32::MAX {
+                    ui.colored_label(egui::Color32::RED, "Container no longer exists!");
+                }
+
+                ui.separator();
+
+                // Track items to loot (by index)
+                let mut items_to_loot: Vec<usize> = Vec::new();
+
+                // Display each loot item
+                for (i, content) in loot_data.contents.iter().enumerate() {
+                    ui.horizontal(|ui| {
+                        match content {
+                            LootContents::Gold(amount) => {
+                                ui.colored_label(egui::Color32::GOLD, format!("{} Gold", amount));
+                                if ui.button("Take").clicked() {
+                                    items_to_loot.push(i);
+                                }
+                            }
+                            LootContents::Item(item_stack) => {
+                                if let Some(item_def) = item_db.items.get(&item_stack.item_id) {
+                                    let item_text = if item_stack.quantity > 1 {
+                                        format!("{} (x{})", item_def.name, item_stack.quantity)
+                                    } else {
+                                        item_def.name.clone()
+                                    };
+                                    ui.label(item_text);
+                                    if ui.button("Take").clicked() {
+                                        items_to_loot.push(i);
+                                    }
+                                } else {
+                                    ui.label(format!("Unknown Item (ID: {})", item_stack.item_id));
+                                }
+                            }
+                        }
+                    });
+                    ui.add_space(5.0);
+                }
+
+                ui.separator();
+                ui.horizontal(|ui| {
+                    if ui.button("Loot All").clicked() {
+                        // Loot all items in order
+                        for i in 0..loot_data.contents.len() {
+                            commands.client_trigger(LootItemRequest {
+                                container_entity: loot_data.container_entity,
+                                loot_index: i,
+                            });
+                        }
+                        should_close = true;
+                    }
+
+                    if ui.button("Close").clicked() {
+                        should_close = true;
+                    }
+                });
+
+                // Send loot requests for individual items
+                for index in items_to_loot.iter() {
+                    commands.client_trigger(LootItemRequest {
+                        container_entity: loot_data.container_entity,
+                        loot_index: *index,
+                    });
+                }
+            });
+
+        // Only close on explicit close/loot all button or if container no longer exists
+        if should_close || container_distance == f32::MAX {
+            ui_state.loot_window = None;
+        }
+    }
 }
 
 pub fn handle_esc_key(
@@ -762,4 +892,18 @@ fn show_item_tooltip(
     } else {
         response
     }
+}
+
+// Handle loot container contents event from server
+pub fn handle_loot_container_contents(
+    trigger: On<LootContainerContentsEvent>,
+    mut ui_state: ResMut<UiState>,
+) {
+    let event = trigger.event();
+    ui_state.loot_window = Some(LootWindowData {
+        container_entity: event.container_entity,
+        contents: event.contents.clone(),
+        source_name: event.source_name.clone(),
+    });
+    info!("Opened loot container: {}", event.source_name);
 }

@@ -130,3 +130,10 @@ pub const COLOR_ITEM: [f32; 4] = [0.6, 0.4, 0.2, 1.0]; // Brown/Bronze
 pub const COLOR_ITEM_DAGGER: [f32; 4] = [0.8, 0.8, 0.2, 1.0]; // Yellow
 pub const COLOR_ITEM_WAND: [f32; 4] = [0.8, 0.2, 0.8, 1.0]; // Purple
 pub const COLOR_ITEM_SWORD: [f32; 4] = [0.7, 0.7, 0.7, 1.0]; // Silver
+pub const COLOR_LOOT_CONTAINER: [f32; 4] = [0.6, 0.4, 0.2, 1.0]; // Brown (like a chest/bag)
+
+// ============================================================================
+// LOOT CONSTANTS
+// ============================================================================
+
+pub const LOOT_CONTAINER_SIZE: f32 = 20.0;

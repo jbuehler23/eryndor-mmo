@@ -339,3 +339,252 @@ fn get_item_visual(item_id: u32) -> VisualShape {
         },
     }
 }
+
+/// Handle opening a loot container to preview its contents
+/// Sends LootContainerContentsEvent to the client with all items
+pub fn handle_open_loot_container(
+    trigger: On<FromClient<OpenLootContainerRequest>>,
+    mut commands: Commands,
+    clients: Query<&ActiveCharacterEntity>,
+    loot_containers: Query<&LootContainer>,
+) {
+    let Some(client_entity) = trigger.client_id.entity() else { return };
+    let request = trigger.event();
+
+    // Get client's character
+    let Ok(_active_char) = clients.get(client_entity) else { return };
+
+    // Get loot container
+    let Ok(container) = loot_containers.get(request.container_entity) else {
+        info!("Loot container not found: {:?}", request.container_entity);
+        return;
+    };
+
+    // Send container contents to client (no range restriction for preview)
+    commands.server_trigger(ToClients {
+        mode: SendMode::Direct(ClientId::Client(client_entity)),
+        message: LootContainerContentsEvent {
+            container_entity: request.container_entity,
+            contents: container.contents.clone(),
+            source_name: container.source_name.clone(),
+        },
+    });
+
+    info!("Sent loot container contents from {} to client", container.source_name);
+}
+
+/// Handle looting a specific item from a container by index
+pub fn handle_loot_item(
+    trigger: On<FromClient<LootItemRequest>>,
+    mut commands: Commands,
+    clients: Query<&ActiveCharacterEntity>,
+    mut players: Query<(&Position, &mut Inventory, &mut Gold)>,
+    mut loot_containers: Query<(&Position, &mut LootContainer)>,
+    item_db: Res<ItemDatabase>,
+) {
+    let Some(client_entity) = trigger.client_id.entity() else { return };
+    let request = trigger.event();
+
+    // Get client's character
+    let Ok(active_char) = clients.get(client_entity) else { return };
+    let char_entity = active_char.0;
+
+    // Get loot container
+    let Ok((container_pos, mut container)) = loot_containers.get_mut(request.container_entity) else {
+        return;
+    };
+
+    // Get player data
+    let Ok((player_pos, mut inventory, mut player_gold)) = players.get_mut(char_entity) else {
+        return;
+    };
+
+    // Check range
+    let distance = player_pos.0.distance(container_pos.0);
+    if distance > PICKUP_RANGE {
+        commands.server_trigger(ToClients {
+            mode: SendMode::Direct(ClientId::Client(client_entity)),
+            message: NotificationEvent {
+                message: "Too far away!".to_string(),
+                notification_type: NotificationType::Warning,
+            },
+        });
+        return;
+    }
+
+    // Check if loot index is valid
+    if request.loot_index >= container.contents.len() {
+        return;
+    }
+
+    // Get and remove the loot item
+    let loot_item = container.contents.remove(request.loot_index);
+
+    // Process the loot
+    match loot_item {
+        LootContents::Gold(amount) => {
+            player_gold.0 += amount;
+            info!("Player looted {} gold (new total: {})", amount, player_gold.0);
+            commands.server_trigger(ToClients {
+                mode: SendMode::Direct(ClientId::Client(client_entity)),
+                message: NotificationEvent {
+                    message: format!("Looted {} gold", amount),
+                    notification_type: NotificationType::Info,
+                },
+            });
+        }
+        LootContents::Item(item_stack) => {
+            if inventory.add_item(item_stack.clone()) {
+                if let Some(item_def) = item_db.items.get(&item_stack.item_id) {
+                    info!("Player looted: {} (x{})", item_def.name, item_stack.quantity);
+                    commands.server_trigger(ToClients {
+                        mode: SendMode::Direct(ClientId::Client(client_entity)),
+                        message: NotificationEvent {
+                            message: format!("Looted {} (x{})", item_def.name, item_stack.quantity),
+                            notification_type: NotificationType::Info,
+                        },
+                    });
+                }
+            } else {
+                // Inventory full, put item back
+                container.contents.insert(request.loot_index, LootContents::Item(item_stack));
+                commands.server_trigger(ToClients {
+                    mode: SendMode::Direct(ClientId::Client(client_entity)),
+                    message: NotificationEvent {
+                        message: "Inventory full!".to_string(),
+                        notification_type: NotificationType::Warning,
+                    },
+                });
+                return;
+            }
+        }
+    }
+
+    // If container is empty, despawn it
+    if container.contents.is_empty() {
+        commands.entity(request.container_entity).despawn();
+        info!("Loot container emptied and despawned");
+    }
+}
+
+/// Handle auto-looting the nearest container (loot all items)
+pub fn handle_auto_loot(
+    trigger: On<FromClient<AutoLootRequest>>,
+    mut commands: Commands,
+    clients: Query<&ActiveCharacterEntity>,
+    mut players: Query<(&Position, &mut Inventory, &mut Gold)>,
+    mut loot_containers: Query<(Entity, &Position, &mut LootContainer)>,
+    item_db: Res<ItemDatabase>,
+) {
+    let Some(client_entity) = trigger.client_id.entity() else { return };
+
+    // Get client's character
+    let Ok(active_char) = clients.get(client_entity) else { return };
+    let char_entity = active_char.0;
+
+    // Get player data
+    let Ok((player_pos, mut inventory, mut player_gold)) = players.get_mut(char_entity) else {
+        return;
+    };
+
+    // Find nearest loot container within pickup range
+    let mut nearest_container_entity: Option<Entity> = None;
+    let mut nearest_distance = f32::MAX;
+
+    for (container_entity, container_pos, _) in loot_containers.iter() {
+        let distance = player_pos.0.distance(container_pos.0);
+        if distance <= PICKUP_RANGE && distance < nearest_distance {
+            nearest_distance = distance;
+            nearest_container_entity = Some(container_entity);
+        }
+    }
+
+    let Some(container_entity) = nearest_container_entity else {
+        commands.server_trigger(ToClients {
+            mode: SendMode::Direct(ClientId::Client(client_entity)),
+            message: NotificationEvent {
+                message: "No loot nearby!".to_string(),
+                notification_type: NotificationType::Warning,
+            },
+        });
+        return;
+    };
+
+    // Now get mutable access to the container
+    let Ok((_, _, mut container)) = loot_containers.get_mut(container_entity) else {
+        return;
+    };
+
+    // Loot all items from the container
+    let mut total_gold = 0u32;
+    let mut looted_items: Vec<(String, u32)> = Vec::new();
+    let mut inventory_full = false;
+
+    // Process all contents
+    while !container.contents.is_empty() && !inventory_full {
+        let loot_item = container.contents.remove(0);
+
+        match loot_item {
+            LootContents::Gold(amount) => {
+                total_gold += amount;
+            }
+            LootContents::Item(item_stack) => {
+                if inventory.add_item(item_stack.clone()) {
+                    if let Some(item_def) = item_db.items.get(&item_stack.item_id) {
+                        looted_items.push((item_def.name.clone(), item_stack.quantity));
+                    }
+                } else {
+                    // Inventory full, put item back and stop looting
+                    container.contents.insert(0, LootContents::Item(item_stack));
+                    inventory_full = true;
+                }
+            }
+        }
+    }
+
+    // Apply gold
+    if total_gold > 0 {
+        player_gold.0 += total_gold;
+    }
+
+    // Build notification message
+    let mut message_parts = Vec::new();
+    if total_gold > 0 {
+        message_parts.push(format!("{} gold", total_gold));
+    }
+    for (item_name, quantity) in looted_items {
+        if quantity > 1 {
+            message_parts.push(format!("{} (x{})", item_name, quantity));
+        } else {
+            message_parts.push(item_name);
+        }
+    }
+
+    if !message_parts.is_empty() {
+        let message = if inventory_full {
+            format!("Looted: {} (Inventory full!)", message_parts.join(", "))
+        } else {
+            format!("Looted: {}", message_parts.join(", "))
+        };
+
+        commands.server_trigger(ToClients {
+            mode: SendMode::Direct(ClientId::Client(client_entity)),
+            message: NotificationEvent {
+                message,
+                notification_type: if inventory_full {
+                    NotificationType::Warning
+                } else {
+                    NotificationType::Info
+                },
+            },
+        });
+    }
+
+    // If container is empty, despawn it
+    if container.contents.is_empty() {
+        commands.entity(container_entity).despawn();
+        info!("Loot container auto-looted and despawned");
+    } else {
+        info!("Loot container partially looted (inventory full)");
+    }
+}

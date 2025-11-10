@@ -497,7 +497,7 @@ pub fn regenerate_resources(
 
 pub fn check_deaths(
     mut commands: Commands,
-    query: Query<(Entity, &Health, &Position, Option<&Enemy>, Option<&Player>, Option<&LootTable>), Changed<Health>>,
+    query: Query<(Entity, &Health, &Position, Option<&Enemy>, Option<&Player>, Option<&LootTable>, Option<&EnemyType>), Changed<Health>>,
     mut players: Query<(
         Entity,
         &CurrentTarget,
@@ -507,7 +507,7 @@ pub fn check_deaths(
         &mut Experience,
     )>,
 ) {
-    for (entity, health, position, is_enemy, is_player, loot_table) in &query {
+    for (entity, health, position, is_enemy, is_player, loot_table, enemy_type) in &query {
         if health.is_dead() {
             info!("Entity {:?} died", entity);
 
@@ -543,7 +543,7 @@ pub fn check_deaths(
 
                 // Drop loot if enemy has a loot table
                 if let Some(loot) = loot_table {
-                    drop_loot(&mut commands, loot, *position);
+                    drop_loot(&mut commands, loot, *position, enemy_type);
                 }
 
                 // Despawn enemies immediately (respawn will be handled by observer)
@@ -782,9 +782,20 @@ pub fn update_ai_activation_delays(
 }
 
 /// Drop loot from an enemy based on its loot table
-/// Spawns gold and items as WorldItem entities at the death location
-fn drop_loot(commands: &mut Commands, loot_table: &LootTable, position: Position) {
+/// Spawns a LootContainer entity containing all dropped gold and items
+fn drop_loot(commands: &mut Commands, loot_table: &LootTable, position: Position, enemy_type: Option<&EnemyType>) {
     let mut rng = rand::thread_rng();
+    let mut loot_contents = Vec::new();
+
+    // Determine enemy name based on type
+    let source_name = if let Some(enemy_type) = enemy_type {
+        match enemy_type.0 {
+            ENEMY_TYPE_SLIME => "Slime".to_string(),
+            _ => format!("Enemy {}", enemy_type.0),
+        }
+    } else {
+        "Unknown Enemy".to_string()
+    };
 
     // Always drop gold if the range is non-zero
     if loot_table.gold_max > 0 {
@@ -795,20 +806,8 @@ fn drop_loot(commands: &mut Commands, loot_table: &LootTable, position: Position
         };
 
         if gold_amount > 0 {
-            // Spawn gold drop with GoldDrop component (not a WorldItem - gold is currency not inventory item)
-            commands.spawn((
-                Replicated,
-                GoldDrop(gold_amount),
-                position,
-                Interactable::item(),  // Use the item() helper method
-                VisualShape {
-                    shape_type: ShapeType::Circle,
-                    color: COLOR_GOLD,
-                    size: 15.0,
-                },
-                crate::PhysicsPosition(position.0),
-            ));
-            info!("Dropped {} gold at {:?}", gold_amount, position.0);
+            loot_contents.push(LootContents::Gold(gold_amount));
+            info!("Rolling {} gold into loot container at {:?}", gold_amount, position.0);
         }
     }
 
@@ -823,23 +822,32 @@ fn drop_loot(commands: &mut Commands, loot_table: &LootTable, position: Position
             };
 
             if quantity > 0 {
-                // Spawn item drop as a WorldItem (insert each component individually)
-                let item_entity = commands.spawn(Replicated).id();
-
-                commands.entity(item_entity).insert(WorldItem {
+                loot_contents.push(LootContents::Item(ItemStack {
                     item_id: loot_item.item_id,
-                });
-                commands.entity(item_entity).insert(position);
-                commands.entity(item_entity).insert(Interactable::item());
-                commands.entity(item_entity).insert(VisualShape {
-                    shape_type: ShapeType::Square,
-                    color: COLOR_ITEM,
-                    size: 12.0,
-                });
-                commands.entity(item_entity).insert(crate::PhysicsPosition(position.0));
-
-                info!("Dropped item {} (x{}) at {:?}", loot_item.item_id, quantity, position.0);
+                    quantity,
+                }));
+                info!("Rolling item {} (x{}) into loot container at {:?}", loot_item.item_id, quantity, position.0);
             }
         }
+    }
+
+    // Only spawn loot container if there's something to loot
+    if !loot_contents.is_empty() {
+        commands.spawn((
+            Replicated,
+            LootContainer {
+                contents: loot_contents.clone(),
+                source_name: source_name.clone(),
+            },
+            position,
+            Interactable::loot_container(),
+            VisualShape {
+                shape_type: ShapeType::Square,
+                color: COLOR_LOOT_CONTAINER,
+                size: LOOT_CONTAINER_SIZE,
+            },
+            crate::PhysicsPosition(position.0),
+        ));
+        info!("Spawned loot container from {} with {} items at {:?}", source_name, loot_contents.len(), position.0);
     }
 }

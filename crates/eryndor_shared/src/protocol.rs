@@ -144,6 +144,35 @@ pub struct ToggleAutoAttackRequest {
     pub enabled: bool,
 }
 
+/// Open loot container to preview contents
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct OpenLootContainerRequest {
+    pub container_entity: Entity,
+}
+
+impl MapEntities for OpenLootContainerRequest {
+    fn map_entities<M: bevy::ecs::entity::EntityMapper>(&mut self, entity_mapper: &mut M) {
+        self.container_entity = entity_mapper.get_mapped(self.container_entity);
+    }
+}
+
+/// Loot a specific item from container by index
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct LootItemRequest {
+    pub container_entity: Entity,
+    pub loot_index: usize,
+}
+
+impl MapEntities for LootItemRequest {
+    fn map_entities<M: bevy::ecs::entity::EntityMapper>(&mut self, entity_mapper: &mut M) {
+        self.container_entity = entity_mapper.get_mapped(self.container_entity);
+    }
+}
+
+/// Auto-loot nearest container (loot all)
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct AutoLootRequest;
+
 // ============================================================================
 // SERVER -> CLIENT MESSAGES
 // ============================================================================
@@ -247,6 +276,20 @@ pub enum NotificationType {
     Success,
     Warning,
     Error,
+}
+
+/// Loot container contents - sent when client opens a loot container
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct LootContainerContentsEvent {
+    pub container_entity: Entity,
+    pub contents: Vec<LootContents>,
+    pub source_name: String,
+}
+
+impl MapEntities for LootContainerContentsEvent {
+    fn map_entities<M: bevy::ecs::entity::EntityMapper>(&mut self, entity_mapper: &mut M) {
+        self.container_entity = entity_mapper.get_mapped(self.container_entity);
+    }
 }
 
 /// Quest dialogue data - sent when player interacts with quest giver

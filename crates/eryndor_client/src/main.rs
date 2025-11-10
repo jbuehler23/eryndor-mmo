@@ -72,6 +72,7 @@ fn main() {
         .replicate::<AiState>()
         .replicate::<WorldItem>()
         .replicate::<GoldDrop>()
+        .replicate::<LootContainer>()
         .replicate::<Interactable>()
         .replicate::<VisualShape>()
         .replicate::<ActiveBuffs>()
@@ -86,6 +87,9 @@ fn main() {
         .add_mapped_client_event::<SetTargetRequest>(Channel::Ordered)
         .add_client_event::<UseAbilityRequest>(Channel::Ordered)
         .add_mapped_client_event::<PickupItemRequest>(Channel::Ordered)
+        .add_mapped_client_event::<OpenLootContainerRequest>(Channel::Ordered)
+        .add_mapped_client_event::<LootItemRequest>(Channel::Ordered)
+        .add_client_event::<AutoLootRequest>(Channel::Ordered)
         .add_client_event::<DropItemRequest>(Channel::Ordered)
         .add_client_event::<EquipItemRequest>(Channel::Ordered)
         .add_client_event::<UnequipItemRequest>(Channel::Ordered)
@@ -105,6 +109,7 @@ fn main() {
         .add_mapped_server_event::<DeathEvent>(Channel::Ordered)
         .add_server_event::<NotificationEvent>(Channel::Ordered)
         .add_server_event::<QuestDialogueEvent>(Channel::Ordered)
+        .add_mapped_server_event::<LootContainerContentsEvent>(Channel::Ordered)
         .add_server_event::<LevelUpEvent>(Channel::Ordered)
         .add_server_event::<ProficiencyLevelUpEvent>(Channel::Ordered)
         // Register observers for server -> client events
@@ -117,6 +122,7 @@ fn main() {
         .add_observer(game_state::handle_level_up)
         .add_observer(game_state::handle_proficiency_level_up)
         .add_observer(ui::handle_quest_dialogue)
+        .add_observer(ui::handle_loot_container_contents)
         .add_observer(rendering::spawn_damage_numbers)
         // Systems
         .add_systems(Startup, (setup_camera, game_state::connect_to_server))

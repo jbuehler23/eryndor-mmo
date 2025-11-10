@@ -48,12 +48,13 @@ pub fn handle_targeting_input(
     targetable_query: Query<(Entity, &Position, &VisualShape), With<Interactable>>,
     npc_query: Query<Entity, With<Npc>>,
     enemy_query: Query<Entity, With<Enemy>>,
+    loot_query: Query<Entity, With<LootContainer>>,
     mut input_state: ResMut<InputState>,
     mut commands: Commands,
 ) {
     // Left-click for general targeting (NPCs, items, enemies)
     let left_click = mouse_button.just_pressed(MouseButton::Left);
-    // Right-click specifically for enemies (combat)
+    // Right-click specifically for enemies (combat) or loot containers (preview)
     let right_click = mouse_button.just_pressed(MouseButton::Right);
 
     if !left_click && !right_click {
@@ -89,9 +90,21 @@ pub fn handle_targeting_input(
     }
 
     if let Some(entity) = closest_entity {
-        // Check if right-click was used
-        if right_click {
-            // Right-click: only target enemies
+        // Check if this is a loot container - open on either click
+        if loot_query.get(entity).is_ok() {
+            commands.client_trigger(OpenLootContainerRequest {
+                container_entity: entity,
+            });
+            // Also target it so we can see it selected
+            input_state.selected_target = Some(entity);
+            commands.client_trigger(SetTargetRequest {
+                target: Some(entity),
+            });
+            info!("Clicked loot container: {:?}", entity);
+        }
+        // Check if right-click was used on enemy
+        else if right_click {
+            // Right-click on enemy: target for combat
             if enemy_query.get(entity).is_ok() {
                 input_state.selected_target = Some(entity);
                 commands.client_trigger(SetTargetRequest {
@@ -150,7 +163,8 @@ pub fn handle_interaction_input(
     client_state: Res<MyClientState>,
     player_query: Query<&Position, With<Player>>,
     npc_query: Query<(Entity, &Position), With<Npc>>,
-    world_item_query: Query<(Entity, &Position), With<WorldItem>>,
+    world_item_query: Query<(Entity, &Position), Or<(With<WorldItem>, With<GoldDrop>)>>,
+    loot_query: Query<(Entity, &Position), With<LootContainer>>,
     mut commands: Commands,
 ) {
     // Don't handle interaction if ESC menu is open
@@ -162,16 +176,35 @@ pub fn handle_interaction_input(
         return;
     }
 
-    let Some(target) = input_state.selected_target else {
-        info!("E pressed but no target selected");
-        return;
-    };
-
     // Get player position for distance check
     let Some(player_entity) = client_state.player_entity else {
         return;
     };
     let Ok(player_pos) = player_query.get(player_entity) else {
+        return;
+    };
+
+    // Priority 1: Check for nearby loot containers (auto-loot)
+    // This works without targeting - just press E near loot
+    let mut nearest_loot: Option<(Entity, f32)> = None;
+    for (loot_entity, loot_pos) in &loot_query {
+        let distance = player_pos.0.distance(loot_pos.0);
+        if distance <= PICKUP_RANGE {
+            if nearest_loot.is_none() || distance < nearest_loot.unwrap().1 {
+                nearest_loot = Some((loot_entity, distance));
+            }
+        }
+    }
+
+    if let Some((loot_entity, distance)) = nearest_loot {
+        commands.client_trigger(AutoLootRequest);
+        info!("Auto-looting nearest container: {:?} at distance {:.2}", loot_entity, distance);
+        return;
+    }
+
+    // Priority 2: If E is pressed with a target, handle target-specific interactions
+    let Some(target) = input_state.selected_target else {
+        info!("E pressed but no target selected and no loot nearby");
         return;
     };
 
