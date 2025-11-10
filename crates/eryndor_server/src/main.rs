@@ -58,6 +58,8 @@ fn main() {
         .replicate::<MoveSpeed>()
         .replicate::<Health>()
         .replicate::<Mana>()
+        .replicate::<HealthRegen>()
+        .replicate::<ManaRegen>()
         .replicate::<CombatStats>()
         .replicate::<CurrentTarget>()
         .replicate::<InCombat>()
@@ -144,6 +146,7 @@ fn main() {
             combat::update_ai_activation_delays,
             combat::process_auto_attacks,
             combat::update_ability_cooldowns,
+            combat::regenerate_resources,
             combat::check_deaths,
             combat::check_level_ups,
             combat::check_weapon_proficiency_level_ups,

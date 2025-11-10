@@ -43,6 +43,42 @@ pub fn get_class_health_mana(class: CharacterClass) -> (Health, Mana) {
     }
 }
 
+/// Get class-specific regeneration rates
+pub fn get_class_regen(class: CharacterClass) -> (HealthRegen, ManaRegen) {
+    match class {
+        CharacterClass::Knight => (
+            HealthRegen {
+                base_regen: 5.0,
+                in_combat_multiplier: 0.0,  // Knights don't regen health in combat
+            },
+            ManaRegen {
+                base_regen: 1.0,
+                in_combat_multiplier: 0.5,  // 50% mana regen in combat
+            },
+        ),
+        CharacterClass::Mage => (
+            HealthRegen {
+                base_regen: 3.0,  // Lower base health regen (squishier class)
+                in_combat_multiplier: 0.0,
+            },
+            ManaRegen {
+                base_regen: 3.0,  // High mana regen for casters
+                in_combat_multiplier: 0.5,
+            },
+        ),
+        CharacterClass::Rogue => (
+            HealthRegen {
+                base_regen: 4.0,  // Medium health regen
+                in_combat_multiplier: 0.0,
+            },
+            ManaRegen {
+                base_regen: 2.0,  // Medium mana regen
+                in_combat_multiplier: 0.5,
+            },
+        ),
+    }
+}
+
 /// Get class-specific visual shape
 pub fn get_class_visual(class: CharacterClass) -> VisualShape {
     match class {
@@ -83,6 +119,7 @@ pub fn spawn_character_components(
     // Get class-specific stats
     let combat_stats = get_class_stats(class);
     let visual = get_class_visual(class);
+    let (health_regen, mana_regen) = get_class_regen(class);
 
     // Grant class-based starting abilities
     let mut learned_abilities = LearnedAbilities::default();
@@ -123,6 +160,8 @@ pub fn spawn_character_components(
         MoveSpeed::default(),
         health,
         mana,
+        health_regen,
+        mana_regen,
         combat_stats,
         CurrentTarget::default(),
         InCombat(false),

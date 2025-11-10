@@ -284,3 +284,13 @@ pub enum ProficiencyType {
     Weapon,
     Armor,
 }
+
+// ============================================================================
+// ADMIN COMMANDS
+// ============================================================================
+
+/// Admin command to grant an ability
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct AdminGrantAbilityRequest {
+    pub ability_id: u32,
+}

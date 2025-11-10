@@ -51,6 +51,8 @@ fn main() {
         .replicate::<MoveSpeed>()
         .replicate::<Health>()
         .replicate::<Mana>()
+        .replicate::<HealthRegen>()
+        .replicate::<ManaRegen>()
         .replicate::<CombatStats>()
         .replicate::<CurrentTarget>()
         .replicate::<InCombat>()
