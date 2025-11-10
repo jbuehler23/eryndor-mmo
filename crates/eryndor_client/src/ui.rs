@@ -170,7 +170,7 @@ pub fn game_ui(
     mut ui_state: ResMut<UiState>,
     mut client_state: ResMut<MyClientState>,
     mut commands: Commands,
-    player_query: Query<(Entity, &Health, &Mana, &CurrentTarget, &Hotbar, &Inventory, &Equipment, &CombatStats, &LearnedAbilities, &QuestLog, &Character), With<Player>>,
+    player_query: Query<(Entity, &Health, &Mana, &CurrentTarget, &Hotbar, &Inventory, &Equipment, &CombatStats, &LearnedAbilities, &QuestLog, &Character, &Gold), With<Player>>,
     progression_query: Query<(&Experience, &WeaponProficiency, &WeaponProficiencyExp, &ArmorProficiency)>,
     target_query: Query<(&Health, Option<&Character>, Option<&NpcName>)>,
     item_db: Res<crate::item_cache::ClientItemDatabase>,
@@ -183,7 +183,7 @@ pub fn game_ui(
     };
 
     // Silently wait for entity to be replicated with all components
-    let Ok((_, health, mana, current_target, hotbar, inventory, equipment, combat_stats, _learned_abilities, quest_log, character)) = player_query.get(player_entity) else {
+    let Ok((_, health, mana, current_target, hotbar, inventory, equipment, combat_stats, _learned_abilities, quest_log, character, gold)) = player_query.get(player_entity) else {
         return
     };
 
@@ -195,7 +195,7 @@ pub fn game_ui(
     // Player health/mana bar (top left)
     egui::Window::new("Player Status")
         .fixed_pos([10.0, 10.0])
-        .fixed_size([200.0, 80.0])
+        .fixed_size([200.0, 100.0])
         .title_bar(false)
         .show(ctx, |ui| {
             ui.label("Health:");
@@ -203,6 +203,12 @@ pub fn game_ui(
 
             ui.label("Mana:");
             ui.add(egui::ProgressBar::new(mana.percent()).text(format!("{:.0}/{:.0}", mana.current, mana.max)));
+
+            ui.add_space(5.0);
+            ui.horizontal(|ui| {
+                ui.label("Gold:");
+                ui.colored_label(egui::Color32::GOLD, format!("{}", gold.0));
+            });
         });
 
     // Target frame (top center)

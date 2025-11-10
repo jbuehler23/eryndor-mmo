@@ -65,6 +65,12 @@ pub fn spawn_world(mut commands: Commands) {
                 position: *pos,
                 respawn_delay: 5.0, // 5 seconds
             },
+            // Loot table for this enemy
+            LootTable {
+                gold_min: 5,
+                gold_max: 15,
+                items: vec![], // No item drops for slimes yet
+            },
         ));
 
         // Physics components

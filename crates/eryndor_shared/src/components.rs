@@ -282,6 +282,10 @@ impl Default for WeaponProficiency {
 // INVENTORY COMPONENTS
 // ============================================================================
 
+/// Player gold currency
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug, Default)]
+pub struct Gold(pub u32);
+
 /// Player inventory
 #[derive(Component, Serialize, Deserialize, Clone, Debug)]
 pub struct Inventory {
@@ -501,6 +505,22 @@ impl Default for AiState {
     }
 }
 
+/// Loot table for enemies - defines what they drop on death
+#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+pub struct LootTable {
+    pub gold_min: u32,
+    pub gold_max: u32,
+    pub items: Vec<LootItem>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct LootItem {
+    pub item_id: u32,
+    pub drop_chance: f32, // 0.0 to 1.0
+    pub quantity_min: u32,
+    pub quantity_max: u32,
+}
+
 impl bevy::ecs::entity::MapEntities for AiState {
     fn map_entities<M: bevy::ecs::entity::EntityMapper>(&mut self, entity_mapper: &mut M) {
         match self {
@@ -704,6 +724,10 @@ impl Default for UnlockedArmorPassives {
 pub struct WorldItem {
     pub item_id: u32,
 }
+
+/// Gold drop marker - indicates a world item is gold currency
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+pub struct GoldDrop(pub u32);
 
 /// Visual representation data
 #[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]

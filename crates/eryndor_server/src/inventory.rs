@@ -8,8 +8,8 @@ pub fn handle_pickup_item(
     trigger: On<FromClient<PickupItemRequest>>,
     mut commands: Commands,
     clients: Query<&ActiveCharacterEntity>,
-    mut players: Query<(&Position, &mut Inventory, &mut LearnedAbilities, &mut Hotbar)>,
-    world_items: Query<(&Position, &WorldItem)>,
+    mut players: Query<(&Position, &mut Inventory, &mut LearnedAbilities, &mut Hotbar, &mut Gold)>,
+    world_items: Query<(&Position, Option<&WorldItem>, Option<&GoldDrop>)>,
     item_db: Res<ItemDatabase>,
 ) {
     let Some(client_entity) = trigger.client_id.entity() else { return };
@@ -19,13 +19,13 @@ pub fn handle_pickup_item(
     let Ok(active_char) = clients.get(client_entity) else { return };
     let char_entity = active_char.0;
 
-    // Check if item exists
-    let Ok((item_pos, world_item)) = world_items.get(request.item_entity) else {
+    // Check if entity exists
+    let Ok((item_pos, world_item, gold_drop)) = world_items.get(request.item_entity) else {
         return;
     };
 
     // Get player data
-    let Ok((player_pos, mut inventory, mut learned_abilities, mut hotbar)) =
+    let Ok((player_pos, mut inventory, mut learned_abilities, mut hotbar, mut player_gold)) =
         players.get_mut(char_entity) else { return };
 
     // Check range
@@ -41,39 +41,61 @@ pub fn handle_pickup_item(
         return;
     }
 
-    // Add item to inventory
-    let item_stack = ItemStack {
-        item_id: world_item.item_id,
-        quantity: 1,
-    };
+    // Check if this is a gold drop
+    if let Some(gold_drop) = gold_drop {
+        let amount = gold_drop.0;
+        player_gold.0 += amount;
 
-    if inventory.add_item(item_stack.clone()) {
-        // Get item definition
-        if let Some(item_def) = item_db.items.get(&world_item.item_id) {
-            info!("Player picked up: {}", item_def.name);
-
-            // Note: Abilities are now class-based, not item-based
-            // Items can still be picked up for other purposes (consumables, materials, etc.)
-
-            commands.server_trigger(ToClients {
-                mode: SendMode::Direct(ClientId::Client(client_entity)),
-                message: NotificationEvent {
-                    message: format!("Picked up {}", item_def.name),
-                    notification_type: NotificationType::Info,
-                },
-            });
-        }
-
-        // Remove item from world
-        commands.entity(request.item_entity).despawn();
-    } else {
+        info!("Player picked up {} gold (new total: {})", amount, player_gold.0);
         commands.server_trigger(ToClients {
             mode: SendMode::Direct(ClientId::Client(client_entity)),
             message: NotificationEvent {
-                message: "Inventory full!".to_string(),
-                notification_type: NotificationType::Warning,
+                message: format!("Picked up {} gold", amount),
+                notification_type: NotificationType::Info,
             },
         });
+
+        // Remove gold from world
+        commands.entity(request.item_entity).despawn();
+        return;
+    }
+
+    // Otherwise, handle as a regular item
+    if let Some(world_item) = world_item {
+        // Add item to inventory
+        let item_stack = ItemStack {
+            item_id: world_item.item_id,
+            quantity: 1,
+        };
+
+        if inventory.add_item(item_stack.clone()) {
+            // Get item definition
+            if let Some(item_def) = item_db.items.get(&world_item.item_id) {
+                info!("Player picked up: {}", item_def.name);
+
+                // Note: Abilities are now class-based, not item-based
+                // Items can still be picked up for other purposes (consumables, materials, etc.)
+
+                commands.server_trigger(ToClients {
+                    mode: SendMode::Direct(ClientId::Client(client_entity)),
+                    message: NotificationEvent {
+                        message: format!("Picked up {}", item_def.name),
+                        notification_type: NotificationType::Info,
+                    },
+                });
+            }
+
+            // Remove item from world
+            commands.entity(request.item_entity).despawn();
+        } else {
+            commands.server_trigger(ToClients {
+                mode: SendMode::Direct(ClientId::Client(client_entity)),
+                message: NotificationEvent {
+                    message: "Inventory full!".to_string(),
+                    notification_type: NotificationType::Warning,
+                },
+            });
+        }
     }
 }
 

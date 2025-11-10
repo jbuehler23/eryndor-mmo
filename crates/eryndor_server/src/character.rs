@@ -168,6 +168,7 @@ pub fn spawn_character_components(
     )).id();
 
     commands.entity(character_entity).insert((
+        Gold::default(),
         inventory,
         equipment,
         hotbar,

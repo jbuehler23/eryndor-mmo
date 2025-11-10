@@ -4,6 +4,7 @@ use eryndor_shared::*;
 use crate::auth::ActiveCharacterEntity;
 use crate::abilities::AbilityDatabase;
 use avian2d::prelude::LinearVelocity;
+use rand::Rng;
 
 pub fn handle_set_target(
     trigger: On<FromClient<SetTargetRequest>>,
@@ -496,7 +497,7 @@ pub fn regenerate_resources(
 
 pub fn check_deaths(
     mut commands: Commands,
-    query: Query<(Entity, &Health, Option<&Enemy>, Option<&Player>), Changed<Health>>,
+    query: Query<(Entity, &Health, &Position, Option<&Enemy>, Option<&Player>, Option<&LootTable>), Changed<Health>>,
     mut players: Query<(
         Entity,
         &CurrentTarget,
@@ -506,7 +507,7 @@ pub fn check_deaths(
         &mut Experience,
     )>,
 ) {
-    for (entity, health, is_enemy, is_player) in &query {
+    for (entity, health, position, is_enemy, is_player, loot_table) in &query {
         if health.is_dead() {
             info!("Entity {:?} died", entity);
 
@@ -538,6 +539,11 @@ pub fn check_deaths(
                         in_combat.0 = false;
                         info!("Player exited combat - target died");
                     }
+                }
+
+                // Drop loot if enemy has a loot table
+                if let Some(loot) = loot_table {
+                    drop_loot(&mut commands, loot, *position);
                 }
 
                 // Despawn enemies immediately (respawn will be handled by observer)
@@ -639,8 +645,6 @@ pub fn check_weapon_proficiency_level_ups(
     ), Changed<WeaponProficiencyExp>>,
 ) {
     for (_entity, character, mut proficiency, mut prof_exp) in &mut query {
-        info!("Checking weapon proficiency level-ups for {} - Dagger: {}/{}",
-            character.name, prof_exp.dagger_xp, WeaponProficiencyExp::xp_for_level(proficiency.dagger + 1));
         // Helper macro to check level-up for a weapon type
         macro_rules! check_weapon_level_up {
             ($weapon_name:expr, $xp:expr, $level:expr) => {
@@ -673,6 +677,7 @@ pub fn check_weapon_proficiency_level_ups(
         check_weapon_level_up!("Sword", prof_exp.sword_xp, proficiency.sword);
         check_weapon_level_up!("Dagger", prof_exp.dagger_xp, proficiency.dagger);
         check_weapon_level_up!("Staff", prof_exp.staff_xp, proficiency.staff);
+        check_weapon_level_up!("Wand", prof_exp.wand_xp, proficiency.wand);
         check_weapon_level_up!("Mace", prof_exp.mace_xp, proficiency.mace);
         check_weapon_level_up!("Bow", prof_exp.bow_xp, proficiency.bow);
         check_weapon_level_up!("Axe", prof_exp.axe_xp, proficiency.axe);
@@ -772,6 +777,69 @@ pub fn update_ai_activation_delays(
         if delay.timer.finished() {
             commands.entity(entity).remove::<AiActivationDelay>();
             info!("Enemy {:?} AI activated", entity);
+        }
+    }
+}
+
+/// Drop loot from an enemy based on its loot table
+/// Spawns gold and items as WorldItem entities at the death location
+fn drop_loot(commands: &mut Commands, loot_table: &LootTable, position: Position) {
+    let mut rng = rand::thread_rng();
+
+    // Always drop gold if the range is non-zero
+    if loot_table.gold_max > 0 {
+        let gold_amount = if loot_table.gold_min == loot_table.gold_max {
+            loot_table.gold_max
+        } else {
+            rng.gen_range(loot_table.gold_min..=loot_table.gold_max)
+        };
+
+        if gold_amount > 0 {
+            // Spawn gold drop with GoldDrop component (not a WorldItem - gold is currency not inventory item)
+            commands.spawn((
+                Replicated,
+                GoldDrop(gold_amount),
+                position,
+                Interactable::item(),  // Use the item() helper method
+                VisualShape {
+                    shape_type: ShapeType::Circle,
+                    color: COLOR_GOLD,
+                    size: 15.0,
+                },
+                crate::PhysicsPosition(position.0),
+            ));
+            info!("Dropped {} gold at {:?}", gold_amount, position.0);
+        }
+    }
+
+    // Roll for item drops
+    for loot_item in &loot_table.items {
+        let roll: f32 = rng.gen();
+        if roll <= loot_item.drop_chance {
+            let quantity = if loot_item.quantity_min == loot_item.quantity_max {
+                loot_item.quantity_max
+            } else {
+                rng.gen_range(loot_item.quantity_min..=loot_item.quantity_max)
+            };
+
+            if quantity > 0 {
+                // Spawn item drop as a WorldItem (insert each component individually)
+                let item_entity = commands.spawn(Replicated).id();
+
+                commands.entity(item_entity).insert(WorldItem {
+                    item_id: loot_item.item_id,
+                });
+                commands.entity(item_entity).insert(position);
+                commands.entity(item_entity).insert(Interactable::item());
+                commands.entity(item_entity).insert(VisualShape {
+                    shape_type: ShapeType::Square,
+                    color: COLOR_ITEM,
+                    size: 12.0,
+                });
+                commands.entity(item_entity).insert(crate::PhysicsPosition(position.0));
+
+                info!("Dropped item {} (x{}) at {:?}", loot_item.item_id, quantity, position.0);
+            }
         }
     }
 }
