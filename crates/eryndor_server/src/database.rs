@@ -99,6 +99,23 @@ pub fn setup_database(mut db_res: ResMut<DatabaseConnection>) {
         .await;
         // Ignore error if column already exists
 
+        // Migration: Update accounts table for new security features
+        let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN email TEXT UNIQUE").execute(&pool).await;
+        let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN email_verified BOOLEAN DEFAULT FALSE").execute(&pool).await;
+        let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN account_type TEXT DEFAULT 'registered'").execute(&pool).await;
+        let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN is_admin BOOLEAN DEFAULT FALSE").execute(&pool).await;
+        let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN guest_token TEXT UNIQUE").execute(&pool).await;
+        let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN guest_created_at INTEGER").execute(&pool).await;
+        let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN guest_expires_at INTEGER").execute(&pool).await;
+        let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN last_login_at INTEGER").execute(&pool).await;
+        let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN last_login_ip TEXT").execute(&pool).await;
+        // Ignore errors if columns already exist
+
+        // Create indexes for accounts table
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_accounts_email ON accounts(email)").execute(&pool).await;
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_accounts_guest_token ON accounts(guest_token)").execute(&pool).await;
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_accounts_type ON accounts(account_type)").execute(&pool).await;
+
         // Migration: Add progression columns to characters table
         let _ = sqlx::query("ALTER TABLE characters ADD COLUMN current_xp INTEGER NOT NULL DEFAULT 0").execute(&pool).await;
         let _ = sqlx::query("ALTER TABLE characters ADD COLUMN weapon_prof_sword INTEGER NOT NULL DEFAULT 0").execute(&pool).await;
@@ -168,7 +185,135 @@ pub fn setup_database(mut db_res: ResMut<DatabaseConnection>) {
         .await
         .expect("Failed to create hotbar table");
 
-        info!("Database initialized successfully");
+        // ============================================================================
+        // SECURITY TABLES
+        // ============================================================================
+
+        // Bans table
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS bans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ban_type TEXT NOT NULL,
+                target TEXT NOT NULL,
+                account_id INTEGER,
+                reason TEXT NOT NULL,
+                banned_by INTEGER,
+                banned_at INTEGER NOT NULL,
+                expires_at INTEGER,
+                is_active BOOLEAN DEFAULT TRUE,
+                notes TEXT,
+                FOREIGN KEY(account_id) REFERENCES accounts(id),
+                FOREIGN KEY(banned_by) REFERENCES accounts(id)
+            )"
+        )
+        .execute(&pool)
+        .await
+        .expect("Failed to create bans table");
+
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_bans_target ON bans(target, is_active)").execute(&pool).await;
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_bans_account ON bans(account_id, is_active)").execute(&pool).await;
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_bans_expiry ON bans(expires_at)").execute(&pool).await;
+
+        // Ban appeals table
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS ban_appeals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ban_id INTEGER NOT NULL,
+                appeal_text TEXT NOT NULL,
+                submitted_at INTEGER NOT NULL,
+                status TEXT DEFAULT 'pending',
+                reviewed_by INTEGER,
+                reviewed_at INTEGER,
+                review_notes TEXT,
+                FOREIGN KEY(ban_id) REFERENCES bans(id),
+                FOREIGN KEY(reviewed_by) REFERENCES accounts(id)
+            )"
+        )
+        .execute(&pool)
+        .await
+        .expect("Failed to create ban appeals table");
+
+        // Content flags table
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS content_flags (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER NOT NULL,
+                content_type TEXT NOT NULL,
+                content TEXT NOT NULL,
+                toxicity_score REAL,
+                flagged_at INTEGER NOT NULL,
+                status TEXT DEFAULT 'pending',
+                reviewed_by INTEGER,
+                reviewed_at INTEGER,
+                FOREIGN KEY(account_id) REFERENCES accounts(id),
+                FOREIGN KEY(reviewed_by) REFERENCES accounts(id)
+            )"
+        )
+        .execute(&pool)
+        .await
+        .expect("Failed to create content flags table");
+
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_content_flags_status ON content_flags(status)").execute(&pool).await;
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_content_flags_account ON content_flags(account_id)").execute(&pool).await;
+
+        // Admin actions audit log
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS admin_actions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                admin_id INTEGER NOT NULL,
+                action_type TEXT NOT NULL,
+                target_id INTEGER,
+                details TEXT,
+                ip_address TEXT,
+                created_at INTEGER NOT NULL,
+                FOREIGN KEY(admin_id) REFERENCES accounts(id),
+                FOREIGN KEY(target_id) REFERENCES accounts(id)
+            )"
+        )
+        .execute(&pool)
+        .await
+        .expect("Failed to create admin actions table");
+
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_admin_actions_admin ON admin_actions(admin_id)").execute(&pool).await;
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_admin_actions_target ON admin_actions(target_id)").execute(&pool).await;
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_admin_actions_created ON admin_actions(created_at)").execute(&pool).await;
+
+        // Rate limit violations table
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS rate_limit_violations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                identifier TEXT NOT NULL,
+                violation_type TEXT NOT NULL,
+                violated_at INTEGER NOT NULL,
+                details TEXT
+            )"
+        )
+        .execute(&pool)
+        .await
+        .expect("Failed to create rate limit violations table");
+
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_rate_limit_identifier ON rate_limit_violations(identifier, violation_type)").execute(&pool).await;
+
+        // Active sessions table (for security)
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS active_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER NOT NULL,
+                session_token TEXT UNIQUE NOT NULL,
+                ip_address TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                last_activity INTEGER NOT NULL,
+                FOREIGN KEY(account_id) REFERENCES accounts(id)
+            )"
+        )
+        .execute(&pool)
+        .await
+        .expect("Failed to create active sessions table");
+
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_sessions_account ON active_sessions(account_id)").execute(&pool).await;
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_sessions_token ON active_sessions(session_token)").execute(&pool).await;
+
+        info!("Database initialized successfully with security tables");
         pool
     });
 

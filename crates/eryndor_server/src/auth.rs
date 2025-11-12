@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_replicon::prelude::*;
 use eryndor_shared::*;
 use crate::database::{self, DatabaseConnection};
+use sqlx::Row;
 
 /// Component marking authenticated clients
 #[derive(Component)]
@@ -589,4 +590,268 @@ fn hash_password(password: &str) -> String {
         .hash_password(password.as_bytes(), &salt)
         .unwrap()
         .to_string()
+}
+
+// ============================================================================
+// GUEST ACCOUNT HANDLERS
+// ============================================================================
+
+pub fn handle_create_guest_account(
+    trigger: On<FromClient<CreateGuestAccountRequest>>,
+    mut commands: Commands,
+    db: Res<DatabaseConnection>,
+) {
+    info!("handle_create_guest_account observer triggered!");
+
+    let Some(pool) = db.pool() else {
+        warn!("Database pool not available");
+        return;
+    };
+
+    let Some(client_entity) = trigger.client_id.entity() else {
+        warn!("No client entity in trigger");
+        return;
+    };
+
+    info!("Guest account creation request from client {:?}", client_entity);
+
+    // Create guest account
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    let result = runtime.block_on(crate::guest::create_guest_account(pool));
+
+    match result {
+        Ok((account_id, guest_token, username)) => {
+            let expires_at = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs() as i64 + (7 * 24 * 60 * 60);
+
+            info!("Guest account created successfully: {} (ID: {})", username, account_id);
+
+            // Mark client as authenticated
+            commands.entity(client_entity).insert(Authenticated { account_id });
+
+            // Send success response
+            commands.server_trigger(ToClients {
+                mode: SendMode::Direct(ClientId::Client(client_entity)),
+                message: CreateGuestAccountResponse {
+                    success: true,
+                    message: format!("Guest account created: {}. Save your guest token!", username),
+                    guest_token: Some(guest_token),
+                    username: Some(username),
+                    expires_at: Some(expires_at),
+                },
+            });
+
+            // Also send character list (will be empty for new guest)
+            commands.server_trigger(ToClients {
+                mode: SendMode::Direct(ClientId::Client(client_entity)),
+                message: CharacterListResponse {
+                    characters: vec![],
+                },
+            });
+        }
+        Err(err) => {
+            warn!("Failed to create guest account: {}", err);
+            commands.server_trigger(ToClients {
+                mode: SendMode::Direct(ClientId::Client(client_entity)),
+                message: CreateGuestAccountResponse {
+                    success: false,
+                    message: format!("Failed to create guest account: {}", err),
+                    guest_token: None,
+                    username: None,
+                    expires_at: None,
+                },
+            });
+        }
+    }
+}
+
+pub fn handle_guest_login(
+    trigger: On<FromClient<GuestLoginRequest>>,
+    mut commands: Commands,
+    db: Res<DatabaseConnection>,
+    authenticated_clients: Query<&Authenticated>,
+) {
+    info!("handle_guest_login observer triggered!");
+
+    let Some(pool) = db.pool() else {
+        warn!("Database pool not available");
+        return;
+    };
+
+    let Some(client_entity) = trigger.client_id.entity() else {
+        warn!("No client entity in trigger");
+        return;
+    };
+
+    let request = trigger.event();
+    info!("Guest login attempt from client {:?}", client_entity);
+
+    // Verify guest token
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    let result = runtime.block_on(crate::guest::verify_guest_token(pool, &request.guest_token));
+
+    match result {
+        Ok(account_id) => {
+            // Check if this account is already logged in
+            let already_logged_in = authenticated_clients.iter().any(|auth| auth.account_id == account_id);
+
+            if already_logged_in {
+                warn!("Guest account {} is already logged in, rejecting duplicate login", account_id);
+                commands.server_trigger(ToClients {
+                    mode: SendMode::Direct(ClientId::Client(client_entity)),
+                    message: GuestLoginResponse {
+                        success: false,
+                        message: "This guest account is already logged in from another client".to_string(),
+                        account_id: None,
+                        username: None,
+                        expires_at: None,
+                    },
+                });
+                return;
+            }
+
+            // Get username and expiry
+            let username_result = runtime.block_on(
+                sqlx::query("SELECT username, guest_expires_at FROM accounts WHERE id = ?1")
+                    .bind(account_id)
+                    .fetch_one(pool)
+            );
+
+            match username_result {
+                Ok(row) => {
+                    let username: String = row.get(0);
+                    let expires_at: i64 = row.get(1);
+
+                    info!("Guest login successful: {} (ID: {})", username, account_id);
+
+                    // Mark client as authenticated
+                    commands.entity(client_entity).insert(Authenticated { account_id });
+
+                    // Send success response
+                    commands.server_trigger(ToClients {
+                        mode: SendMode::Direct(ClientId::Client(client_entity)),
+                        message: GuestLoginResponse {
+                            success: true,
+                            message: format!("Welcome back, {}!", username),
+                            account_id: Some(account_id),
+                            username: Some(username),
+                            expires_at: Some(expires_at),
+                        },
+                    });
+
+                    // Send character list
+                    let characters_result = runtime.block_on(database::get_characters(pool, account_id));
+                    match characters_result {
+                        Ok(characters) => {
+                            commands.server_trigger(ToClients {
+                                mode: SendMode::Direct(ClientId::Client(client_entity)),
+                                message: CharacterListResponse { characters },
+                            });
+                        }
+                        Err(e) => {
+                            warn!("Failed to get characters for guest {}: {}", account_id, e);
+                        }
+                    }
+                }
+                Err(e) => {
+                    warn!("Failed to get guest details: {}", e);
+                    commands.server_trigger(ToClients {
+                        mode: SendMode::Direct(ClientId::Client(client_entity)),
+                        message: GuestLoginResponse {
+                            success: false,
+                            message: "Failed to retrieve account details".to_string(),
+                            account_id: None,
+                            username: None,
+                            expires_at: None,
+                        },
+                    });
+                }
+            }
+        }
+        Err(err) => {
+            warn!("Guest login failed: {}", err);
+            commands.server_trigger(ToClients {
+                mode: SendMode::Direct(ClientId::Client(client_entity)),
+                message: GuestLoginResponse {
+                    success: false,
+                    message: err,
+                    account_id: None,
+                    username: None,
+                    expires_at: None,
+                },
+            });
+        }
+    }
+}
+
+pub fn handle_convert_guest_account(
+    trigger: On<FromClient<ConvertGuestAccountRequest>>,
+    mut commands: Commands,
+    db: Res<DatabaseConnection>,
+    clients: Query<&Authenticated>,
+) {
+    info!("handle_convert_guest_account observer triggered!");
+
+    let Some(pool) = db.pool() else {
+        warn!("Database pool not available");
+        return;
+    };
+
+    let Some(client_entity) = trigger.client_id.entity() else {
+        warn!("No client entity in trigger");
+        return;
+    };
+
+    // Check if client is authenticated
+    let Ok(auth) = clients.get(client_entity) else {
+        warn!("Client {:?} not authenticated", client_entity);
+        commands.server_trigger(ToClients {
+            mode: SendMode::Direct(ClientId::Client(client_entity)),
+            message: ConvertGuestAccountResponse {
+                success: false,
+                message: "You must be logged in to convert your account".to_string(),
+            },
+        });
+        return;
+    };
+
+    let request = trigger.event();
+    info!("Guest account conversion request from account {}", auth.account_id);
+
+    // Convert guest to registered
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    let result = runtime.block_on(crate::guest::convert_guest_to_registered(
+        pool,
+        auth.account_id,
+        request.email.clone(),
+        request.password.clone(),
+    ));
+
+    match result {
+        Ok(()) => {
+            info!("Successfully converted guest account {} to registered", auth.account_id);
+            commands.server_trigger(ToClients {
+                mode: SendMode::Direct(ClientId::Client(client_entity)),
+                message: ConvertGuestAccountResponse {
+                    success: true,
+                    message: format!(
+                        "Account upgraded successfully! You can now login with email: {}",
+                        request.email
+                    ),
+                },
+            });
+        }
+        Err(err) => {
+            warn!("Failed to convert guest account {}: {}", auth.account_id, err);
+            commands.server_trigger(ToClients {
+                mode: SendMode::Direct(ClientId::Client(client_entity)),
+                message: ConvertGuestAccountResponse {
+                    success: false,
+                    message: err,
+                },
+            });
+        }
+    }
 }

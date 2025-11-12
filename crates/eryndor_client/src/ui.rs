@@ -17,6 +17,14 @@ pub struct UiState {
     pub show_esc_menu: bool,
     pub quest_dialogue: Option<QuestDialogueData>,
     pub loot_window: Option<LootWindowData>,
+    // Guest account fields
+    pub guest_token: String,
+    pub guest_token_input: String,
+    pub show_upgrade_dialog: bool,
+    pub upgrade_email: String,
+    pub upgrade_password: String,
+    pub upgrade_password_confirm: String,
+    pub show_guest_login_tab: bool,
 }
 
 #[derive(Clone)]
@@ -49,31 +57,78 @@ pub fn login_ui(
             ui.heading("Eryndor MMO");
             ui.add_space(20.0);
 
-            ui.label("Username:");
-            ui.text_edit_singleline(&mut ui_state.username);
-            ui.add_space(10.0);
-
-            ui.label("Password:");
-            ui.add(egui::TextEdit::singleline(&mut ui_state.password).password(true));
+            // Tabs for regular login vs guest login
+            ui.horizontal(|ui| {
+                if ui.selectable_label(!ui_state.show_guest_login_tab, "Account Login").clicked() {
+                    ui_state.show_guest_login_tab = false;
+                }
+                if ui.selectable_label(ui_state.show_guest_login_tab, "Guest Login").clicked() {
+                    ui_state.show_guest_login_tab = true;
+                }
+            });
             ui.add_space(20.0);
 
-            if ui.button("Login").clicked() {
-                if !ui_state.username.is_empty() && !ui_state.password.is_empty() {
-                    info!("Sending login request for user: {}", ui_state.username);
-                    commands.client_trigger(LoginRequest {
-                        username: ui_state.username.clone(),
-                        password: ui_state.password.clone(),
-                    });
-                }
-            }
+            if !ui_state.show_guest_login_tab {
+                // Regular account login tab
+                ui.label("Username:");
+                ui.text_edit_singleline(&mut ui_state.username);
+                ui.add_space(10.0);
 
-            if ui.button("Create Account").clicked() {
-                if !ui_state.username.is_empty() && !ui_state.password.is_empty() {
-                    info!("Sending create account request for user: {}", ui_state.username);
-                    commands.client_trigger(CreateAccountRequest {
-                        username: ui_state.username.clone(),
-                        password: ui_state.password.clone(),
-                    });
+                ui.label("Password:");
+                ui.add(egui::TextEdit::singleline(&mut ui_state.password).password(true));
+                ui.add_space(20.0);
+
+                if ui.button("Login").clicked() {
+                    if !ui_state.username.is_empty() && !ui_state.password.is_empty() {
+                        info!("Sending login request for user: {}", ui_state.username);
+                        commands.client_trigger(LoginRequest {
+                            username: ui_state.username.clone(),
+                            password: ui_state.password.clone(),
+                        });
+                    }
+                }
+
+                if ui.button("Create Account").clicked() {
+                    if !ui_state.username.is_empty() && !ui_state.password.is_empty() {
+                        info!("Sending create account request for user: {}", ui_state.username);
+                        commands.client_trigger(CreateAccountRequest {
+                            username: ui_state.username.clone(),
+                            password: ui_state.password.clone(),
+                        });
+                    }
+                }
+            } else {
+                // Guest login tab
+                ui.label("Play as Guest - No account required!");
+                ui.add_space(10.0);
+                ui.label("You'll receive a guest token to save for future logins.");
+                ui.add_space(10.0);
+                ui.colored_label(egui::Color32::LIGHT_RED, "Note: Guest accounts expire after 7 days.");
+                ui.add_space(20.0);
+
+                if ui.button("Create Guest Account").clicked() {
+                    info!("Sending create guest account request");
+                    commands.client_trigger(CreateGuestAccountRequest);
+                }
+
+                ui.add_space(20.0);
+                ui.separator();
+                ui.add_space(20.0);
+
+                ui.label("Already have a guest token? Login here:");
+                ui.add_space(10.0);
+
+                ui.label("Guest Token:");
+                ui.text_edit_singleline(&mut ui_state.guest_token_input);
+                ui.add_space(10.0);
+
+                if ui.button("Login with Guest Token").clicked() {
+                    if !ui_state.guest_token_input.is_empty() {
+                        info!("Sending guest login request");
+                        commands.client_trigger(GuestLoginRequest {
+                            guest_token: ui_state.guest_token_input.clone(),
+                        });
+                    }
                 }
             }
 
@@ -82,6 +137,21 @@ pub fn login_ui(
             // Show notifications
             for notification in &client_state.notifications {
                 ui.colored_label(egui::Color32::YELLOW, notification);
+            }
+
+            // Show saved guest token with copy button
+            if !ui_state.guest_token.is_empty() {
+                ui.add_space(20.0);
+                ui.separator();
+                ui.add_space(10.0);
+                ui.colored_label(egui::Color32::GREEN, "Your Guest Token (SAVE THIS!):");
+                ui.add_space(5.0);
+                ui.horizontal(|ui| {
+                    ui.label(&ui_state.guest_token);
+                    if ui.button("Copy").clicked() {
+                        ui.ctx().copy_text(ui_state.guest_token.clone());
+                    }
+                });
             }
         });
     });
@@ -576,12 +646,21 @@ pub fn game_ui(
         egui::Window::new("Menu")
             .collapsible(false)
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-            .fixed_size([300.0, 150.0])
+            .fixed_size([300.0, 200.0])
             .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
                     ui.add_space(20.0);
                     ui.heading("Game Menu");
                     ui.add_space(20.0);
+
+                    // Show "Upgrade Account" button if guest token is set (indicates guest account)
+                    if !ui_state.guest_token.is_empty() {
+                        if ui.button("Upgrade Account").clicked() {
+                            ui_state.show_upgrade_dialog = true;
+                            ui_state.show_esc_menu = false;
+                        }
+                        ui.add_space(10.0);
+                    }
 
                     if ui.button("Return to Character Select").clicked() {
                         info!("Player requested disconnect to character select");
@@ -593,6 +672,67 @@ pub fn game_ui(
 
                     if ui.button("Resume").clicked() {
                         ui_state.show_esc_menu = false;
+                    }
+                });
+            });
+    }
+
+    // Account Upgrade Dialog
+    if ui_state.show_upgrade_dialog {
+        egui::Window::new("Upgrade Guest Account")
+            .collapsible(false)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .fixed_size([400.0, 300.0])
+            .show(ctx, |ui| {
+                ui.vertical_centered(|ui| {
+                    ui.add_space(10.0);
+                    ui.heading("Upgrade to Permanent Account");
+                    ui.add_space(10.0);
+                });
+
+                ui.label("Convert your guest account to a permanent account.");
+                ui.label("Your characters and progress will be preserved!");
+                ui.add_space(10.0);
+
+                ui.label("Email:");
+                ui.text_edit_singleline(&mut ui_state.upgrade_email);
+                ui.add_space(10.0);
+
+                ui.label("Password (min 8 characters):");
+                ui.add(egui::TextEdit::singleline(&mut ui_state.upgrade_password).password(true));
+                ui.add_space(10.0);
+
+                ui.label("Confirm Password:");
+                ui.add(egui::TextEdit::singleline(&mut ui_state.upgrade_password_confirm).password(true));
+                ui.add_space(20.0);
+
+                ui.horizontal(|ui| {
+                    if ui.button("Upgrade Account").clicked() {
+                        // Validate passwords match
+                        if ui_state.upgrade_password != ui_state.upgrade_password_confirm {
+                            client_state.notifications.push("Passwords do not match!".to_string());
+                        } else if ui_state.upgrade_email.is_empty() || ui_state.upgrade_password.is_empty() {
+                            client_state.notifications.push("Email and password required".to_string());
+                        } else {
+                            info!("Sending convert guest account request");
+                            commands.client_trigger(ConvertGuestAccountRequest {
+                                email: ui_state.upgrade_email.clone(),
+                                password: ui_state.upgrade_password.clone(),
+                            });
+                            // Clear fields
+                            ui_state.upgrade_email.clear();
+                            ui_state.upgrade_password.clear();
+                            ui_state.upgrade_password_confirm.clear();
+                            ui_state.show_upgrade_dialog = false;
+                        }
+                    }
+
+                    if ui.button("Cancel").clicked() {
+                        ui_state.show_upgrade_dialog = false;
+                        // Clear fields on cancel
+                        ui_state.upgrade_email.clear();
+                        ui_state.upgrade_password.clear();
+                        ui_state.upgrade_password_confirm.clear();
                     }
                 });
             });

@@ -1,0 +1,28 @@
+[build]
+# The index HTML file to use for the build
+target = "index.html"
+
+# Output directory for the built files
+dist = "dist"
+
+# Release mode optimization
+release = true
+
+# Enable minification in release mode
+minify = "on_release"
+
+[watch]
+# Watch for changes and rebuild
+ignore = ["dist", "target"]
+
+[serve]
+# Development server configuration
+address = "127.0.0.1"
+port = 8080
+# Open browser automatically when starting dev server
+open = false
+
+# WebSocket proxy to forward to game server during development
+[[proxy]]
+# Proxy WebSocket connections to the game server
+backend = "http://127.0.0.1:5000"

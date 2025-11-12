@@ -10,8 +10,8 @@ path = "src/main.rs"
 [dependencies]
 bevy = { workspace = true, features = ["bevy_core_pipeline", "bevy_render"] }
 bevy_replicon = { workspace = true }
-bevy_renet = { workspace = true }
-bevy_replicon_renet = { workspace = true }
+bevy_renet2 = { workspace = true }
+bevy_replicon_renet2 = { workspace = true, features = ["server"] }
 avian2d = { workspace = true }
 serde = { workspace = true }
 serde_json = "1.0"
@@ -25,5 +25,24 @@ tokio = { version = "1", features = ["full"] }
 # Hashing for passwords
 argon2 = "0.5"
 rand = "0.8"
+
+# Configuration
+toml = "0.8"
+
+# Content moderation
+rustrict = "0.7"
+
+# Rate limiting
+governor = "0.6"
+
+# Admin dashboard
+axum = { version = "0.7", features = ["tokio"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "fs"] }
+jsonwebtoken = "9"
+
+# Utilities
+chrono = "0.4"
+uuid = { version = "1.0", features = ["v4"] }
 
 eryndor_shared = { path = "../eryndor_shared" }

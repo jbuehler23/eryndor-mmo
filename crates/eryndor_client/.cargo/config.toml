@@ -1,0 +1,7 @@
+[build]
+# WASM target configuration
+target = "wasm32-unknown-unknown"
+
+[target.wasm32-unknown-unknown]
+# Use wasm-opt for optimization
+runner = 'wasm-bindgen-test-runner'

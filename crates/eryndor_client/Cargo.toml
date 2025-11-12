@@ -10,8 +10,9 @@ path = "src/main.rs"
 [dependencies]
 bevy = { workspace = true, features = ["default"] }
 bevy_replicon = { workspace = true }
-bevy_renet = { workspace = true }
-bevy_replicon_renet = { workspace = true }
+# Full transport support: Native UDP, WebSocket, and WebTransport
+bevy_renet2 = { version = "0.11", default-features = false, features = ["native_transport", "ws_client_transport", "wt_client_transport"] }
+bevy_replicon_renet2 = { version = "0.11", default-features = false, features = ["client", "native_transport", "ws_client_transport", "wt_client_transport"] }
 serde = { workspace = true }
 log = { workspace = true }
 tracing = { workspace = true }
@@ -23,3 +24,14 @@ bevy_egui = "0.38"
 bevy_prototype_lyon = "0.15"
 
 eryndor_shared = { path = "../eryndor_shared" }
+
+# WASM-specific dependencies
+[target.'cfg(target_family = "wasm")'.dependencies]
+url = "2.5"
+web-sys = "0.3"
+js-sys = "0.3"
+console_error_panic_hook = "0.1"
+getrandom = { version = "0.2", features = ["js"] }
+reqwest = { version = "0.12", default-features = false, features = ["json"] }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"

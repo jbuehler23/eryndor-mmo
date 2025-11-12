@@ -4,7 +4,9 @@ use bevy::prelude::*;
 // NETWORK CONSTANTS
 // ============================================================================
 
-pub const SERVER_PORT: u16 = 5000;
+pub const SERVER_PORT: u16 = 5001;  // UDP port for native clients
+pub const SERVER_PORT_WEBTRANSPORT: u16 = 5002;  // WebTransport port for WASM
+pub const SERVER_PORT_WEBSOCKET: u16 = 5003;  // WebSocket port for WASM fallback
 pub const SERVER_ADDR: &str = "127.0.0.1";
 
 // ============================================================================

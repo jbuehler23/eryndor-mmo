@@ -23,6 +23,23 @@ pub struct CreateAccountRequest {
     pub password: String,
 }
 
+/// Create guest account (no credentials needed)
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct CreateGuestAccountRequest;
+
+/// Login with guest token
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct GuestLoginRequest {
+    pub guest_token: String,
+}
+
+/// Convert guest account to registered account
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct ConvertGuestAccountRequest {
+    pub email: String,
+    pub password: String,
+}
+
 /// Request to create a new character
 #[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
 pub struct CreateCharacterRequest {
@@ -183,6 +200,33 @@ pub struct LoginResponse {
     pub success: bool,
     pub message: String,
     pub account_id: Option<i64>,
+}
+
+/// Guest account creation response
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct CreateGuestAccountResponse {
+    pub success: bool,
+    pub message: String,
+    pub guest_token: Option<String>,
+    pub username: Option<String>,
+    pub expires_at: Option<i64>,
+}
+
+/// Guest login response
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct GuestLoginResponse {
+    pub success: bool,
+    pub message: String,
+    pub account_id: Option<i64>,
+    pub username: Option<String>,
+    pub expires_at: Option<i64>,
+}
+
+/// Convert guest account response
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct ConvertGuestAccountResponse {
+    pub success: bool,
+    pub message: String,
 }
 
 /// Account creation response

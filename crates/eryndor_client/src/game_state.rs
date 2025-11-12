@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_replicon::prelude::*;
-use bevy_renet::renet::{ConnectionConfig, RenetClient};
-use bevy_replicon_renet::RenetChannelsExt;
+use bevy_renet2::prelude::{ConnectionConfig, RenetClient};
+use bevy_replicon_renet2::RenetChannelsExt;
 use eryndor_shared::*;
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -20,6 +20,12 @@ pub struct MyClientState {
     pub player_entity: Option<Entity>,
     pub notifications: Vec<String>,
     pub connection_error_shown: bool,
+}
+
+#[cfg(target_family = "wasm")]
+#[derive(Resource)]
+pub struct ServerCertHashResource {
+    pub cert_hash: bevy_renet2::netcode::ServerCertHash,
 }
 
 pub fn handle_login_response(
@@ -83,6 +89,65 @@ pub fn handle_notifications(
     client_state.notifications.push(notification.message.clone());
 }
 
+// ============================================================================
+// GUEST ACCOUNT HANDLERS
+// ============================================================================
+
+pub fn handle_create_guest_account_response(
+    trigger: On<CreateGuestAccountResponse>,
+    mut client_state: ResMut<MyClientState>,
+    mut ui_state: ResMut<crate::ui::UiState>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    let response = trigger.event();
+    if response.success {
+        info!("Guest account created successfully!");
+        client_state.account_id = None; // Guests don't have account_id in this response
+
+        // Save the guest token for future logins
+        if let Some(token) = &response.guest_token {
+            ui_state.guest_token = token.clone();
+        }
+
+        next_state.set(GameState::CharacterSelect);
+    } else {
+        warn!("Guest account creation failed: {}", response.message);
+    }
+    client_state.notifications.push(response.message.clone());
+}
+
+pub fn handle_guest_login_response(
+    trigger: On<GuestLoginResponse>,
+    mut client_state: ResMut<MyClientState>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    let response = trigger.event();
+    if response.success {
+        info!("Guest login successful!");
+        client_state.account_id = response.account_id;
+        next_state.set(GameState::CharacterSelect);
+    } else {
+        warn!("Guest login failed: {}", response.message);
+    }
+    client_state.notifications.push(response.message.clone());
+}
+
+pub fn handle_convert_guest_account_response(
+    trigger: On<ConvertGuestAccountResponse>,
+    mut client_state: ResMut<MyClientState>,
+    mut ui_state: ResMut<crate::ui::UiState>,
+) {
+    let response = trigger.event();
+    if response.success {
+        info!("Guest account converted successfully!");
+        // Clear guest token since account is now registered
+        ui_state.guest_token.clear();
+    } else {
+        warn!("Guest account conversion failed: {}", response.message);
+    }
+    client_state.notifications.push(response.message.clone());
+}
+
 pub fn handle_select_character_response(
     trigger: On<SelectCharacterResponse>,
     mut client_state: ResMut<MyClientState>,
@@ -119,60 +184,161 @@ pub fn detect_player_entity(
     }
 }
 
-pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>) {
+#[cfg(not(target_family = "wasm"))]
+pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>, time: Res<Time>) {
     info!("Connecting to server...");
 
-    let server_channels_config = channels.server_configs();
-    let client_channels_config = channels.client_configs();
-
-    let client = RenetClient::new(ConnectionConfig {
-        server_channels_config,
-        client_channels_config,
-        ..Default::default()
-    });
+    let connection_config = ConnectionConfig::from_channels(
+        channels.server_configs(),
+        channels.client_configs(),
+    );
 
     let server_addr: std::net::SocketAddr = format!("{}:{}", SERVER_ADDR, SERVER_PORT)
         .parse()
         .expect("Invalid server address");
 
-    // Create transport layer
-    use std::net::UdpSocket;
-    use std::time::SystemTime;
-    use bevy_renet::netcode::{ClientAuthentication, NetcodeClientTransport};
+    use bevy_renet2::netcode::{ClientAuthentication, NetcodeClientTransport};
+    use std::time::Duration;
 
-    let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind socket");
-    let current_time = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap();
+    // Use Bevy's time which works cross-platform (including WASM)
+    let current_time = Duration::from_secs_f64(time.elapsed_secs_f64());
     let client_id = current_time.as_millis() as u64;
 
     let authentication = ClientAuthentication::Unsecure {
         client_id,
         protocol_id: 0, // TODO: Use proper protocol ID
+        socket_id: 0,
         server_addr,
         user_data: None,
     };
 
-    let transport = NetcodeClientTransport::new(current_time, authentication, socket)
-        .expect("Failed to create transport");
+    // Native: Use UDP transport
+    use std::net::UdpSocket;
+    use bevy_renet2::netcode::NativeSocket;
+
+    info!("Using UDP transport (native)");
+    let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind socket");
+    let transport = NetcodeClientTransport::new(current_time, authentication, NativeSocket::new(socket).unwrap())
+        .expect("Failed to create UDP transport");
+
+    let has_reliable_socket = transport.is_reliable();
+    let client = RenetClient::new(connection_config, has_reliable_socket);
 
     commands.insert_resource(client);
     commands.insert_resource(transport);
 
-    info!("Connected to server at {}", server_addr);
+    info!("Connected to server at {} (UDP)", server_addr);
+}
+
+#[cfg(target_family = "wasm")]
+pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>, time: Res<Time>, _cert_hash_res: Res<ServerCertHashResource>) {
+    info!("Connecting to server...");
+
+    let connection_config = ConnectionConfig::from_channels(
+        channels.server_configs(),
+        channels.client_configs(),
+    );
+
+    use bevy_renet2::netcode::{ClientAuthentication, NetcodeClientTransport};
+    use std::time::Duration;
+
+    // Use js_sys::Date::now() to get Unix timestamp in WASM
+    // (SystemTime is not available in WASM)
+    let timestamp_ms = js_sys::Date::now() as u64; // Milliseconds since Unix epoch
+
+    let current_time = Duration::from_millis(timestamp_ms);
+
+    // Generate unique client ID from timestamp + random bytes to avoid collisions
+    // Mix timestamp (upper 48 bits) with random data (lower 16 bits)
+    let mut random_bytes = [0u8; 2];
+    getrandom::getrandom(&mut random_bytes).expect("Failed to generate random bytes");
+    let random_component = u16::from_le_bytes(random_bytes) as u64;
+    let client_id = (timestamp_ms << 16) | random_component;
+
+    info!("Generated client_id: {} (timestamp: {}, random: {})", client_id, timestamp_ms, random_component);
+
+    // Try WebSocket first (more reliable for testing)
+    let server_addr: std::net::SocketAddr = format!("{}:{}", SERVER_ADDR, SERVER_PORT_WEBSOCKET)
+        .parse()
+        .expect("Invalid server address");
+
+    let authentication = ClientAuthentication::Unsecure {
+        client_id,
+        protocol_id: 0,
+        socket_id: 2,  // Socket 2 = WebSocket on server (Socket 0 = UDP, Socket 1 = WebTransport)
+        server_addr,
+        user_data: None,
+    };
+
+    // WASM: Use WebSocket fallback (more compatible than WebTransport)
+    use bevy_renet2::netcode::{WebSocketClient, WebSocketClientConfig};
+
+    info!("Using WebSocket for WASM client (fallback from WebTransport)");
+    let ws_url = format!("ws://{}:{}", SERVER_ADDR, SERVER_PORT_WEBSOCKET);
+    info!("WebSocket URL: {}", ws_url);
+    let url: url::Url = ws_url.parse().expect("Invalid WebSocket URL");
+
+    info!("Creating WebSocket config...");
+    let ws_config = WebSocketClientConfig { server_url: url };
+
+    info!("Creating WebSocket client...");
+    let ws_client = WebSocketClient::new(ws_config).expect("Failed to create WebSocket client");
+
+    info!("Creating NetcodeClientTransport with client_id: {}, socket_id: 2", client_id);
+    let transport = NetcodeClientTransport::new(current_time, authentication, ws_client)
+        .expect("Failed to create WebSocket transport");
+
+    info!("NetcodeClientTransport created successfully");
+
+    let has_reliable_socket = transport.is_reliable();
+    let client = RenetClient::new(connection_config, has_reliable_socket);
+
+    commands.insert_resource(client);
+    commands.insert_resource(transport);
+
+    info!("RenetClient and Transport resources inserted");
+    info!("Attempting to connect to server (WebSocket: ws://{}:{})", SERVER_ADDR, SERVER_PORT_WEBSOCKET);
+}
+
+// Explicit system to update WebSocket transport for WASM
+#[cfg(target_family = "wasm")]
+pub fn update_websocket_transport(
+    mut transport: ResMut<bevy_renet2::netcode::NetcodeClientTransport>,
+    mut client: ResMut<RenetClient>,
+    time: Res<Time>,
+) {
+    use std::time::Duration;
+    let delta = Duration::from_secs_f64(time.delta_secs_f64());
+    if let Err(e) = transport.update(delta, &mut client) {
+        error!("Transport update error: {}", e);
+    }
 }
 
 pub fn monitor_connection(
     client: Option<Res<RenetClient>>,
     mut client_state: ResMut<MyClientState>,
 ) {
-    // Check if client exists and is disconnected
+    // Check if client resource exists
     if let Some(client) = client {
         if client.is_disconnected() && !client_state.connection_error_shown {
             error!("Lost connection to server!");
             client_state.notifications.push("ERROR: Cannot connect to server. Please make sure the server is running.".to_string());
             client_state.connection_error_shown = true;
         }
+
+        // Log connection state periodically for debugging
+        if !client_state.connection_error_shown {
+            if client.is_connected() {
+                info!("Client is connected!");
+            } else if client.is_connecting() {
+                info!("Client is connecting...");
+            } else if client.is_disconnected() {
+                warn!("Client is disconnected");
+            }
+        }
+    } else {
+        // This would indicate the RenetClient resource was never created
+        warn!("RenetClient resource not found!");
     }
 }
 

@@ -2,8 +2,10 @@ mod abilities;
 mod auth;
 mod character;
 mod combat;
+mod config;
 mod database;
 mod game_data;
+mod guest;
 mod inventory;
 mod movement;
 mod quest;
@@ -13,10 +15,16 @@ mod world;
 
 use bevy::prelude::*;
 use bevy_replicon::prelude::*;
-use bevy_replicon_renet::RepliconRenetPlugins;
+use bevy_replicon_renet2::RepliconRenetPlugins;
 use avian2d::prelude::*;
 
 use eryndor_shared::*;
+
+// Resource to keep tokio runtime alive for WebTransport/WebSocket servers
+// The HTTP server task is managed by Bevy's IoTaskPool, but WebTransport/WebSocket
+// need their own runtime as they're not integrated with Bevy's task system
+#[derive(Resource)]
+struct TokioRuntimeResource(tokio::runtime::Runtime);
 
 // Disambiguate Position - use our custom one for replication
 use eryndor_shared::Position as SharedPosition;
@@ -25,6 +33,10 @@ use avian2d::prelude::Position as PhysicsPosition;
 use avian2d::prelude::LinearVelocity as PhysicsVelocity;
 
 fn main() {
+    // Load configuration first
+    let config = config::ServerConfig::load()
+        .expect("Failed to load configuration. Make sure config.toml exists and is valid.");
+
     App::new()
         .add_plugins((
             MinimalPlugins,
@@ -38,6 +50,8 @@ fn main() {
         .add_plugins(PhysicsPlugins::default().with_length_unit(1.0))
         .insert_resource(Gravity(Vec2::ZERO))  // Top-down game, no gravity
         .insert_resource(Time::<Fixed>::from_hz(60.0))  // 60 Hz physics tick rate
+        // Configuration
+        .insert_resource(config)
         // Database
         .init_resource::<database::DatabaseConnection>()
         // Game data resources
@@ -88,6 +102,9 @@ fn main() {
         // Register client -> server events (Events API)
         .add_client_event::<LoginRequest>(Channel::Ordered)
         .add_client_event::<CreateAccountRequest>(Channel::Ordered)
+        .add_client_event::<CreateGuestAccountRequest>(Channel::Ordered)
+        .add_client_event::<GuestLoginRequest>(Channel::Ordered)
+        .add_client_event::<ConvertGuestAccountRequest>(Channel::Ordered)
         .add_client_event::<CreateCharacterRequest>(Channel::Ordered)
         .add_client_event::<SelectCharacterRequest>(Channel::Ordered)
         .add_client_event::<MoveInput>(Channel::Unreliable)
@@ -108,6 +125,9 @@ fn main() {
         // Register server -> client events (Events API)
         .add_server_event::<LoginResponse>(Channel::Ordered)
         .add_server_event::<CreateAccountResponse>(Channel::Ordered)
+        .add_server_event::<CreateGuestAccountResponse>(Channel::Ordered)
+        .add_server_event::<GuestLoginResponse>(Channel::Ordered)
+        .add_server_event::<ConvertGuestAccountResponse>(Channel::Ordered)
         .add_server_event::<CharacterListResponse>(Channel::Ordered)
         .add_server_event::<CreateCharacterResponse>(Channel::Ordered)
         .add_server_event::<SelectCharacterResponse>(Channel::Ordered)
@@ -122,6 +142,9 @@ fn main() {
         // Register observers for client triggers
         .add_observer(auth::handle_login)
         .add_observer(auth::handle_create_account)
+        .add_observer(auth::handle_create_guest_account)
+        .add_observer(auth::handle_guest_login)
+        .add_observer(auth::handle_convert_guest_account)
         .add_observer(auth::handle_create_character)
         .add_observer(auth::handle_select_character)
         .add_observer(movement::handle_move_input)
@@ -187,45 +210,129 @@ fn sync_physics_to_position(
 }
 
 fn setup_server(mut commands: Commands, channels: Res<RepliconChannels>) {
-    info!("Starting Eryndor MMO Server...");
+    info!("Starting Eryndor MMO Server with multi-transport support...");
 
-    use bevy_renet::renet::{ConnectionConfig, RenetServer};
-    use bevy_renet::netcode::{NetcodeServerTransport, ServerAuthentication, ServerConfig};
-    use bevy_replicon_renet::RenetChannelsExt;
+    use bevy_renet2::prelude::{RenetServer, ConnectionConfig};
+    use bevy_renet2::netcode::{
+        NetcodeServerTransport, ServerAuthentication, ServerSetupConfig,
+        NativeSocket, BoxedSocket, WebTransportServerConfig, WebSocketServerConfig,
+        WebTransportServer, WebSocketServer
+    };
+    use bevy_replicon_renet2::RenetChannelsExt;
     use std::net::UdpSocket;
     use std::time::SystemTime;
 
-    let server_channels_config = channels.server_configs();
-    let client_channels_config = channels.client_configs();
+    let connection_config = ConnectionConfig::from_channels(
+        channels.server_configs(),
+        channels.client_configs(),
+    );
 
-    let server = RenetServer::new(ConnectionConfig {
-        server_channels_config,
-        client_channels_config,
-        ..Default::default()
-    });
-
-    let server_addr: std::net::SocketAddr = format!("{}:{}", SERVER_ADDR, SERVER_PORT)
+    let udp_addr: std::net::SocketAddr = format!("{}:{}", SERVER_ADDR, SERVER_PORT)
         .parse()
-        .expect("Invalid server address");
+        .expect("Invalid UDP address");
+    let wt_addr: std::net::SocketAddr = format!("{}:{}", SERVER_ADDR, SERVER_PORT_WEBTRANSPORT)
+        .parse()
+        .expect("Invalid WebTransport address");
+    let ws_addr: std::net::SocketAddr = format!("{}:{}", SERVER_ADDR, SERVER_PORT_WEBSOCKET)
+        .parse()
+        .expect("Invalid WebSocket address");
 
-    let socket = UdpSocket::bind(server_addr).expect("Failed to bind server socket");
     let current_time = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
 
-    let server_config = ServerConfig {
+    let max_clients = 64;
+
+    // Create three sockets: Native UDP, WebTransport, and WebSocket
+    // Socket 0: UDP for native clients
+    let udp_socket = UdpSocket::bind(udp_addr).expect("Failed to bind UDP socket");
+    let native_socket = BoxedSocket::new(NativeSocket::new(udp_socket).unwrap());
+    info!("UDP socket listening on {}", udp_addr);
+
+    // Socket 1: WebTransport for WASM clients (with self-signed cert)
+    // WebTransport/WebSocket need a tokio runtime - create one for them to use
+    let tokio_runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .expect("Failed to create tokio runtime");
+    let tokio_handle = tokio_runtime.handle().clone();
+
+    let (wt_config, cert_hash) = WebTransportServerConfig::new_selfsigned(wt_addr, max_clients)
+        .expect("Failed to create WebTransport config");
+    let wt_server = WebTransportServer::new(wt_config, tokio_handle.clone())
+        .expect("Failed to create WebTransport server");
+    let wt_socket = BoxedSocket::new(wt_server);
+    info!("WebTransport socket listening on {}", wt_addr);
+    info!("WebTransport certificate hash: {:?}", cert_hash);
+
+    // Socket 2: WebSocket fallback for WASM clients
+    let ws_config = WebSocketServerConfig::new(ws_addr, max_clients);
+    let ws_server = WebSocketServer::new(ws_config, tokio_handle.clone())
+        .expect("Failed to create WebSocket server");
+    let ws_socket = BoxedSocket::new(ws_server);
+    info!("WebSocket socket listening on {}", ws_addr);
+
+    // Spawn HTTP server to serve certificate hash for WASM clients
+    // Must run on tokio runtime (not Bevy's IoTaskPool which uses async-executor)
+    let cert_hash_clone = cert_hash.clone();
+    tokio_handle.spawn(async move {
+        serve_cert_hash(cert_hash_clone).await;
+    });
+
+    // Register all three socket addresses
+    let server_config = ServerSetupConfig {
         current_time,
-        max_clients: 64,
-        protocol_id: 0, // TODO: Use proper protocol ID
-        public_addresses: vec![server_addr],
+        max_clients,
+        protocol_id: 0,
+        socket_addresses: vec![
+            vec![udp_addr], // Socket 0: UDP
+            vec![wt_addr],  // Socket 1: WebTransport
+            vec![ws_addr],  // Socket 2: WebSocket
+        ],
         authentication: ServerAuthentication::Unsecure,
     };
 
-    let transport = NetcodeServerTransport::new(server_config, socket)
-        .expect("Failed to create server transport");
+    // Create transport with all three sockets
+    let transport = NetcodeServerTransport::new_with_sockets(
+        server_config,
+        vec![native_socket, wt_socket, ws_socket],
+    )
+    .expect("Failed to create multi-transport");
+
+    let server = RenetServer::new(connection_config);
 
     commands.insert_resource(server);
     commands.insert_resource(transport);
+    // Keep tokio runtime alive for WebTransport/WebSocket servers
+    commands.insert_resource(TokioRuntimeResource(tokio_runtime));
 
-    info!("Server listening on {}", server_addr);
+    info!("Server ready - UDP: {}, WebTransport: {}, WebSocket: {}", udp_addr, wt_addr, ws_addr);
+}
+
+// HTTP server to serve WebTransport certificate hash for WASM clients
+async fn serve_cert_hash(cert_hash: bevy_renet2::netcode::ServerCertHash) {
+    use axum::{routing::get, Router, Json};
+    use tower_http::cors::{CorsLayer, Any};
+
+    let app = Router::new()
+        .route("/cert", get(move || async move {
+            // Return the hash bytes as JSON array (matching renet2 example pattern)
+            Json(cert_hash.hash.to_vec())
+        }))
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods(Any)
+                .allow_headers(Any)
+        );
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:8080")
+        .await
+        .expect("Failed to bind HTTP server");
+
+    info!("HTTP server for certificate hash listening on http://127.0.0.1:8080/cert");
+
+    axum::serve(listener, app)
+        .await
+        .expect("Failed to start HTTP server");
 }
