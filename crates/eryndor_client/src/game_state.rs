@@ -200,8 +200,14 @@ pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>
     use bevy_renet2::netcode::{ClientAuthentication, NetcodeClientTransport};
     use std::time::Duration;
 
-    // Use Bevy's time which works cross-platform (including WASM)
-    let current_time = Duration::from_secs_f64(time.elapsed_secs_f64());
+    // Create RenetClient first (UDP is not reliable)
+    let client = RenetClient::new(connection_config, false);
+
+    // Use SystemTime for actual Unix timestamp (required for netcode authentication)
+    use std::time::SystemTime;
+    let current_time = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap();
     let client_id = current_time.as_millis() as u64;
 
     let authentication = ClientAuthentication::Unsecure {
@@ -220,9 +226,6 @@ pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>
     let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind socket");
     let transport = NetcodeClientTransport::new(current_time, authentication, NativeSocket::new(socket).unwrap())
         .expect("Failed to create UDP transport");
-
-    let has_reliable_socket = transport.is_reliable();
-    let client = RenetClient::new(connection_config, has_reliable_socket);
 
     commands.insert_resource(client);
     commands.insert_resource(transport);
@@ -257,47 +260,42 @@ pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>
 
     info!("Generated client_id: {} (timestamp: {}, random: {})", client_id, timestamp_ms, random_component);
 
-    // Try WebSocket first (more reliable for testing)
-    let server_addr: std::net::SocketAddr = format!("{}:{}", SERVER_ADDR, SERVER_PORT_WEBSOCKET)
+    // Use WebSocket for now (WebTransport requires complex server setup with certificates)
+    // TODO: Add WebTransport support once server is properly configured
+    use bevy_renet2::netcode::{WebSocketClient, WebSocketClientConfig};
+
+    let ws_server_addr: std::net::SocketAddr = format!("{}:{}", SERVER_ADDR, SERVER_PORT_WEBSOCKET)
         .parse()
-        .expect("Invalid server address");
+        .expect("Invalid WebSocket server address");
+
+    let ws_url = format!("ws://{}:{}", SERVER_ADDR, SERVER_PORT_WEBSOCKET);
+    info!("Connecting via WebSocket to {}", ws_url);
+
+    let ws_config = WebSocketClientConfig {
+        server_url: ws_url.parse().expect("Invalid WebSocket URL"),
+    };
+
+    let ws_client = WebSocketClient::new(ws_config)
+        .expect("Failed to create WebSocket client");
 
     let authentication = ClientAuthentication::Unsecure {
         client_id,
         protocol_id: 0,
-        socket_id: 2,  // Socket 2 = WebSocket on server (Socket 0 = UDP, Socket 1 = WebTransport)
-        server_addr,
+        socket_id: 2,  // Socket 2 = WebSocket
+        server_addr: ws_server_addr,
         user_data: None,
     };
 
-    // WASM: Use WebSocket fallback (more compatible than WebTransport)
-    use bevy_renet2::netcode::{WebSocketClient, WebSocketClientConfig};
-
-    info!("Using WebSocket for WASM client (fallback from WebTransport)");
-    let ws_url = format!("ws://{}:{}", SERVER_ADDR, SERVER_PORT_WEBSOCKET);
-    info!("WebSocket URL: {}", ws_url);
-    let url: url::Url = ws_url.parse().expect("Invalid WebSocket URL");
-
-    info!("Creating WebSocket config...");
-    let ws_config = WebSocketClientConfig { server_url: url };
-
-    info!("Creating WebSocket client...");
-    let ws_client = WebSocketClient::new(ws_config).expect("Failed to create WebSocket client");
-
-    info!("Creating NetcodeClientTransport with client_id: {}, socket_id: 2", client_id);
     let transport = NetcodeClientTransport::new(current_time, authentication, ws_client)
         .expect("Failed to create WebSocket transport");
 
-    info!("NetcodeClientTransport created successfully");
-
-    let has_reliable_socket = transport.is_reliable();
-    let client = RenetClient::new(connection_config, has_reliable_socket);
+    // Create RenetClient (WebSocket is reliable)
+    let client = RenetClient::new(connection_config, true);
 
     commands.insert_resource(client);
     commands.insert_resource(transport);
 
-    info!("RenetClient and Transport resources inserted");
-    info!("Attempting to connect to server (WebSocket: ws://{}:{})", SERVER_ADDR, SERVER_PORT_WEBSOCKET);
+    info!("Connected to server via WebSocket (client_id: {})", client_id);
 }
 
 // Explicit system to update WebSocket transport for WASM
@@ -328,13 +326,12 @@ pub fn monitor_connection(
 
         // Log connection state periodically for debugging
         if !client_state.connection_error_shown {
-            if client.is_connected() {
-                info!("Client is connected!");
-            } else if client.is_connecting() {
+            if client.is_connecting() {
                 info!("Client is connecting...");
             } else if client.is_disconnected() {
                 warn!("Client is disconnected");
             }
+            // Note: Removed "Client is connected!" log spam
         }
     } else {
         // This would indicate the RenetClient resource was never created
