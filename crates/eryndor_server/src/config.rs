@@ -9,6 +9,7 @@ pub struct ServerConfig {
     pub security: Security,
     pub rate_limits: RateLimits,
     pub moderation: Moderation,
+    pub oauth: OAuth,
 }
 
 #[derive(Clone, Deserialize)]
@@ -48,6 +49,18 @@ pub struct Moderation {
     pub enable_profanity_filter: bool,
     pub block_profane_messages: bool,
     pub censor_instead_of_block: bool,
+}
+
+#[derive(Clone, Deserialize)]
+pub struct OAuth {
+    pub google_client_id: String,
+    pub google_client_secret: String,
+}
+
+impl OAuth {
+    pub fn is_google_enabled(&self) -> bool {
+        !self.google_client_id.is_empty()
+    }
 }
 
 impl ServerConfig {
@@ -103,6 +116,10 @@ impl Default for ServerConfig {
                 enable_profanity_filter: true,
                 block_profane_messages: true,
                 censor_instead_of_block: false,
+            },
+            oauth: OAuth {
+                google_client_id: String::new(),
+                google_client_secret: String::new(),
             },
         }
     }

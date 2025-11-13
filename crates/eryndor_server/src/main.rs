@@ -5,8 +5,8 @@ mod combat;
 mod config;
 mod database;
 mod game_data;
-mod guest;
 mod inventory;
+mod moderation;
 mod movement;
 mod quest;
 mod spawn;
@@ -17,6 +17,9 @@ use bevy::prelude::*;
 use bevy_replicon::prelude::*;
 use bevy_replicon_renet2::RepliconRenetPlugins;
 use avian2d::prelude::*;
+use governor::{Quota, RateLimiter, state::keyed::DefaultKeyedStateStore};
+use std::num::NonZeroU32;
+use std::net::IpAddr;
 
 use eryndor_shared::*;
 
@@ -25,6 +28,26 @@ use eryndor_shared::*;
 // need their own runtime as they're not integrated with Bevy's task system
 #[derive(Resource)]
 struct TokioRuntimeResource(tokio::runtime::Runtime);
+
+// Rate limiters for security (per-IP rate limiting)
+#[derive(Resource)]
+pub struct RateLimiters {
+    pub account_creation: RateLimiter<IpAddr, DefaultKeyedStateStore<IpAddr>, governor::clock::DefaultClock>,
+    pub login_attempts: RateLimiter<IpAddr, DefaultKeyedStateStore<IpAddr>, governor::clock::DefaultClock>,
+}
+
+impl RateLimiters {
+    fn from_config(config: &config::ServerConfig) -> Self {
+        Self {
+            account_creation: RateLimiter::keyed(
+                Quota::per_hour(NonZeroU32::new(config.rate_limits.account_creation_per_hour).unwrap())
+            ),
+            login_attempts: RateLimiter::keyed(
+                Quota::per_hour(NonZeroU32::new(config.rate_limits.login_attempts_per_hour).unwrap())
+            ),
+        }
+    }
+}
 
 // Disambiguate Position - use our custom one for replication
 use eryndor_shared::Position as SharedPosition;
@@ -51,6 +74,7 @@ fn main() {
         .insert_resource(Gravity(Vec2::ZERO))  // Top-down game, no gravity
         .insert_resource(Time::<Fixed>::from_hz(60.0))  // 60 Hz physics tick rate
         // Configuration
+        .insert_resource(RateLimiters::from_config(&config))
         .insert_resource(config)
         // Database
         .init_resource::<database::DatabaseConnection>()
@@ -102,9 +126,7 @@ fn main() {
         // Register client -> server events (Events API)
         .add_client_event::<LoginRequest>(Channel::Ordered)
         .add_client_event::<CreateAccountRequest>(Channel::Ordered)
-        .add_client_event::<CreateGuestAccountRequest>(Channel::Ordered)
-        .add_client_event::<GuestLoginRequest>(Channel::Ordered)
-        .add_client_event::<ConvertGuestAccountRequest>(Channel::Ordered)
+        .add_client_event::<OAuthLoginRequest>(Channel::Ordered)
         .add_client_event::<CreateCharacterRequest>(Channel::Ordered)
         .add_client_event::<SelectCharacterRequest>(Channel::Ordered)
         .add_client_event::<MoveInput>(Channel::Unreliable)
@@ -125,9 +147,7 @@ fn main() {
         // Register server -> client events (Events API)
         .add_server_event::<LoginResponse>(Channel::Ordered)
         .add_server_event::<CreateAccountResponse>(Channel::Ordered)
-        .add_server_event::<CreateGuestAccountResponse>(Channel::Ordered)
-        .add_server_event::<GuestLoginResponse>(Channel::Ordered)
-        .add_server_event::<ConvertGuestAccountResponse>(Channel::Ordered)
+        .add_server_event::<OAuthLoginResponse>(Channel::Ordered)
         .add_server_event::<CharacterListResponse>(Channel::Ordered)
         .add_server_event::<CreateCharacterResponse>(Channel::Ordered)
         .add_server_event::<SelectCharacterResponse>(Channel::Ordered)
@@ -142,9 +162,7 @@ fn main() {
         // Register observers for client triggers
         .add_observer(auth::handle_login)
         .add_observer(auth::handle_create_account)
-        .add_observer(auth::handle_create_guest_account)
-        .add_observer(auth::handle_guest_login)
-        .add_observer(auth::handle_convert_guest_account)
+        .add_observer(auth::handle_oauth_login)
         .add_observer(auth::handle_create_character)
         .add_observer(auth::handle_select_character)
         .add_observer(movement::handle_move_input)
@@ -171,6 +189,8 @@ fn main() {
             world::spawn_world,
         ))
         .add_systems(Update, (
+            // Connection tracking (must run first to capture IPs)
+            auth::track_client_connections,
             // Auth systems
             auth::handle_client_disconnect,
             // Movement

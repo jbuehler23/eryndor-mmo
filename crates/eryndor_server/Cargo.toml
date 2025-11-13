@@ -29,6 +29,9 @@ rand = "0.8"
 # Configuration
 toml = "0.8"
 
+# OAuth verification
+reqwest = { version = "0.12", features = ["json"] }
+
 # Content moderation
 rustrict = "0.7"
 

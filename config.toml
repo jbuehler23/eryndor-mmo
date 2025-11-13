@@ -39,3 +39,12 @@ enable_profanity_filter = true
 block_profane_messages = true
 # Just censor them instead (replace with ***)
 censor_instead_of_block = false
+
+[oauth]
+# OAuth2 settings for Google Sign-In
+# Get these from https://console.cloud.google.com/apis/credentials
+# IMPORTANT: For development, you can leave these empty and OAuth will be disabled
+# For production, create OAuth 2.0 credentials and fill these in
+google_client_id = "917714705564-l5eikmnq0n0miqaurh7vbmc3dbk26e4r.apps.googleusercontent.com"
+# Optional: Used for server-to-server verification (leave empty for client-side only)
+google_client_secret = ""

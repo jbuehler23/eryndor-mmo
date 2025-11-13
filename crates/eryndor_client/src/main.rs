@@ -82,9 +82,7 @@ fn main() {
         // Register client -> server events
         .add_client_event::<LoginRequest>(Channel::Ordered)
         .add_client_event::<CreateAccountRequest>(Channel::Ordered)
-        .add_client_event::<CreateGuestAccountRequest>(Channel::Ordered)
-        .add_client_event::<GuestLoginRequest>(Channel::Ordered)
-        .add_client_event::<ConvertGuestAccountRequest>(Channel::Ordered)
+        .add_client_event::<OAuthLoginRequest>(Channel::Ordered)
         .add_client_event::<CreateCharacterRequest>(Channel::Ordered)
         .add_client_event::<SelectCharacterRequest>(Channel::Ordered)
         .add_client_event::<MoveInput>(Channel::Unreliable)
@@ -105,9 +103,7 @@ fn main() {
         // Register server -> client events
         .add_server_event::<LoginResponse>(Channel::Ordered)
         .add_server_event::<CreateAccountResponse>(Channel::Ordered)
-        .add_server_event::<CreateGuestAccountResponse>(Channel::Ordered)
-        .add_server_event::<GuestLoginResponse>(Channel::Ordered)
-        .add_server_event::<ConvertGuestAccountResponse>(Channel::Ordered)
+        .add_server_event::<OAuthLoginResponse>(Channel::Ordered)
         .add_server_event::<CharacterListResponse>(Channel::Ordered)
         .add_server_event::<CreateCharacterResponse>(Channel::Ordered)
         .add_server_event::<SelectCharacterResponse>(Channel::Ordered)
@@ -123,9 +119,7 @@ fn main() {
         .add_observer(game_state::handle_login_response)
         .add_observer(game_state::handle_character_list)
         .add_observer(game_state::handle_create_account_response)
-        .add_observer(game_state::handle_create_guest_account_response)
-        .add_observer(game_state::handle_guest_login_response)
-        .add_observer(game_state::handle_convert_guest_account_response)
+        .add_observer(game_state::handle_oauth_login_response)
         .add_observer(game_state::handle_create_character_response)
         .add_observer(game_state::handle_select_character_response)
         .add_observer(game_state::handle_notifications)
@@ -144,6 +138,8 @@ fn main() {
         ))
         .add_systems(OnExit(GameState::InGame), game_state::cleanup_game_entities)
         .add_systems(Update, (
+            // OAuth callback check (runs during Login state)
+            ui::check_oauth_callback.run_if(in_state(GameState::Login)),
             // Connection monitoring
             game_state::monitor_connection,
             // Player entity detection
@@ -283,9 +279,7 @@ fn start_app(cert_hash: bevy_renet2::netcode::ServerCertHash) {
         // Register client -> server events
         .add_client_event::<LoginRequest>(Channel::Ordered)
         .add_client_event::<CreateAccountRequest>(Channel::Ordered)
-        .add_client_event::<CreateGuestAccountRequest>(Channel::Ordered)
-        .add_client_event::<GuestLoginRequest>(Channel::Ordered)
-        .add_client_event::<ConvertGuestAccountRequest>(Channel::Ordered)
+        .add_client_event::<OAuthLoginRequest>(Channel::Ordered)
         .add_client_event::<CreateCharacterRequest>(Channel::Ordered)
         .add_client_event::<SelectCharacterRequest>(Channel::Ordered)
         .add_client_event::<MoveInput>(Channel::Unreliable)
@@ -306,9 +300,7 @@ fn start_app(cert_hash: bevy_renet2::netcode::ServerCertHash) {
         // Register server -> client events
         .add_server_event::<LoginResponse>(Channel::Ordered)
         .add_server_event::<CreateAccountResponse>(Channel::Ordered)
-        .add_server_event::<CreateGuestAccountResponse>(Channel::Ordered)
-        .add_server_event::<GuestLoginResponse>(Channel::Ordered)
-        .add_server_event::<ConvertGuestAccountResponse>(Channel::Ordered)
+        .add_server_event::<OAuthLoginResponse>(Channel::Ordered)
         .add_server_event::<CharacterListResponse>(Channel::Ordered)
         .add_server_event::<CreateCharacterResponse>(Channel::Ordered)
         .add_server_event::<SelectCharacterResponse>(Channel::Ordered)
@@ -324,9 +316,7 @@ fn start_app(cert_hash: bevy_renet2::netcode::ServerCertHash) {
         .add_observer(game_state::handle_login_response)
         .add_observer(game_state::handle_character_list)
         .add_observer(game_state::handle_create_account_response)
-        .add_observer(game_state::handle_create_guest_account_response)
-        .add_observer(game_state::handle_guest_login_response)
-        .add_observer(game_state::handle_convert_guest_account_response)
+        .add_observer(game_state::handle_oauth_login_response)
         .add_observer(game_state::handle_create_character_response)
         .add_observer(game_state::handle_select_character_response)
         .add_observer(game_state::handle_notifications)
@@ -345,6 +335,8 @@ fn start_app(cert_hash: bevy_renet2::netcode::ServerCertHash) {
         ))
         .add_systems(OnExit(GameState::InGame), game_state::cleanup_game_entities)
         .add_systems(Update, (
+            // OAuth callback check (runs during Login state)
+            ui::check_oauth_callback.run_if(in_state(GameState::Login)),
             // Connection monitoring
             game_state::monitor_connection,
             // Player entity detection

@@ -109,12 +109,25 @@ pub fn setup_database(mut db_res: ResMut<DatabaseConnection>) {
         let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN guest_expires_at INTEGER").execute(&pool).await;
         let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN last_login_at INTEGER").execute(&pool).await;
         let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN last_login_ip TEXT").execute(&pool).await;
+
+        // OAuth columns
+        let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN oauth_provider TEXT").execute(&pool).await;
+        let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN oauth_id TEXT").execute(&pool).await;
         // Ignore errors if columns already exist
 
         // Create indexes for accounts table
         let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_accounts_email ON accounts(email)").execute(&pool).await;
         let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_accounts_guest_token ON accounts(guest_token)").execute(&pool).await;
         let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_accounts_type ON accounts(account_type)").execute(&pool).await;
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_accounts_oauth_id ON accounts(oauth_id)").execute(&pool).await;
+
+        // Delete all guest accounts (one-time migration for new auth system)
+        let result = sqlx::query("DELETE FROM accounts WHERE account_type = 'guest'").execute(&pool).await;
+        if let Ok(rows_affected) = result {
+            if rows_affected.rows_affected() > 0 {
+                info!("Deleted {} guest accounts during migration", rows_affected.rows_affected());
+            }
+        }
 
         // Migration: Add progression columns to characters table
         let _ = sqlx::query("ALTER TABLE characters ADD COLUMN current_xp INTEGER NOT NULL DEFAULT 0").execute(&pool).await;
@@ -320,15 +333,58 @@ pub fn setup_database(mut db_res: ResMut<DatabaseConnection>) {
     db_res.pool = Some(pool);
 }
 
-pub async fn create_account(pool: &SqlitePool, username: &str, password_hash: &str) -> Result<i64, String> {
+/// Check if an email already exists in the database
+pub async fn email_exists(pool: &SqlitePool, email: &str) -> Result<bool, String> {
+    let result = sqlx::query("SELECT 1 FROM accounts WHERE email = ?1")
+        .bind(email)
+        .fetch_optional(pool)
+        .await;
+
+    match result {
+        Ok(Some(_)) => Ok(true),
+        Ok(None) => Ok(false),
+        Err(e) => Err(format!("Database error checking email: {}", e)),
+    }
+}
+
+/// Check if a username already exists in the database
+pub async fn username_exists(pool: &SqlitePool, username: &str) -> Result<bool, String> {
+    let result = sqlx::query("SELECT 1 FROM accounts WHERE username = ?1")
+        .bind(username)
+        .fetch_optional(pool)
+        .await;
+
+    match result {
+        Ok(Some(_)) => Ok(true),
+        Ok(None) => Ok(false),
+        Err(e) => Err(format!("Database error checking username: {}", e)),
+    }
+}
+
+pub async fn create_account(pool: &SqlitePool, email: &str, username: &str, password_hash: &str) -> Result<i64, String> {
+    // Check for existing email
+    match email_exists(pool, email).await {
+        Ok(true) => return Err("Email already in use".to_string()),
+        Ok(false) => {},
+        Err(e) => return Err(e),
+    }
+
+    // Check for existing username
+    match username_exists(pool, username).await {
+        Ok(true) => return Err("Username already taken".to_string()),
+        Ok(false) => {},
+        Err(e) => return Err(e),
+    }
+
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs() as i64;
 
     let result = sqlx::query(
-        "INSERT INTO accounts (username, password_hash, created_at) VALUES (?1, ?2, ?3)"
+        "INSERT INTO accounts (email, username, password_hash, created_at, account_type) VALUES (?1, ?2, ?3, ?4, 'registered')"
     )
+    .bind(email)
     .bind(username)
     .bind(password_hash)
     .bind(now)
@@ -1033,4 +1089,187 @@ pub async fn save_quest_log(pool: &SqlitePool, character_id: i64, quest_log: &Qu
 
     info!("Successfully saved {} quests for character {}", total_quests, character_id);
     Ok(())
+}
+
+// ============================================================================
+// OAUTH ACCOUNT MANAGEMENT
+// ============================================================================
+
+/// Find account by OAuth provider and ID
+pub async fn find_account_by_oauth(pool: &SqlitePool, provider: &str, oauth_id: &str) -> Result<Option<i64>, String> {
+    let result = sqlx::query(
+        "SELECT id FROM accounts WHERE oauth_provider = ?1 AND oauth_id = ?2"
+    )
+    .bind(provider)
+    .bind(oauth_id)
+    .fetch_optional(pool)
+    .await;
+
+    match result {
+        Ok(Some(row)) => {
+            let id: i64 = row.try_get("id").map_err(|e| e.to_string())?;
+            Ok(Some(id))
+        }
+        Ok(None) => Ok(None),
+        Err(e) => Err(format!("Database error: {}", e)),
+    }
+}
+
+/// Create a new OAuth account
+pub async fn create_oauth_account(
+    pool: &SqlitePool,
+    email: &str,
+    username: &str,
+    provider: &str,
+    oauth_id: &str
+) -> Result<i64, String> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+
+    // OAuth accounts don't have passwords (use empty hash)
+    let result = sqlx::query(
+        "INSERT INTO accounts (email, username, password_hash, oauth_provider, oauth_id, created_at, account_type)
+         VALUES (?1, ?2, '', ?3, ?4, ?5, 'registered')"
+    )
+    .bind(email)
+    .bind(username)
+    .bind(provider)
+    .bind(oauth_id)
+    .bind(now)
+    .execute(pool)
+    .await;
+
+    match result {
+        Ok(result) => Ok(result.last_insert_rowid()),
+        Err(e) => Err(format!("Failed to create OAuth account: {}", e)),
+    }
+}
+
+/// Log a rate limit violation to the database
+pub async fn log_rate_limit_violation(
+    pool: &SqlitePool,
+    identifier: &str,
+    violation_type: &str,
+    details: &str,
+) -> Result<(), String> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+
+    let result = sqlx::query(
+        "INSERT INTO rate_limit_violations (identifier, violation_type, violated_at, details)
+         VALUES (?1, ?2, ?3, ?4)"
+    )
+    .bind(identifier)
+    .bind(violation_type)
+    .bind(now)
+    .bind(details)
+    .execute(pool)
+    .await;
+
+    match result {
+        Ok(_) => {
+            info!("Logged rate limit violation: {} - {}", identifier, violation_type);
+            Ok(())
+        }
+        Err(e) => Err(format!("Failed to log rate limit violation: {}", e)),
+    }
+}
+
+// ============================================================================
+// BAN SYSTEM
+// ============================================================================
+
+/// Information about an active ban
+#[derive(Debug, Clone)]
+pub struct BanInfo {
+    pub ban_type: String,
+    pub reason: String,
+    pub expires_at: Option<i64>,
+    pub is_permanent: bool,
+}
+
+/// Check if an account is banned
+/// Returns Ok(None) if not banned, Ok(Some(BanInfo)) if banned
+pub async fn check_account_ban(
+    pool: &SqlitePool,
+    account_id: i64,
+) -> Result<Option<BanInfo>, String> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+
+    let result = sqlx::query(
+        "SELECT ban_type, reason, expires_at
+         FROM bans
+         WHERE banned_account_id = ?1
+           AND is_active = TRUE
+           AND (expires_at IS NULL OR expires_at > ?2)
+         LIMIT 1"
+    )
+    .bind(account_id)
+    .bind(now)
+    .fetch_optional(pool)
+    .await;
+
+    match result {
+        Ok(Some(row)) => {
+            let expires_at: Option<i64> = row.get("expires_at");
+            let is_permanent = expires_at.is_none();
+
+            Ok(Some(BanInfo {
+                ban_type: row.get("ban_type"),
+                reason: row.get("reason"),
+                expires_at,
+                is_permanent,
+            }))
+        }
+        Ok(None) => Ok(None),
+        Err(e) => Err(format!("Failed to check account ban: {}", e)),
+    }
+}
+
+/// Check if an IP address is banned
+/// Returns Ok(None) if not banned, Ok(Some(BanInfo)) if banned
+pub async fn check_ip_ban(
+    pool: &SqlitePool,
+    ip_address: &str,
+) -> Result<Option<BanInfo>, String> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+
+    let result = sqlx::query(
+        "SELECT ban_type, reason, expires_at
+         FROM bans
+         WHERE banned_ip = ?1
+           AND is_active = TRUE
+           AND (expires_at IS NULL OR expires_at > ?2)
+         LIMIT 1"
+    )
+    .bind(ip_address)
+    .bind(now)
+    .fetch_optional(pool)
+    .await;
+
+    match result {
+        Ok(Some(row)) => {
+            let expires_at: Option<i64> = row.get("expires_at");
+            let is_permanent = expires_at.is_none();
+
+            Ok(Some(BanInfo {
+                ban_type: row.get("ban_type"),
+                reason: row.get("reason"),
+                expires_at,
+                is_permanent,
+            }))
+        }
+        Ok(None) => Ok(None),
+        Err(e) => Err(format!("Failed to check IP ban: {}", e)),
+    }
 }

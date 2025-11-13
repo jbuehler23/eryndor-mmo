@@ -26,13 +26,14 @@ eryndor_shared = { path = "../eryndor_shared" }
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 bevy_renet2 = { version = "0.11", default-features = false, features = ["native_transport"] }
 bevy_replicon_renet2 = { version = "0.11", default-features = false, features = ["client", "native_transport"] }
+webbrowser = "1.0"
 
 # WASM-specific dependencies (WebSocket and WebTransport)
 [target.'cfg(target_family = "wasm")'.dependencies]
 bevy_renet2 = { version = "0.11", default-features = false, features = ["ws_client_transport", "wt_client_transport"] }
 bevy_replicon_renet2 = { version = "0.11", default-features = false, features = ["client", "ws_client_transport", "wt_client_transport"] }
 url = "2.5"
-web-sys = "0.3"
+web-sys = { version = "0.3", features = ["Window", "Location", "History"] }
 js-sys = "0.3"
 console_error_panic_hook = "0.1"
 getrandom = { version = "0.2", features = ["js"] }

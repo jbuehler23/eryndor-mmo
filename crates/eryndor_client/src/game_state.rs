@@ -90,60 +90,21 @@ pub fn handle_notifications(
 }
 
 // ============================================================================
-// GUEST ACCOUNT HANDLERS
+// OAUTH HANDLERS
 // ============================================================================
 
-pub fn handle_create_guest_account_response(
-    trigger: On<CreateGuestAccountResponse>,
-    mut client_state: ResMut<MyClientState>,
-    mut ui_state: ResMut<crate::ui::UiState>,
-    mut next_state: ResMut<NextState<GameState>>,
-) {
-    let response = trigger.event();
-    if response.success {
-        info!("Guest account created successfully!");
-        client_state.account_id = None; // Guests don't have account_id in this response
-
-        // Save the guest token for future logins
-        if let Some(token) = &response.guest_token {
-            ui_state.guest_token = token.clone();
-        }
-
-        next_state.set(GameState::CharacterSelect);
-    } else {
-        warn!("Guest account creation failed: {}", response.message);
-    }
-    client_state.notifications.push(response.message.clone());
-}
-
-pub fn handle_guest_login_response(
-    trigger: On<GuestLoginResponse>,
+pub fn handle_oauth_login_response(
+    trigger: On<OAuthLoginResponse>,
     mut client_state: ResMut<MyClientState>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     let response = trigger.event();
     if response.success {
-        info!("Guest login successful!");
+        info!("OAuth login successful!");
         client_state.account_id = response.account_id;
         next_state.set(GameState::CharacterSelect);
     } else {
-        warn!("Guest login failed: {}", response.message);
-    }
-    client_state.notifications.push(response.message.clone());
-}
-
-pub fn handle_convert_guest_account_response(
-    trigger: On<ConvertGuestAccountResponse>,
-    mut client_state: ResMut<MyClientState>,
-    mut ui_state: ResMut<crate::ui::UiState>,
-) {
-    let response = trigger.event();
-    if response.success {
-        info!("Guest account converted successfully!");
-        // Clear guest token since account is now registered
-        ui_state.guest_token.clear();
-    } else {
-        warn!("Guest account conversion failed: {}", response.message);
+        warn!("OAuth login failed: {}", response.message);
     }
     client_state.notifications.push(response.message.clone());
 }
