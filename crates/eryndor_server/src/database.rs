@@ -121,6 +121,26 @@ pub fn setup_database(mut db_res: ResMut<DatabaseConnection>) {
         let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_accounts_type ON accounts(account_type)").execute(&pool).await;
         let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_accounts_oauth_id ON accounts(oauth_id)").execute(&pool).await;
 
+        // Create audit_logs table for security event tracking
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS audit_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp INTEGER NOT NULL,
+                action_type TEXT NOT NULL,
+                actor_account_id INTEGER,
+                target_account_id INTEGER,
+                target_username TEXT,
+                ip_address TEXT,
+                details TEXT
+            )"
+        ).execute(&pool).await;
+
+        // Create indexes for audit_logs table (for efficient querying)
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp)").execute(&pool).await;
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_audit_logs_action_type ON audit_logs(action_type)").execute(&pool).await;
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs(actor_account_id)").execute(&pool).await;
+        let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_audit_logs_target ON audit_logs(target_account_id)").execute(&pool).await;
+
         // Delete all guest accounts (one-time migration for new auth system)
         let result = sqlx::query("DELETE FROM accounts WHERE account_type = 'guest'").execute(&pool).await;
         if let Ok(rows_affected) = result {

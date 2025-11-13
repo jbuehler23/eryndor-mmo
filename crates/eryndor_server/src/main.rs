@@ -1,4 +1,6 @@
 mod abilities;
+mod admin;
+mod audit;
 mod auth;
 mod character;
 mod combat;
@@ -144,6 +146,8 @@ fn main() {
         .add_client_event::<CompleteQuestRequest>(Channel::Ordered)
         .add_client_event::<SetHotbarSlotRequest>(Channel::Ordered)
         .add_client_event::<DisconnectCharacterRequest>(Channel::Ordered)
+        .add_client_event::<AdminCommandRequest>(Channel::Ordered)
+        .add_client_event::<SendChatMessage>(Channel::Ordered)
         // Register server -> client events (Events API)
         .add_server_event::<LoginResponse>(Channel::Ordered)
         .add_server_event::<CreateAccountResponse>(Channel::Ordered)
@@ -159,6 +163,7 @@ fn main() {
         .add_mapped_server_event::<LootContainerContentsEvent>(Channel::Ordered)
         .add_server_event::<LevelUpEvent>(Channel::Ordered)
         .add_server_event::<ProficiencyLevelUpEvent>(Channel::Ordered)
+        .add_server_event::<ChatMessage>(Channel::Ordered)
         // Register observers for client triggers
         .add_observer(auth::handle_login)
         .add_observer(auth::handle_create_account)
@@ -180,6 +185,8 @@ fn main() {
         .add_observer(quest::handle_accept_quest)
         .add_observer(quest::handle_complete_quest)
         .add_observer(auth::handle_disconnect_character)
+        .add_observer(admin::handle_admin_command)
+        .add_observer(admin::handle_chat_message)
         // Respawn system
         .add_observer(spawn::schedule_respawn)
         // Systems

@@ -23,6 +23,9 @@ pub struct UiState {
     pub loot_window: Option<LootWindowData>,
     pub show_register_tab: bool,  // Toggle between Login and Register tabs
     pub oauth_checked: bool,  // Track if we've checked for OAuth callback
+    pub chat_input: String,  // Current chat message being typed
+    pub chat_visible: bool,  // Whether chat window is visible
+    pub chat_history: Vec<String>,  // Last 50 chat messages
 }
 
 impl Default for UiState {
@@ -42,6 +45,9 @@ impl Default for UiState {
             loot_window: None,
             show_register_tab: false,
             oauth_checked: false,
+            chat_input: String::new(),
+            chat_visible: false,
+            chat_history: Vec::new(),
         }
     }
 }
@@ -1088,4 +1094,95 @@ pub fn check_oauth_callback(
 #[cfg(not(target_family = "wasm"))]
 pub fn check_oauth_callback() {
     // OAuth callback only works in WASM
+}
+
+// ============================================================================
+// CHAT SYSTEM
+// ============================================================================
+
+/// Chat window for sending admin commands and regular chat messages
+pub fn chat_window(
+    mut contexts: EguiContexts,
+    mut ui_state: ResMut<UiState>,
+    mut commands: Commands,
+) {
+    let Ok(ctx) = contexts.ctx_mut() else { return };
+
+    // Chat window at bottom-left of screen - always visible
+    egui::Window::new("Chat")
+        .default_pos([10.0, 400.0])
+        .default_size([500.0, 250.0])
+        .resizable(true)
+        .show(ctx, |ui| {
+            // Chat history display (scrollable area)
+            egui::ScrollArea::vertical()
+                .max_height(150.0)
+                .auto_shrink([false, false])
+                .stick_to_bottom(true)
+                .show(ui, |ui| {
+                    if ui_state.chat_history.is_empty() {
+                        ui.label("No messages yet. Type to chat with other players!");
+                    } else {
+                        for message in &ui_state.chat_history {
+                            ui.label(message);
+                        }
+                    }
+                });
+
+            ui.separator();
+
+            // Chat input field
+            let response = ui.text_edit_singleline(&mut ui_state.chat_input);
+
+            // Send message on Enter key
+            if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                let message = ui_state.chat_input.trim().to_string();
+
+                if !message.is_empty() {
+                    // Check if it's an admin command (starts with /)
+                    if message.starts_with('/') {
+                        commands.trigger(AdminCommandRequest {
+                            command: message.clone(),
+                        });
+                    } else {
+                        // Send as regular chat message
+                        commands.trigger(SendChatMessage {
+                            message: message.clone(),
+                        });
+                    }
+
+                    // Clear input after sending
+                    ui_state.chat_input.clear();
+
+                    // Re-focus the input field so user can continue typing
+                    response.request_focus();
+                }
+            }
+
+            ui.label("Press Enter to send");
+        });
+}
+
+/// Receive chat messages from server and add them to chat history
+pub fn receive_chat_messages(
+    mut ui_state: ResMut<UiState>,
+    mut chat_events: Option<EventReader<ChatMessage>>,
+) {
+    // Handle case where ChatMessage events haven't been initialized yet
+    let Some(chat_events) = chat_events.as_mut() else {
+        return;
+    };
+
+    for chat_event in chat_events.read() {
+        // Format: "[Sender] message"
+        let formatted_message = format!("[{}] {}", chat_event.sender, chat_event.message);
+
+        // Add to chat history
+        ui_state.chat_history.push(formatted_message);
+
+        // Keep only last 50 messages to prevent memory bloat
+        if ui_state.chat_history.len() > 50 {
+            ui_state.chat_history.remove(0);
+        }
+    }
 }

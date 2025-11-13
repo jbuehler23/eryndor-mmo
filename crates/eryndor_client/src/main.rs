@@ -100,6 +100,8 @@ fn main() {
         .add_client_event::<CompleteQuestRequest>(Channel::Ordered)
         .add_client_event::<SetHotbarSlotRequest>(Channel::Ordered)
         .add_client_event::<DisconnectCharacterRequest>(Channel::Ordered)
+        .add_client_event::<AdminCommandRequest>(Channel::Ordered)
+        .add_client_event::<SendChatMessage>(Channel::Ordered)
         // Register server -> client events
         .add_server_event::<LoginResponse>(Channel::Ordered)
         .add_server_event::<CreateAccountResponse>(Channel::Ordered)
@@ -115,6 +117,7 @@ fn main() {
         .add_mapped_server_event::<LootContainerContentsEvent>(Channel::Ordered)
         .add_server_event::<LevelUpEvent>(Channel::Ordered)
         .add_server_event::<ProficiencyLevelUpEvent>(Channel::Ordered)
+        .add_server_event::<ChatMessage>(Channel::Ordered)
         // Register observers for server -> client events
         .add_observer(game_state::handle_login_response)
         .add_observer(game_state::handle_character_list)
@@ -135,11 +138,14 @@ fn main() {
             ui::login_ui.run_if(in_state(GameState::Login)),
             ui::character_select_ui.run_if(in_state(GameState::CharacterSelect)),
             ui::game_ui.run_if(in_state(GameState::InGame)),
+            ui::chat_window.run_if(in_state(GameState::InGame)),
         ))
         .add_systems(OnExit(GameState::InGame), game_state::cleanup_game_entities)
         .add_systems(Update, (
             // OAuth callback check (runs during Login state)
             ui::check_oauth_callback.run_if(in_state(GameState::Login)),
+            // Chat message receiver
+            ui::receive_chat_messages.run_if(in_state(GameState::InGame)),
             // Connection monitoring
             game_state::monitor_connection,
             // Player entity detection
@@ -297,6 +303,8 @@ fn start_app(cert_hash: bevy_renet2::netcode::ServerCertHash) {
         .add_client_event::<CompleteQuestRequest>(Channel::Ordered)
         .add_client_event::<SetHotbarSlotRequest>(Channel::Ordered)
         .add_client_event::<DisconnectCharacterRequest>(Channel::Ordered)
+        .add_client_event::<AdminCommandRequest>(Channel::Ordered)
+        .add_client_event::<SendChatMessage>(Channel::Ordered)
         // Register server -> client events
         .add_server_event::<LoginResponse>(Channel::Ordered)
         .add_server_event::<CreateAccountResponse>(Channel::Ordered)
@@ -312,6 +320,7 @@ fn start_app(cert_hash: bevy_renet2::netcode::ServerCertHash) {
         .add_mapped_server_event::<LootContainerContentsEvent>(Channel::Ordered)
         .add_server_event::<LevelUpEvent>(Channel::Ordered)
         .add_server_event::<ProficiencyLevelUpEvent>(Channel::Ordered)
+        .add_server_event::<ChatMessage>(Channel::Ordered)
         // Register observers for server -> client events
         .add_observer(game_state::handle_login_response)
         .add_observer(game_state::handle_character_list)
@@ -332,11 +341,14 @@ fn start_app(cert_hash: bevy_renet2::netcode::ServerCertHash) {
             ui::login_ui.run_if(in_state(GameState::Login)),
             ui::character_select_ui.run_if(in_state(GameState::CharacterSelect)),
             ui::game_ui.run_if(in_state(GameState::InGame)),
+            ui::chat_window.run_if(in_state(GameState::InGame)),
         ))
         .add_systems(OnExit(GameState::InGame), game_state::cleanup_game_entities)
         .add_systems(Update, (
             // OAuth callback check (runs during Login state)
             ui::check_oauth_callback.run_if(in_state(GameState::Login)),
+            // Chat message receiver
+            ui::receive_chat_messages.run_if(in_state(GameState::InGame)),
             // Connection monitoring
             game_state::monitor_connection,
             // Player entity detection

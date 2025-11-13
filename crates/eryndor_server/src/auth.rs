@@ -330,6 +330,19 @@ pub fn handle_create_account(
     let moderation_result = crate::moderation::check_username(&request.username);
     if !moderation_result.is_appropriate {
         warn!("Account creation rejected - inappropriate username: {}", request.username);
+
+        // AUDIT LOG: Inappropriate content blocked
+        let runtime_audit = tokio::runtime::Runtime::new().unwrap();
+        let _ = runtime_audit.block_on(crate::audit::log_audit_event(
+            pool,
+            crate::audit::AuditActionType::InappropriateContentBlocked,
+            None,
+            None,
+            Some(&request.username),
+            Some(&metadata.ip_address.to_string()),
+            Some(&format!("username moderation failed: {}", moderation_result.reason.clone().unwrap_or_default())),
+        ));
+
         commands.server_trigger(ToClients {
             mode: SendMode::Direct(ClientId::Client(client_entity)),
             message: CreateAccountResponse {
@@ -384,8 +397,21 @@ pub fn handle_create_account(
     let result = runtime.block_on(database::create_account(pool, &request.email, &validated_username, &password_hash));
 
     match result {
-        Ok(_account_id) => {
+        Ok(account_id) => {
             info!("Account created: {} ({})", validated_username, request.email);
+
+            // AUDIT LOG: Account creation
+            let runtime_audit = tokio::runtime::Runtime::new().unwrap();
+            let _ = runtime_audit.block_on(crate::audit::log_audit_event(
+                pool,
+                crate::audit::AuditActionType::AccountCreated,
+                Some(account_id),
+                Some(account_id),
+                Some(&validated_username),
+                Some(&metadata.ip_address.to_string()),
+                Some(&format!("email: {}", request.email)),
+            ));
+
             commands.server_trigger(ToClients {
                 mode: SendMode::Direct(ClientId::Client(client_entity)),
                 message: CreateAccountResponse {

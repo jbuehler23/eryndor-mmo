@@ -182,6 +182,22 @@ impl MapEntities for LootItemRequest {
 pub struct AutoLootRequest;
 
 // ============================================================================
+// ADMIN COMMANDS (CLIENT -> SERVER)
+// ============================================================================
+
+/// Admin command request - for executing admin-only commands
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct AdminCommandRequest {
+    pub command: String,  // e.g., "/ban username 1h spam", "/kick username", "/broadcast message"
+}
+
+/// Regular chat message from player
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct SendChatMessage {
+    pub message: String,
+}
+
+// ============================================================================
 // SERVER -> CLIENT MESSAGES
 // ============================================================================
 
