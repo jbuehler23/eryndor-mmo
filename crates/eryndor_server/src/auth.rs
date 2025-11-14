@@ -139,6 +139,7 @@ pub fn handle_login(
                 success: false,
                 message: "Connection error. Please try again.".to_string(),
                 account_id: None,
+                is_admin: false,
             },
         });
         return;
@@ -162,6 +163,7 @@ pub fn handle_login(
                 success: false,
                 message: "Too many login attempts. Please try again later.".to_string(),
                 account_id: None,
+                is_admin: false,
             },
         });
         return;
@@ -198,6 +200,7 @@ pub fn handle_login(
                         success: false,
                         message,
                         account_id: None,
+                        is_admin: false,
                     },
                 });
                 return;
@@ -214,12 +217,17 @@ pub fn handle_login(
                         success: false,
                         message: "This account is already logged in".to_string(),
                         account_id: None,
+                        is_admin: false,
                     },
                 });
                 return;
             }
 
             info!("Login successful for {} (ID: {})", request.username, account_id);
+
+            // Check if user is admin
+            let is_admin = runtime.block_on(crate::admin::is_admin(pool, account_id))
+                .unwrap_or(false);
 
             // Mark client as authenticated
             commands.entity(client_entity).insert(Authenticated { account_id });
@@ -231,6 +239,7 @@ pub fn handle_login(
                     success: true,
                     message: "Login successful".to_string(),
                     account_id: Some(account_id),
+                    is_admin,
                 },
             });
 
@@ -251,6 +260,7 @@ pub fn handle_login(
                     success: false,
                     message: e,
                     account_id: None,
+                    is_admin: false,
                 },
             });
         }

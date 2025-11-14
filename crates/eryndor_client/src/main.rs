@@ -102,6 +102,11 @@ fn main() {
         .add_client_event::<DisconnectCharacterRequest>(Channel::Ordered)
         .add_client_event::<AdminCommandRequest>(Channel::Ordered)
         .add_client_event::<SendChatMessage>(Channel::Ordered)
+        // Dashboard query events
+        .add_client_event::<GetPlayerListRequest>(Channel::Ordered)
+        .add_client_event::<GetBanListRequest>(Channel::Ordered)
+        .add_client_event::<GetServerStatsRequest>(Channel::Ordered)
+        .add_client_event::<GetAuditLogsRequest>(Channel::Ordered)
         // Register server -> client events
         .add_server_event::<LoginResponse>(Channel::Ordered)
         .add_server_event::<CreateAccountResponse>(Channel::Ordered)
@@ -118,6 +123,11 @@ fn main() {
         .add_server_event::<LevelUpEvent>(Channel::Ordered)
         .add_server_event::<ProficiencyLevelUpEvent>(Channel::Ordered)
         .add_server_event::<ChatMessage>(Channel::Ordered)
+        // Dashboard response events
+        .add_server_event::<PlayerListResponse>(Channel::Ordered)
+        .add_server_event::<BanListResponse>(Channel::Ordered)
+        .add_server_event::<ServerStatsResponse>(Channel::Ordered)
+        .add_server_event::<AuditLogsResponse>(Channel::Ordered)
         // Register observers for server -> client events
         .add_observer(game_state::handle_login_response)
         .add_observer(game_state::handle_character_list)
@@ -128,6 +138,11 @@ fn main() {
         .add_observer(game_state::handle_notifications)
         .add_observer(game_state::handle_level_up)
         .add_observer(game_state::handle_proficiency_level_up)
+        // Admin dashboard response handlers
+        .add_observer(game_state::handle_player_list_response)
+        .add_observer(game_state::handle_ban_list_response)
+        .add_observer(game_state::handle_server_stats_response)
+        .add_observer(game_state::handle_audit_logs_response)
         .add_observer(ui::handle_quest_dialogue)
         .add_observer(ui::handle_loot_container_contents)
         .add_observer(rendering::spawn_damage_numbers)
@@ -305,6 +320,11 @@ fn start_app(cert_hash: bevy_renet2::netcode::ServerCertHash) {
         .add_client_event::<DisconnectCharacterRequest>(Channel::Ordered)
         .add_client_event::<AdminCommandRequest>(Channel::Ordered)
         .add_client_event::<SendChatMessage>(Channel::Ordered)
+        // Dashboard query events
+        .add_client_event::<GetPlayerListRequest>(Channel::Ordered)
+        .add_client_event::<GetBanListRequest>(Channel::Ordered)
+        .add_client_event::<GetServerStatsRequest>(Channel::Ordered)
+        .add_client_event::<GetAuditLogsRequest>(Channel::Ordered)
         // Register server -> client events
         .add_server_event::<LoginResponse>(Channel::Ordered)
         .add_server_event::<CreateAccountResponse>(Channel::Ordered)
@@ -321,6 +341,11 @@ fn start_app(cert_hash: bevy_renet2::netcode::ServerCertHash) {
         .add_server_event::<LevelUpEvent>(Channel::Ordered)
         .add_server_event::<ProficiencyLevelUpEvent>(Channel::Ordered)
         .add_server_event::<ChatMessage>(Channel::Ordered)
+        // Dashboard response events
+        .add_server_event::<PlayerListResponse>(Channel::Ordered)
+        .add_server_event::<BanListResponse>(Channel::Ordered)
+        .add_server_event::<ServerStatsResponse>(Channel::Ordered)
+        .add_server_event::<AuditLogsResponse>(Channel::Ordered)
         // Register observers for server -> client events
         .add_observer(game_state::handle_login_response)
         .add_observer(game_state::handle_character_list)
@@ -331,6 +356,11 @@ fn start_app(cert_hash: bevy_renet2::netcode::ServerCertHash) {
         .add_observer(game_state::handle_notifications)
         .add_observer(game_state::handle_level_up)
         .add_observer(game_state::handle_proficiency_level_up)
+        // Admin dashboard response handlers
+        .add_observer(game_state::handle_player_list_response)
+        .add_observer(game_state::handle_ban_list_response)
+        .add_observer(game_state::handle_server_stats_response)
+        .add_observer(game_state::handle_audit_logs_response)
         .add_observer(ui::handle_quest_dialogue)
         .add_observer(ui::handle_loot_container_contents)
         .add_observer(rendering::spawn_damage_numbers)

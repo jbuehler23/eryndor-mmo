@@ -3,6 +3,7 @@ use bevy_replicon::prelude::*;
 use bevy_renet2::prelude::{ConnectionConfig, RenetClient};
 use bevy_replicon_renet2::RenetChannelsExt;
 use eryndor_shared::*;
+use crate::ui::UiState;
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GameState {
@@ -31,12 +32,14 @@ pub struct ServerCertHashResource {
 pub fn handle_login_response(
     trigger: On<LoginResponse>,
     mut client_state: ResMut<MyClientState>,
+    mut ui_state: ResMut<UiState>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     let response = trigger.event();
     if response.success {
         info!("Login successful!");
         client_state.account_id = response.account_id;
+        ui_state.is_admin = response.is_admin;
         next_state.set(GameState::CharacterSelect);
     } else {
         warn!("Login failed: {}", response.message);
@@ -361,6 +364,51 @@ pub fn handle_proficiency_level_up(
     );
     info!("{}", message);
     client_state.notifications.push(message);
+}
+
+// ============================================================================
+// ADMIN DASHBOARD RESPONSE HANDLERS
+// ============================================================================
+
+/// Handle player list response from server
+pub fn handle_player_list_response(
+    trigger: On<PlayerListResponse>,
+    mut ui_state: ResMut<crate::ui::UiState>,
+) {
+    let response = trigger.event();
+    info!("Received player list with {} players", response.players.len());
+    ui_state.system_menu.player_list = response.players.clone();
+}
+
+/// Handle ban list response from server
+pub fn handle_ban_list_response(
+    trigger: On<BanListResponse>,
+    mut ui_state: ResMut<crate::ui::UiState>,
+) {
+    let response = trigger.event();
+    info!("Received ban list with {} bans", response.bans.len());
+    ui_state.system_menu.ban_list = response.bans.clone();
+}
+
+/// Handle server stats response from server
+pub fn handle_server_stats_response(
+    trigger: On<ServerStatsResponse>,
+    mut ui_state: ResMut<crate::ui::UiState>,
+) {
+    let response = trigger.event();
+    info!("Received server stats");
+    ui_state.system_menu.server_stats = Some(response.clone());
+}
+
+/// Handle audit logs response from server
+pub fn handle_audit_logs_response(
+    trigger: On<AuditLogsResponse>,
+    mut ui_state: ResMut<crate::ui::UiState>,
+) {
+    let response = trigger.event();
+    info!("Received {} audit logs (total: {})", response.logs.len(), response.total_count);
+    ui_state.system_menu.audit_logs = response.logs.clone();
+    ui_state.system_menu.audit_logs_total = response.total_count;
 }
 
 /// Cleanup player entities when leaving InGame state

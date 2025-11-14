@@ -15,8 +15,8 @@ pub fn handle_movement_input(
     ui_state: Res<UiState>,
     mut commands: Commands,
 ) {
-    // Don't handle movement if ESC menu is open
-    if ui_state.show_esc_menu {
+    // Don't handle movement if ESC menu is open or chat has focus
+    if ui_state.show_esc_menu || ui_state.chat_has_focus {
         return;
     }
 

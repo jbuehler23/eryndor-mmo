@@ -5,6 +5,7 @@ mod auth;
 mod character;
 mod combat;
 mod config;
+mod dashboard;
 mod database;
 mod game_data;
 mod inventory;
@@ -148,6 +149,11 @@ fn main() {
         .add_client_event::<DisconnectCharacterRequest>(Channel::Ordered)
         .add_client_event::<AdminCommandRequest>(Channel::Ordered)
         .add_client_event::<SendChatMessage>(Channel::Ordered)
+        // Dashboard query events
+        .add_client_event::<GetPlayerListRequest>(Channel::Ordered)
+        .add_client_event::<GetBanListRequest>(Channel::Ordered)
+        .add_client_event::<GetServerStatsRequest>(Channel::Ordered)
+        .add_client_event::<GetAuditLogsRequest>(Channel::Ordered)
         // Register server -> client events (Events API)
         .add_server_event::<LoginResponse>(Channel::Ordered)
         .add_server_event::<CreateAccountResponse>(Channel::Ordered)
@@ -164,6 +170,11 @@ fn main() {
         .add_server_event::<LevelUpEvent>(Channel::Ordered)
         .add_server_event::<ProficiencyLevelUpEvent>(Channel::Ordered)
         .add_server_event::<ChatMessage>(Channel::Ordered)
+        // Dashboard response events
+        .add_server_event::<PlayerListResponse>(Channel::Ordered)
+        .add_server_event::<BanListResponse>(Channel::Ordered)
+        .add_server_event::<ServerStatsResponse>(Channel::Ordered)
+        .add_server_event::<AuditLogsResponse>(Channel::Ordered)
         // Register observers for client triggers
         .add_observer(auth::handle_login)
         .add_observer(auth::handle_create_account)
@@ -187,6 +198,11 @@ fn main() {
         .add_observer(auth::handle_disconnect_character)
         .add_observer(admin::handle_admin_command)
         .add_observer(admin::handle_chat_message)
+        // Dashboard observers
+        .add_observer(dashboard::handle_get_player_list)
+        .add_observer(dashboard::handle_get_ban_list)
+        .add_observer(dashboard::handle_get_server_stats)
+        .add_observer(dashboard::handle_get_audit_logs)
         // Respawn system
         .add_observer(spawn::schedule_respawn)
         // Systems

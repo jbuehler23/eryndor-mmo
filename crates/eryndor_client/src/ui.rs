@@ -7,6 +7,58 @@ use crate::game_state::{GameState, MyClientState};
 #[cfg(target_family = "wasm")]
 use wasm_bindgen::JsCast;
 
+pub struct SystemMenuState {
+    pub active_tab: SystemMenuTab,
+    pub player_list: Vec<OnlinePlayerInfo>,
+    pub ban_list: Vec<BanInfo>,
+    pub server_stats: Option<ServerStatsResponse>,
+    pub audit_logs: Vec<AuditLogEntry>,
+    pub audit_logs_total: u32,
+    pub audit_logs_offset: u32,
+    pub audit_logs_limit: u32,
+    // UI input fields
+    pub ban_form_username: String,
+    pub ban_form_duration: u32,
+    pub ban_form_reason: String,
+    pub ban_username: String,
+    pub ban_duration: String,
+    pub ban_reason: String,
+    pub kick_username: String,
+    pub kick_reason: String,
+}
+
+impl Default for SystemMenuState {
+    fn default() -> Self {
+        Self {
+            active_tab: SystemMenuTab::default(),
+            player_list: Vec::new(),
+            ban_list: Vec::new(),
+            server_stats: None,
+            audit_logs: Vec::new(),
+            audit_logs_total: 0,
+            audit_logs_offset: 0,
+            audit_logs_limit: 20, // Default page size
+            ban_form_username: String::new(),
+            ban_form_duration: 0,
+            ban_form_reason: String::new(),
+            ban_username: String::new(),
+            ban_duration: String::new(),
+            ban_reason: String::new(),
+            kick_username: String::new(),
+            kick_reason: String::new(),
+        }
+    }
+}
+
+#[derive(Default, PartialEq, Clone, Copy)]
+pub enum SystemMenuTab {
+    #[default]
+    Players,
+    Bans,
+    Stats,
+    Logs,
+}
+
 #[derive(Resource)]
 pub struct UiState {
     pub email: String,
@@ -24,8 +76,13 @@ pub struct UiState {
     pub show_register_tab: bool,  // Toggle between Login and Register tabs
     pub oauth_checked: bool,  // Track if we've checked for OAuth callback
     pub chat_input: String,  // Current chat message being typed
-    pub chat_visible: bool,  // Whether chat window is visible
     pub chat_history: Vec<String>,  // Last 50 chat messages
+    pub chat_has_focus: bool,  // Whether chat input currently has focus
+    pub chat_previous_focus: bool,  // Previous frame's chat focus state
+    pub is_admin: bool,  // Whether the current player is an admin
+    // System menu (accessible to all players, some tabs admin-only)
+    pub show_system_menu: bool,
+    pub system_menu: SystemMenuState,
 }
 
 impl Default for UiState {
@@ -46,8 +103,12 @@ impl Default for UiState {
             show_register_tab: false,
             oauth_checked: false,
             chat_input: String::new(),
-            chat_visible: false,
             chat_history: Vec::new(),
+            chat_has_focus: false,
+            chat_previous_focus: false,
+            is_admin: false,
+            show_system_menu: false,
+            system_menu: SystemMenuState::default(),
         }
     }
 }
@@ -409,9 +470,10 @@ pub fn game_ui(
         });
 
     // Action buttons (top right)
+    let button_count = if ui_state.is_admin { 4 } else { 3 };
     egui::Window::new("Actions")
         .fixed_pos([1090.0, 10.0])
-        .fixed_size([180.0, 120.0])
+        .fixed_size([180.0, 30.0 * button_count as f32 + 20.0])
         .title_bar(false)
         .show(ctx, |ui| {
             if ui.button("Equipment").clicked() {
@@ -422,6 +484,12 @@ pub fn game_ui(
             }
             if ui.button("Inventory").clicked() {
                 ui_state.show_inventory = !ui_state.show_inventory;
+            }
+            // Admin Panel button (only visible to admins)
+            if ui_state.is_admin {
+                if ui.button("Admin Panel").clicked() {
+                    ui_state.show_system_menu = !ui_state.show_system_menu;
+                }
             }
         });
 
@@ -881,6 +949,361 @@ pub fn game_ui(
             ui_state.loot_window = None;
         }
     }
+
+    // Admin Dashboard window (only shown if user is admin)
+    if ui_state.show_system_menu {
+        system_menu_window(ctx, &mut ui_state.system_menu, &mut commands);
+    }
+}
+
+// Admin Dashboard window with tabs
+fn system_menu_window(
+    ctx: &egui::Context,
+    dashboard: &mut SystemMenuState,
+    commands: &mut Commands,
+) {
+    egui::Window::new("System Menu")
+        .default_width(800.0)
+        .default_height(600.0)
+        .show(ctx, |ui| {
+            ui.heading("Server Information");
+            ui.separator();
+
+            // Tab selector
+            ui.horizontal(|ui| {
+                ui.selectable_value(&mut dashboard.active_tab, SystemMenuTab::Players, "Players");
+                ui.selectable_value(&mut dashboard.active_tab, SystemMenuTab::Bans, "Bans");
+                ui.selectable_value(&mut dashboard.active_tab, SystemMenuTab::Stats, "Stats");
+                ui.selectable_value(&mut dashboard.active_tab, SystemMenuTab::Logs, "Logs");
+            });
+
+            ui.separator();
+
+            // Tab content
+            match dashboard.active_tab {
+                SystemMenuTab::Players => {
+                    render_players_tab(ui, dashboard, commands);
+                }
+                SystemMenuTab::Bans => {
+                    render_bans_tab(ui, dashboard, commands);
+                }
+                SystemMenuTab::Stats => {
+                    render_stats_tab(ui, dashboard, commands);
+                }
+                SystemMenuTab::Logs => {
+                    render_logs_tab(ui, dashboard, commands);
+                }
+            }
+        });
+}
+
+// ============================================================================
+// ADMIN DASHBOARD TAB RENDERERS
+// ============================================================================
+
+/// Render the Players tab - shows online players and kick functionality
+fn render_players_tab(
+    ui: &mut egui::Ui,
+    dashboard: &mut SystemMenuState,
+    commands: &mut Commands,
+) {
+    ui.heading("Online Players");
+
+    // Refresh button
+    if ui.button("Refresh Player List").clicked() {
+        commands.client_trigger(GetPlayerListRequest {});
+    }
+
+    ui.separator();
+
+    // Player list
+    if dashboard.player_list.is_empty() {
+        ui.label("No players online or data not loaded yet.");
+        ui.label("Click 'Refresh Player List' to fetch current data.");
+    } else {
+        egui::ScrollArea::vertical()
+            .max_height(400.0)
+            .show(ui, |ui| {
+                egui::Grid::new("players_grid")
+                    .striped(true)
+                    .spacing([10.0, 4.0])
+                    .show(ui, |ui| {
+                        // Header
+                        ui.label("Character");
+                        ui.label("Account ID");
+                        ui.label("Level");
+                        ui.label("Class");
+                        ui.label("Position");
+                        ui.label("Actions");
+                        ui.end_row();
+
+                        // Rows
+                        for player in &dashboard.player_list {
+                            ui.label(&player.character_name);
+                            ui.label(format!("{}", player.account_id));
+                            ui.label(format!("{}", player.level));
+                            ui.label(format!("{:?}", player.class));
+                            ui.label(format!("({:.0}, {:.0})", player.position_x, player.position_y));
+
+                            // Kick button
+                            if ui.button("Kick").clicked() {
+                                // Send kick command via admin command system
+                                commands.client_trigger(AdminCommandRequest {
+                                    command: format!("/kick {}", player.character_name),
+                                });
+                            }
+
+                            ui.end_row();
+                        }
+                    });
+            });
+    }
+}
+
+/// Render the Bans tab - shows ban list and ban/unban functionality
+fn render_bans_tab(
+    ui: &mut egui::Ui,
+    dashboard: &mut SystemMenuState,
+    commands: &mut Commands,
+) {
+    ui.heading("Ban Management");
+
+    // Refresh button
+    if ui.button("Refresh Ban List").clicked() {
+        commands.client_trigger(GetBanListRequest {});
+    }
+
+    ui.separator();
+
+    // Create ban form
+    ui.collapsing("Create New Ban", |ui| {
+        ui.horizontal(|ui| {
+            ui.label("Username:");
+            ui.text_edit_singleline(&mut dashboard.ban_form_username);
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("Duration (hours, 0 = permanent):");
+            ui.add(egui::DragValue::new(&mut dashboard.ban_form_duration).speed(1.0));
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("Reason:");
+            ui.text_edit_singleline(&mut dashboard.ban_form_reason);
+        });
+
+        if ui.button("Create Ban").clicked() {
+            let duration_str = if dashboard.ban_form_duration == 0 {
+                "permanent".to_string()
+            } else {
+                format!("{}h", dashboard.ban_form_duration)
+            };
+
+            commands.client_trigger(AdminCommandRequest {
+                command: format!("/ban {} {} {}",
+                    dashboard.ban_form_username,
+                    duration_str,
+                    dashboard.ban_form_reason
+                ),
+            });
+
+            // Clear form
+            dashboard.ban_form_username.clear();
+            dashboard.ban_form_duration = 0;
+            dashboard.ban_form_reason.clear();
+        }
+    });
+
+    ui.separator();
+    ui.heading("Active Bans");
+
+    // Ban list
+    if dashboard.ban_list.is_empty() {
+        ui.label("No active bans or data not loaded yet.");
+        ui.label("Click 'Refresh Ban List' to fetch current data.");
+    } else {
+        egui::ScrollArea::vertical()
+            .max_height(300.0)
+            .show(ui, |ui| {
+                egui::Grid::new("bans_grid")
+                    .striped(true)
+                    .spacing([10.0, 4.0])
+                    .show(ui, |ui| {
+                        // Header
+                        ui.label("ID");
+                        ui.label("Type");
+                        ui.label("Target");
+                        ui.label("Reason");
+                        ui.label("Expires");
+                        ui.label("Actions");
+                        ui.end_row();
+
+                        // Rows
+                        for ban in &dashboard.ban_list {
+                            ui.label(format!("{}", ban.id));
+                            ui.label(&ban.ban_type);
+                            ui.label(&ban.target);
+                            ui.label(&ban.reason);
+
+                            // Format expiration
+                            if let Some(expires) = ban.expires_at {
+                                ui.label(format!("Expires: {}", expires));
+                            } else {
+                                ui.label("Permanent");
+                            }
+
+                            // Unban button
+                            if ui.button("Unban").clicked() {
+                                commands.client_trigger(AdminCommandRequest {
+                                    command: format!("/unban {}", ban.target),
+                                });
+                            }
+
+                            ui.end_row();
+                        }
+                    });
+            });
+    }
+}
+
+/// Render the Stats tab - shows server statistics
+fn render_stats_tab(
+    ui: &mut egui::Ui,
+    dashboard: &mut SystemMenuState,
+    commands: &mut Commands,
+) {
+    ui.heading("Server Statistics");
+
+    // Refresh button
+    if ui.button("Refresh Stats").clicked() {
+        commands.client_trigger(GetServerStatsRequest {});
+    }
+
+    ui.separator();
+
+    // Stats display
+    if let Some(stats) = &dashboard.server_stats {
+        egui::Grid::new("stats_grid")
+            .num_columns(2)
+            .spacing([20.0, 10.0])
+            .striped(true)
+            .show(ui, |ui| {
+                ui.label("Online Players:");
+                ui.label(format!("{}", stats.online_players));
+                ui.end_row();
+
+                ui.label("Total Accounts:");
+                ui.label(format!("{}", stats.total_accounts));
+                ui.end_row();
+
+                ui.label("Total Characters:");
+                ui.label(format!("{}", stats.total_characters));
+                ui.end_row();
+
+                ui.label("Active Bans:");
+                ui.label(format!("{}", stats.active_bans));
+                ui.end_row();
+            });
+    } else {
+        ui.label("No stats data loaded yet.");
+        ui.label("Click 'Refresh Stats' to fetch current data.");
+    }
+}
+
+/// Render the Logs tab - shows audit logs with pagination
+fn render_logs_tab(
+    ui: &mut egui::Ui,
+    dashboard: &mut SystemMenuState,
+    commands: &mut Commands,
+) {
+    ui.heading("Audit Logs");
+
+    // Pagination controls
+    ui.horizontal(|ui| {
+        if ui.button("Previous Page").clicked() && dashboard.audit_logs_offset >= dashboard.audit_logs_limit {
+            dashboard.audit_logs_offset -= dashboard.audit_logs_limit;
+            commands.client_trigger(GetAuditLogsRequest {
+                limit: dashboard.audit_logs_limit,
+                offset: dashboard.audit_logs_offset,
+            });
+        }
+
+        ui.label(format!("Page {} | Total: {}",
+            (dashboard.audit_logs_offset / dashboard.audit_logs_limit) + 1,
+            dashboard.audit_logs_total
+        ));
+
+        if ui.button("Next Page").clicked() {
+            let max_offset = dashboard.audit_logs_total.saturating_sub(dashboard.audit_logs_limit);
+            if dashboard.audit_logs_offset < max_offset {
+                dashboard.audit_logs_offset += dashboard.audit_logs_limit;
+                commands.client_trigger(GetAuditLogsRequest {
+                    limit: dashboard.audit_logs_limit,
+                    offset: dashboard.audit_logs_offset,
+                });
+            }
+        }
+
+        if ui.button("Refresh").clicked() {
+            commands.client_trigger(GetAuditLogsRequest {
+                limit: dashboard.audit_logs_limit,
+                offset: dashboard.audit_logs_offset,
+            });
+        }
+    });
+
+    ui.separator();
+
+    // Audit log list
+    if dashboard.audit_logs.is_empty() {
+        ui.label("No audit logs or data not loaded yet.");
+        ui.label("Click 'Refresh' to fetch current data.");
+    } else {
+        egui::ScrollArea::vertical()
+            .max_height(400.0)
+            .show(ui, |ui| {
+                egui::Grid::new("logs_grid")
+                    .striped(true)
+                    .spacing([10.0, 4.0])
+                    .show(ui, |ui| {
+                        // Header
+                        ui.label("ID");
+                        ui.label("Action");
+                        ui.label("Account");
+                        ui.label("Target");
+                        ui.label("Details");
+                        ui.label("Timestamp");
+                        ui.end_row();
+
+                        // Rows
+                        for log in &dashboard.audit_logs {
+                            ui.label(format!("{}", log.id));
+                            ui.label(&log.action_type);
+
+                            if let Some(account_id) = log.account_id {
+                                ui.label(format!("{}", account_id));
+                            } else {
+                                ui.label("-");
+                            }
+
+                            if let Some(target) = &log.target_account {
+                                ui.label(target);
+                            } else {
+                                ui.label("-");
+                            }
+
+                            if let Some(details) = &log.details {
+                                ui.label(details);
+                            } else {
+                                ui.label("-");
+                            }
+
+                            ui.label(format!("{}", log.timestamp));
+                            ui.end_row();
+                        }
+                    });
+            });
+    }
 }
 
 pub fn handle_esc_key(
@@ -1104,9 +1527,20 @@ pub fn check_oauth_callback() {
 pub fn chat_window(
     mut contexts: EguiContexts,
     mut ui_state: ResMut<UiState>,
+    client_state: Res<MyClientState>,
+    character_query: Query<&Character>,
     mut commands: Commands,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else { return };
+
+    // Get character name for displaying own messages
+    let character_name = if let Some(player_entity) = client_state.player_entity {
+        character_query.get(player_entity)
+            .map(|c| c.name.clone())
+            .unwrap_or_else(|_| "Unknown".to_string())
+    } else {
+        "Unknown".to_string()
+    };
 
     // Chat window at bottom-left of screen - always visible
     egui::Window::new("Chat")
@@ -1122,6 +1556,9 @@ pub fn chat_window(
                 .show(ui, |ui| {
                     if ui_state.chat_history.is_empty() {
                         ui.label("No messages yet. Type to chat with other players!");
+                        if ui_state.is_admin {
+                            ui.label("Admin commands: /ban, /unban, /kick, /broadcast, /help");
+                        }
                     } else {
                         for message in &ui_state.chat_history {
                             ui.label(message);
@@ -1134,6 +1571,18 @@ pub fn chat_window(
             // Chat input field
             let response = ui.text_edit_singleline(&mut ui_state.chat_input);
 
+            // Track focus state changes
+            let current_focus = response.has_focus();
+
+            // If chat just gained focus (wasn't focused last frame, is focused now)
+            // send a stop movement command to prevent stuck movement
+            if current_focus && !ui_state.chat_previous_focus {
+                commands.client_trigger(MoveInput { direction: Vec2::ZERO });
+            }
+
+            ui_state.chat_previous_focus = ui_state.chat_has_focus;
+            ui_state.chat_has_focus = current_focus;
+
             // Send message on Enter key
             if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                 let message = ui_state.chat_input.trim().to_string();
@@ -1141,14 +1590,23 @@ pub fn chat_window(
                 if !message.is_empty() {
                     // Check if it's an admin command (starts with /)
                     if message.starts_with('/') {
-                        commands.trigger(AdminCommandRequest {
+                        commands.client_trigger(AdminCommandRequest {
                             command: message.clone(),
                         });
+                        // Show command in chat history
+                        ui_state.chat_history.push(format!("[{}] {}", character_name, message));
                     } else {
                         // Send as regular chat message
-                        commands.trigger(SendChatMessage {
+                        commands.client_trigger(SendChatMessage {
                             message: message.clone(),
                         });
+                        // Show own message in chat history immediately
+                        ui_state.chat_history.push(format!("[{}] {}", character_name, message));
+                    }
+
+                    // Keep only last 50 messages
+                    if ui_state.chat_history.len() > 50 {
+                        ui_state.chat_history.remove(0);
                     }
 
                     // Clear input after sending
@@ -1159,7 +1617,12 @@ pub fn chat_window(
                 }
             }
 
-            ui.label("Press Enter to send");
+            let help_text = if ui_state.is_admin {
+                "Press Enter to send | Type / for admin commands"
+            } else {
+                "Press Enter to send"
+            };
+            ui.label(help_text);
         });
 }
 

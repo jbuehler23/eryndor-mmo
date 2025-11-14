@@ -207,6 +207,7 @@ pub struct LoginResponse {
     pub success: bool,
     pub message: String,
     pub account_id: Option<i64>,
+    pub is_admin: bool,
 }
 
 /// OAuth login response
@@ -368,4 +369,91 @@ pub enum ProficiencyType {
 #[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
 pub struct AdminGrantAbilityRequest {
     pub ability_id: u32,
+}
+
+// ============================================================================
+// ADMIN DASHBOARD QUERIES
+// ============================================================================
+
+/// Request list of online players
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct GetPlayerListRequest;
+
+/// Response with online player list
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct PlayerListResponse {
+    pub players: Vec<OnlinePlayerInfo>,
+}
+
+/// Information about an online player
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct OnlinePlayerInfo {
+    pub character_name: String,
+    pub account_id: i64,
+    pub level: u32,
+    pub class: CharacterClass,
+    pub position_x: f32,
+    pub position_y: f32,
+}
+
+/// Request list of active bans
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct GetBanListRequest;
+
+/// Response with ban list
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct BanListResponse {
+    pub bans: Vec<BanInfo>,
+}
+
+/// Information about a ban
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct BanInfo {
+    pub id: i64,
+    pub ban_type: String,  // "account", "ip", "both"
+    pub target: String,
+    pub reason: String,
+    pub banned_by_id: Option<i64>,
+    pub banned_at: i64,
+    pub expires_at: Option<i64>,
+    pub is_active: bool,
+}
+
+/// Request server statistics
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct GetServerStatsRequest;
+
+/// Response with server statistics
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct ServerStatsResponse {
+    pub online_players: u32,
+    pub total_accounts: u32,
+    pub total_characters: u32,
+    pub active_bans: u32,
+}
+
+/// Request audit logs with pagination
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct GetAuditLogsRequest {
+    pub limit: u32,
+    pub offset: u32,
+}
+
+/// Response with audit logs
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct AuditLogsResponse {
+    pub logs: Vec<AuditLogEntry>,
+    pub total_count: u32,
+}
+
+/// Audit log entry
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AuditLogEntry {
+    pub id: i64,
+    pub action_type: String,
+    pub account_id: Option<i64>,
+    pub target_account: Option<String>,
+    pub ip_address: Option<String>,
+    pub details: Option<String>,
+    pub timestamp: i64,
 }
