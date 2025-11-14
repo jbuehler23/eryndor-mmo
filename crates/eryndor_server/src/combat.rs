@@ -642,9 +642,10 @@ pub fn check_weapon_proficiency_level_ups(
         &Character,
         &mut WeaponProficiency,
         &mut WeaponProficiencyExp,
+        &OwnedBy,
     ), Changed<WeaponProficiencyExp>>,
 ) {
-    for (_entity, character, mut proficiency, mut prof_exp) in &mut query {
+    for (_entity, character, mut proficiency, mut prof_exp, owned_by) in &mut query {
         // Helper macro to check level-up for a weapon type
         macro_rules! check_weapon_level_up {
             ($weapon_name:expr, $xp:expr, $level:expr) => {
@@ -662,7 +663,7 @@ pub fn check_weapon_proficiency_level_ups(
                     info!("{} - {} proficiency level up! Level {}", character.name, $weapon_name, $level);
 
                     commands.server_trigger(ToClients {
-                        mode: SendMode::Broadcast,
+                        mode: SendMode::Direct(ClientId::Client(owned_by.0)),
                         message: ProficiencyLevelUpEvent {
                             proficiency_type: ProficiencyType::Weapon,
                             weapon_or_armor: $weapon_name.to_string(),

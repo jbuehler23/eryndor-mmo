@@ -485,11 +485,9 @@ pub fn game_ui(
             if ui.button("Inventory").clicked() {
                 ui_state.show_inventory = !ui_state.show_inventory;
             }
-            // Admin Panel button (only visible to admins)
-            if ui_state.is_admin {
-                if ui.button("Admin Panel").clicked() {
-                    ui_state.show_system_menu = !ui_state.show_system_menu;
-                }
+            // System Menu button (accessible to all players)
+            if ui.button("System Menu").clicked() {
+                ui_state.show_system_menu = !ui_state.show_system_menu;
             }
         });
 
@@ -950,17 +948,19 @@ pub fn game_ui(
         }
     }
 
-    // Admin Dashboard window (only shown if user is admin)
+    // System Menu window (accessible to all players)
     if ui_state.show_system_menu {
-        system_menu_window(ctx, &mut ui_state.system_menu, &mut commands);
+        let is_admin = ui_state.is_admin;
+        system_menu_window(ctx, &mut ui_state.system_menu, &mut commands, is_admin);
     }
 }
 
-// Admin Dashboard window with tabs
+// System Menu window with tabs (some tabs are admin-only)
 fn system_menu_window(
     ctx: &egui::Context,
     dashboard: &mut SystemMenuState,
     commands: &mut Commands,
+    is_admin: bool,
 ) {
     egui::Window::new("System Menu")
         .default_width(800.0)
@@ -969,15 +969,23 @@ fn system_menu_window(
             ui.heading("Server Information");
             ui.separator();
 
-            // Tab selector
+            // Tab selector (Ban and Audit tabs only visible to admins)
             ui.horizontal(|ui| {
                 ui.selectable_value(&mut dashboard.active_tab, SystemMenuTab::Players, "Players");
-                ui.selectable_value(&mut dashboard.active_tab, SystemMenuTab::Bans, "Bans");
                 ui.selectable_value(&mut dashboard.active_tab, SystemMenuTab::Stats, "Stats");
-                ui.selectable_value(&mut dashboard.active_tab, SystemMenuTab::Logs, "Logs");
+                // Admin-only tabs
+                if is_admin {
+                    ui.selectable_value(&mut dashboard.active_tab, SystemMenuTab::Bans, "Bans (Admin)");
+                    ui.selectable_value(&mut dashboard.active_tab, SystemMenuTab::Logs, "Audit Logs (Admin)");
+                }
             });
 
             ui.separator();
+
+            // If non-admin is on an admin-only tab, switch to Players
+            if !is_admin && (dashboard.active_tab == SystemMenuTab::Bans || dashboard.active_tab == SystemMenuTab::Logs) {
+                dashboard.active_tab = SystemMenuTab::Players;
+            }
 
             // Tab content
             match dashboard.active_tab {
@@ -985,13 +993,21 @@ fn system_menu_window(
                     render_players_tab(ui, dashboard, commands);
                 }
                 SystemMenuTab::Bans => {
-                    render_bans_tab(ui, dashboard, commands);
+                    if is_admin {
+                        render_bans_tab(ui, dashboard, commands);
+                    } else {
+                        ui.label("This tab is only accessible to administrators.");
+                    }
                 }
                 SystemMenuTab::Stats => {
                     render_stats_tab(ui, dashboard, commands);
                 }
                 SystemMenuTab::Logs => {
-                    render_logs_tab(ui, dashboard, commands);
+                    if is_admin {
+                        render_logs_tab(ui, dashboard, commands);
+                    } else {
+                        ui.label("This tab is only accessible to administrators.");
+                    }
                 }
             }
         });
@@ -1029,8 +1045,8 @@ fn render_players_tab(
                     .spacing([10.0, 4.0])
                     .show(ui, |ui| {
                         // Header
+                        ui.label("Username");
                         ui.label("Character");
-                        ui.label("Account ID");
                         ui.label("Level");
                         ui.label("Class");
                         ui.label("Position");
@@ -1039,8 +1055,8 @@ fn render_players_tab(
 
                         // Rows
                         for player in &dashboard.player_list {
+                            ui.label(&player.username);
                             ui.label(&player.character_name);
-                            ui.label(format!("{}", player.account_id));
                             ui.label(format!("{}", player.level));
                             ui.label(format!("{:?}", player.class));
                             ui.label(format!("({:.0}, {:.0})", player.position_x, player.position_y));
@@ -1202,6 +1218,18 @@ fn render_stats_tab(
 
                 ui.label("Active Bans:");
                 ui.label(format!("{}", stats.active_bans));
+                ui.end_row();
+
+                // Server Time (UTC)
+                ui.label("Server Time (UTC):");
+                let server_time = format_timestamp(stats.server_time_utc);
+                ui.label(server_time);
+                ui.end_row();
+
+                // Local Client Time
+                ui.label("Local Time:");
+                let local_time = format_local_time();
+                ui.label(local_time);
                 ui.end_row();
             });
     } else {
@@ -1647,5 +1675,48 @@ pub fn receive_chat_messages(
         if ui_state.chat_history.len() > 50 {
             ui_state.chat_history.remove(0);
         }
+    }
+}
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/// Format a Unix timestamp (seconds) to a human-readable UTC time string
+fn format_timestamp(timestamp: i64) -> String {
+    use std::time::{UNIX_EPOCH, Duration};
+
+    let datetime = UNIX_EPOCH + Duration::from_secs(timestamp as u64);
+
+    // For WASM compatibility, we'll use a simple format
+    // Format: YYYY-MM-DD HH:MM:SS UTC
+    #[cfg(not(target_family = "wasm"))]
+    {
+        use chrono::{DateTime, Utc};
+        let dt: DateTime<Utc> = datetime.into();
+        dt.format("%Y-%m-%d %H:%M:%S UTC").to_string()
+    }
+
+    #[cfg(target_family = "wasm")]
+    {
+        // For WASM, just show the timestamp value since we don't have full chrono support
+        format!("Unix: {}", timestamp)
+    }
+}
+
+/// Get current local time as a formatted string
+fn format_local_time() -> String {
+    #[cfg(not(target_family = "wasm"))]
+    {
+        use chrono::Local;
+        let local_time = Local::now();
+        local_time.format("%Y-%m-%d %H:%M:%S").to_string()
+    }
+
+    #[cfg(target_family = "wasm")]
+    {
+        // For WASM, use js_sys to get the current time
+        let timestamp_ms = js_sys::Date::now() as i64 / 1000;
+        format!("Unix: {}", timestamp_ms)
     }
 }

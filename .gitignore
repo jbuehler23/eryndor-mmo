@@ -1,4 +1,30 @@
 # Rust builds
 /target
-# This file contains environment-specific configuration like linker settings
+
+# Environment variables (contains secrets!)
+.env
+.env.local
+.env.*.local
+
+# Database files (contain user data!)
+eryndor.db
+eryndor.db-shm
+eryndor.db-wal
+*.db
+*.db-shm
+*.db-wal
+
+# Local configuration
+config.local.toml
 .cargo/config.toml
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db

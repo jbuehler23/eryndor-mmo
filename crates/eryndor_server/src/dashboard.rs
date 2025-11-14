@@ -32,48 +32,47 @@ pub fn handle_get_player_list(
         return;
     };
 
-    // Check admin permissions
     let Some(pool) = db.pool() else {
         error!("Database not available");
         return;
     };
 
+    // Collect player list - accessible to all authenticated players
     let runtime = tokio::runtime::Runtime::new().unwrap();
-    let is_admin_result = runtime.block_on(is_admin(pool, auth.account_id));
+    let mut players = Vec::new();
 
-    match is_admin_result {
-        Ok(true) => {
-            // User is admin, collect player list
-            let mut players = Vec::new();
+    for (character, position, owned_by) in characters.iter() {
+        // Get the account_id from the owner (client connection entity)
+        if let Ok(owner_auth) = owners.get(owned_by.0) {
+            // Query username from database
+            let username = runtime.block_on(async {
+                sqlx::query("SELECT username FROM accounts WHERE id = ?")
+                    .bind(owner_auth.account_id)
+                    .fetch_one(pool)
+                    .await
+                    .ok()
+                    .and_then(|row| row.try_get::<String, _>("username").ok())
+                    .unwrap_or_else(|| format!("user_{}", owner_auth.account_id))
+            });
 
-            for (character, position, owned_by) in characters.iter() {
-                // Get the account_id from the owner (client connection entity)
-                if let Ok(owner_auth) = owners.get(owned_by.0) {
-                    players.push(OnlinePlayerInfo {
-                        character_name: character.name.clone(),
-                        account_id: owner_auth.account_id,
-                        level: character.level,
-                        class: character.class,
-                        position_x: position.0.x,
-                        position_y: position.0.y,
-                    });
-                }
-            }
-
-            info!("Admin {} requested player list, returning {} players", auth.account_id, players.len());
-
-            commands.server_trigger(ToClients {
-                mode: SendMode::Direct(trigger.client_id),
-                message: PlayerListResponse { players },
+            players.push(OnlinePlayerInfo {
+                username,
+                character_name: character.name.clone(),
+                account_id: owner_auth.account_id,
+                level: character.level,
+                class: character.class,
+                position_x: position.0.x,
+                position_y: position.0.y,
             });
         }
-        Ok(false) => {
-            warn!("Non-admin account {} attempted to get player list", auth.account_id);
-        }
-        Err(e) => {
-            error!("Database error checking admin status: {}", e);
-        }
     }
+
+    info!("Account {} requested player list, returning {} players", auth.account_id, players.len());
+
+    commands.server_trigger(ToClients {
+        mode: SendMode::Direct(trigger.client_id),
+        message: PlayerListResponse { players },
+    });
 }
 
 /// Handle request for ban list
@@ -129,7 +128,7 @@ pub fn handle_get_ban_list(
     }
 }
 
-/// Handle request for server statistics
+/// Handle request for server statistics (accessible to all authenticated players)
 pub fn handle_get_server_stats(
     trigger: On<FromClient<GetServerStatsRequest>>,
     mut commands: Commands,
@@ -152,36 +151,24 @@ pub fn handle_get_server_stats(
         return;
     };
 
+    // Count online players
+    let online_players = characters.iter().count() as u32;
+
+    // Fetch database stats
     let runtime = tokio::runtime::Runtime::new().unwrap();
-    let is_admin_result = runtime.block_on(is_admin(pool, auth.account_id));
+    let stats_result = runtime.block_on(fetch_server_stats(pool, online_players));
 
-    match is_admin_result {
-        Ok(true) => {
-            // Count online players
-            let online_players = characters.iter().count() as u32;
+    match stats_result {
+        Ok(stats) => {
+            info!("Account {} requested server stats", auth.account_id);
 
-            // Fetch database stats
-            let stats_result = runtime.block_on(fetch_server_stats(pool, online_players));
-
-            match stats_result {
-                Ok(stats) => {
-                    info!("Admin {} requested server stats", auth.account_id);
-
-                    commands.server_trigger(ToClients {
-                        mode: SendMode::Direct(trigger.client_id),
-                        message: stats,
-                    });
-                }
-                Err(e) => {
-                    error!("Failed to fetch server stats: {}", e);
-                }
-            }
-        }
-        Ok(false) => {
-            warn!("Non-admin account {} attempted to get server stats", auth.account_id);
+            commands.server_trigger(ToClients {
+                mode: SendMode::Direct(trigger.client_id),
+                message: stats,
+            });
         }
         Err(e) => {
-            error!("Database error checking admin status: {}", e);
+            error!("Failed to fetch server stats: {}", e);
         }
     }
 }
@@ -297,11 +284,18 @@ async fn fetch_server_stats(pool: &SqlitePool, online_players: u32) -> Result<Se
         .map_err(|e| format!("Failed to count bans: {}", e))?;
     let active_bans = row.get::<i64, _>(0) as u32;
 
+    // Get current server time as Unix timestamp
+    let server_time_utc = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+
     Ok(ServerStatsResponse {
         online_players,
         total_accounts,
         total_characters,
         active_bans,
+        server_time_utc,
     })
 }
 

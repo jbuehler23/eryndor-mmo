@@ -388,6 +388,7 @@ pub struct PlayerListResponse {
 /// Information about an online player
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct OnlinePlayerInfo {
+    pub username: String,           // Account username
     pub character_name: String,
     pub account_id: i64,
     pub level: u32,
@@ -430,6 +431,7 @@ pub struct ServerStatsResponse {
     pub total_accounts: u32,
     pub total_characters: u32,
     pub active_bans: u32,
+    pub server_time_utc: i64, // Unix timestamp in seconds
 }
 
 /// Request audit logs with pagination

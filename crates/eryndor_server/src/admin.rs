@@ -150,15 +150,15 @@ pub async fn is_admin(pool: &SqlitePool, account_id: i64) -> Result<bool, String
 pub fn get_help_text() -> String {
     r#"
 === ADMIN COMMANDS ===
-/ban <username> <duration|perm> [reason] - Ban a player
+/ban <username|character> <duration|perm> [reason] - Ban a player
   Examples: /ban john123 1h spam
-           /ban jane456 perm harassment
+           /ban PlayerName perm harassment
 
 /unban <username> - Remove ban from player
   Example: /unban john123
 
-/kick <username> [reason] - Kick player from server
-  Example: /kick john123 disruptive behavior
+/kick <character_name> [reason] - Kick player from server
+  Example: /kick PlayerName disruptive behavior
 
 /broadcast <message> - Send server-wide message
   Example: /broadcast Server restart in 5 minutes
@@ -166,6 +166,7 @@ pub fn get_help_text() -> String {
 /help - Show this help message
 
 Duration formats: m=minutes, h=hours, d=days, w=weeks, perm=permanent
+Note: Ban and kick commands accept either username or character name
 "#.to_string()
 }
 
@@ -499,27 +500,66 @@ pub fn handle_admin_command(
 /// Execute a ban command
 async fn execute_ban(
     pool: &SqlitePool,
-    username: &str,
+    name_or_username: &str,
     duration: Option<i64>,
     reason: &str,
     banned_by_account_id: i64,
 ) -> Result<String, String> {
-    // Find the account by username
+    // Try to find account by username first
     let account_result = sqlx::query(
-        "SELECT id FROM accounts WHERE username = ?1"
+        "SELECT id, username FROM accounts WHERE username = ?1"
     )
-    .bind(username)
+    .bind(name_or_username)
     .fetch_optional(pool)
     .await;
 
-    let account_id = match account_result {
+    // If not found by username, try to find by character name
+    let (account_id, username) = match account_result {
         Ok(Some(row)) => {
             let id: i64 = row.try_get("id")
                 .map_err(|e| format!("Failed to get id: {}", e))?;
-            id
+            let username: String = row.try_get("username")
+                .map_err(|e| format!("Failed to get username: {}", e))?;
+            (id, username)
         }
         Ok(None) => {
-            return Err(format!("User '{}' not found", username));
+            // Not found by username, try character name
+            let char_result = sqlx::query(
+                "SELECT account_id FROM characters WHERE name = ?1"
+            )
+            .bind(name_or_username)
+            .fetch_optional(pool)
+            .await;
+
+            match char_result {
+                Ok(Some(row)) => {
+                    let acc_id: i64 = row.try_get("account_id")
+                        .map_err(|e| format!("Failed to get account_id: {}", e))?;
+
+                    // Get username for this account
+                    let username_result = sqlx::query(
+                        "SELECT username FROM accounts WHERE id = ?1"
+                    )
+                    .bind(acc_id)
+                    .fetch_optional(pool)
+                    .await;
+
+                    match username_result {
+                        Ok(Some(username_row)) => {
+                            let username: String = username_row.try_get("username")
+                                .map_err(|e| format!("Failed to get username: {}", e))?;
+                            (acc_id, username)
+                        }
+                        _ => return Err(format!("Account not found for character '{}'", name_or_username)),
+                    }
+                }
+                Ok(None) => {
+                    return Err(format!("User or character '{}' not found", name_or_username));
+                }
+                Err(e) => {
+                    return Err(format!("Database error: {}", e));
+                }
+            }
         }
         Err(e) => {
             return Err(format!("Database error: {}", e));
@@ -546,7 +586,7 @@ async fn execute_ban(
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 1)"
     )
     .bind("account")  // ban_type: 'account', 'ip', or 'both'
-    .bind(username)   // target: username for account bans
+    .bind(&username)  // target: username for account bans
     .bind(account_id)
     .bind(reason)
     .bind(banned_by_account_id)
@@ -618,19 +658,24 @@ fn format_duration(seconds: i64) -> String {
 pub fn handle_chat_message(
     trigger: On<FromClient<SendChatMessage>>,
     mut commands: Commands,
-    character_query: Query<&Character>,
-    player_query: Query<Entity, With<Player>>,
+    characters: Query<(&Character, &OwnedBy), With<Player>>,
 ) {
     let Some(client_entity) = trigger.client_id.entity() else {
         warn!("No client entity in chat message trigger");
         return;
     };
 
-    // Get the character name of the sender
-    let sender_name = if let Ok(character) = character_query.get(client_entity) {
-        character.name.clone()
-    } else {
-        warn!("Chat message from client without character");
+    // Find the player character owned by this client
+    let mut sender_name = None;
+    for (character, owned_by) in characters.iter() {
+        if owned_by.0 == client_entity {
+            sender_name = Some(character.name.clone());
+            break;
+        }
+    }
+
+    let Some(sender_name) = sender_name else {
+        warn!("Chat message from client {:?} without spawned character", client_entity);
         return;
     };
 
@@ -640,7 +685,7 @@ pub fn handle_chat_message(
         message: trigger.message.message.clone(),
     };
 
-    // Broadcast to all connected players (SendMode::Broadcast doesn't require explicit player iteration)
+    // Broadcast to all connected players
     commands.server_trigger(ToClients {
         mode: SendMode::Broadcast,
         message: chat_message,
