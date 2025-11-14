@@ -15,12 +15,14 @@ eryndor.db-wal
 *.db-wal
 
 # Local configuration
+config.toml
 config.local.toml
 .cargo/config.toml
 
 # IDE files
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 *~

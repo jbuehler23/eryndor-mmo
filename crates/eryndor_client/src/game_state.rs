@@ -228,12 +228,20 @@ pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>
     // TODO: Add WebTransport support once server is properly configured
     use bevy_renet2::netcode::{WebSocketClient, WebSocketClientConfig};
 
-    let ws_server_addr: std::net::SocketAddr = format!("{}:{}", SERVER_ADDR, SERVER_PORT_WEBSOCKET)
+    // Use compile-time environment variable for production, development default otherwise
+    // For production builds: SERVER_WS_URL="wss://yourdomain.com/ws" cargo build --target wasm32-unknown-unknown --release
+    let ws_url = option_env!("SERVER_WS_URL")
+        .unwrap_or("ws://127.0.0.1:5003");
+
+    info!("Connecting via WebSocket to {}", ws_url);
+
+    // Parse the URL to extract host and port for server_addr
+    let url: url::Url = ws_url.parse().expect("Invalid WebSocket URL");
+    let host = url.host_str().expect("WebSocket URL must have a host");
+    let port = url.port().unwrap_or(if url.scheme() == "wss" { 443 } else { 5003 });
+    let ws_server_addr: std::net::SocketAddr = format!("{}:{}", host, port)
         .parse()
         .expect("Invalid WebSocket server address");
-
-    let ws_url = format!("ws://{}:{}", SERVER_ADDR, SERVER_PORT_WEBSOCKET);
-    info!("Connecting via WebSocket to {}", ws_url);
 
     let ws_config = WebSocketClientConfig {
         server_url: ws_url.parse().expect("Invalid WebSocket URL"),

@@ -59,7 +59,11 @@ use avian2d::prelude::Position as PhysicsPosition;
 use avian2d::prelude::LinearVelocity as PhysicsVelocity;
 
 fn main() {
-    // Load configuration first
+    // Load environment variables from .env file (if it exists)
+    // This allows for production secrets to be configured via environment
+    dotenvy::dotenv().ok();
+
+    // Load configuration from config.toml
     let config = config::ServerConfig::load()
         .expect("Failed to load configuration. Make sure config.toml exists and is valid.");
 
@@ -270,13 +274,13 @@ fn setup_server(mut commands: Commands, channels: Res<RepliconChannels>) {
         channels.client_configs(),
     );
 
-    let udp_addr: std::net::SocketAddr = format!("{}:{}", SERVER_ADDR, SERVER_PORT)
+    let udp_addr: std::net::SocketAddr = format!("{}:{}", server_addr(), server_port())
         .parse()
         .expect("Invalid UDP address");
-    let wt_addr: std::net::SocketAddr = format!("{}:{}", SERVER_ADDR, SERVER_PORT_WEBTRANSPORT)
+    let wt_addr: std::net::SocketAddr = format!("{}:{}", server_addr(), server_port_webtransport())
         .parse()
         .expect("Invalid WebTransport address");
-    let ws_addr: std::net::SocketAddr = format!("{}:{}", SERVER_ADDR, SERVER_PORT_WEBSOCKET)
+    let ws_addr: std::net::SocketAddr = format!("{}:{}", server_addr(), server_port_websocket())
         .parse()
         .expect("Invalid WebSocket address");
 
@@ -369,11 +373,15 @@ async fn serve_cert_hash(cert_hash: bevy_renet2::netcode::ServerCertHash) {
                 .allow_headers(Any)
         );
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:8080")
+    let cert_server_addr = format!("{}:{}",
+        eryndor_shared::constants::server_addr(),
+        eryndor_shared::constants::server_cert_port()
+    );
+    let listener = tokio::net::TcpListener::bind(&cert_server_addr)
         .await
         .expect("Failed to bind HTTP server");
 
-    info!("HTTP server for certificate hash listening on http://127.0.0.1:8080/cert");
+    info!("HTTP server for certificate hash listening on http://{}/cert", cert_server_addr);
 
     axum::serve(listener, app)
         .await

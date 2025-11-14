@@ -1,12 +1,55 @@
 use bevy::prelude::*;
+use std::env;
 
 // ============================================================================
 // NETWORK CONSTANTS
 // ============================================================================
 
-pub const SERVER_PORT: u16 = 5001;  // UDP port for native clients
-pub const SERVER_PORT_WEBTRANSPORT: u16 = 5002;  // WebTransport port for WASM
-pub const SERVER_PORT_WEBSOCKET: u16 = 5003;  // WebSocket port for WASM fallback
+// Environment-configurable network settings with sensible defaults
+
+/// Get server bind address from environment or use default
+/// Production: 0.0.0.0 (accepts connections from any IP)
+/// Development: 127.0.0.1 (localhost only)
+pub fn server_addr() -> String {
+    env::var("SERVER_ADDR").unwrap_or_else(|_| "127.0.0.1".to_string())
+}
+
+/// Get UDP port from environment or use default 5001
+pub fn server_port() -> u16 {
+    env::var("SERVER_PORT")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(5001)
+}
+
+/// Get WebSocket port from environment or use default 5003
+pub fn server_port_websocket() -> u16 {
+    env::var("SERVER_PORT_WEBSOCKET")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(5003)
+}
+
+/// Get WebTransport port from environment or use default 5002
+pub fn server_port_webtransport() -> u16 {
+    env::var("SERVER_PORT_WEBTRANSPORT")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(5002)
+}
+
+/// Get HTTP certificate server port from environment or use default 8080
+pub fn server_cert_port() -> u16 {
+    env::var("SERVER_CERT_PORT")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(8080)
+}
+
+// Legacy constants for backwards compatibility (deprecated - use functions above)
+pub const SERVER_PORT: u16 = 5001;
+pub const SERVER_PORT_WEBTRANSPORT: u16 = 5002;
+pub const SERVER_PORT_WEBSOCKET: u16 = 5003;
 pub const SERVER_ADDR: &str = "127.0.0.1";
 
 // ============================================================================
