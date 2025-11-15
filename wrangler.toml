@@ -1,0 +1,6 @@
+name = "eryndor-mmo"
+compatibility_date = "2025-11-15"
+pages_build_output_dir = "./crates/eryndor_client/bevy_web/web-release"
+
+[site]
+bucket = "./crates/eryndor_client/bevy_web/web-release"
