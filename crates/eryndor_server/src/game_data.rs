@@ -55,6 +55,60 @@ impl Default for ItemDatabase {
             },
         });
 
+        // Staff - Highest magic attack, large mana pool
+        items.insert(ITEM_STAFF, ItemDefinition {
+            id: ITEM_STAFF,
+            name: "Staff".to_string(),
+            item_type: ItemType::Weapon,
+            grants_ability: Some(crate::abilities::ABILITY_ARCANE_BLAST),
+            stat_bonuses: ItemStatBonuses {
+                attack_power: 14.0,
+                max_mana: 30.0,
+                ..Default::default()
+            },
+        });
+
+        // Mace - Moderate attack, good defense
+        items.insert(ITEM_MACE, ItemDefinition {
+            id: ITEM_MACE,
+            name: "Mace".to_string(),
+            item_type: ItemType::Weapon,
+            grants_ability: Some(crate::abilities::ABILITY_SMITE),
+            stat_bonuses: ItemStatBonuses {
+                attack_power: 11.0,
+                defense: 3.0,
+                max_health: 15.0,
+                ..Default::default()
+            },
+        });
+
+        // Bow - Moderate attack, high crit
+        items.insert(ITEM_BOW, ItemDefinition {
+            id: ITEM_BOW,
+            name: "Bow".to_string(),
+            item_type: ItemType::Weapon,
+            grants_ability: Some(crate::abilities::ABILITY_AIMED_SHOT),
+            stat_bonuses: ItemStatBonuses {
+                attack_power: 9.0,
+                crit_chance: 0.15,
+                ..Default::default()
+            },
+        });
+
+        // Axe - High attack, low crit
+        items.insert(ITEM_AXE, ItemDefinition {
+            id: ITEM_AXE,
+            name: "Axe".to_string(),
+            item_type: ItemType::Weapon,
+            grants_ability: Some(crate::abilities::ABILITY_RENDING_STRIKE),
+            stat_bonuses: ItemStatBonuses {
+                attack_power: 13.0,
+                crit_chance: 0.05,
+                max_health: 10.0,
+                ..Default::default()
+            },
+        });
+
         // ========== ARMOR - HELMETS ==========
 
         items.insert(ITEM_LEATHER_CAP, ItemDefinition {
@@ -345,6 +399,7 @@ impl Default for EnemyDatabase {
     fn default() -> Self {
         let mut enemies = HashMap::new();
 
+        // Level 1: Slime - Weak starter enemy
         enemies.insert(ENEMY_TYPE_SLIME, EnemyDefinition {
             id: ENEMY_TYPE_SLIME,
             name: "Slime".to_string(),
@@ -352,6 +407,56 @@ impl Default for EnemyDatabase {
             attack_power: 5.0,
             defense: 2.0,
             move_speed: 80.0,
+        });
+
+        // Level 2: Goblin - Weak humanoid
+        enemies.insert(ENEMY_TYPE_GOBLIN, EnemyDefinition {
+            id: ENEMY_TYPE_GOBLIN,
+            name: "Goblin".to_string(),
+            max_health: 80.0,
+            attack_power: 8.0,
+            defense: 3.0,
+            move_speed: 90.0,
+        });
+
+        // Level 3: Wolf - Fast predator
+        enemies.insert(ENEMY_TYPE_WOLF, EnemyDefinition {
+            id: ENEMY_TYPE_WOLF,
+            name: "Wolf".to_string(),
+            max_health: 100.0,
+            attack_power: 12.0,
+            defense: 4.0,
+            move_speed: 120.0,
+        });
+
+        // Level 4: Skeleton - Undead warrior
+        enemies.insert(ENEMY_TYPE_SKELETON, EnemyDefinition {
+            id: ENEMY_TYPE_SKELETON,
+            name: "Skeleton".to_string(),
+            max_health: 120.0,
+            attack_power: 15.0,
+            defense: 5.0,
+            move_speed: 85.0,
+        });
+
+        // Level 5: Orc - Strong bruiser
+        enemies.insert(ENEMY_TYPE_ORC, EnemyDefinition {
+            id: ENEMY_TYPE_ORC,
+            name: "Orc".to_string(),
+            max_health: 150.0,
+            attack_power: 18.0,
+            defense: 6.0,
+            move_speed: 75.0,
+        });
+
+        // Level 3: Spider - Fast but fragile
+        enemies.insert(ENEMY_TYPE_SPIDER, EnemyDefinition {
+            id: ENEMY_TYPE_SPIDER,
+            name: "Spider".to_string(),
+            max_health: 90.0,
+            attack_power: 10.0,
+            defense: 3.0,
+            move_speed: 110.0,
         });
 
         Self { enemies }
@@ -365,4 +470,46 @@ pub struct EnemyDefinition {
     pub attack_power: f32,
     pub defense: f32,
     pub move_speed: f32,
+}
+
+// ============================================================================
+// TRAINER DEFINITIONS
+// ============================================================================
+
+#[derive(Resource)]
+pub struct TrainerDatabase {
+    pub trainers: HashMap<String, TrainerDefinition>,
+}
+
+impl Default for TrainerDatabase {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl TrainerDatabase {
+    pub fn new() -> Self {
+        let mut trainers = HashMap::new();
+
+        // Weapon Trainer - Sells all weapons
+        trainers.insert("Weapon Master".to_string(), TrainerDefinition {
+            name: "Weapon Master".to_string(),
+            items: vec![
+                TrainerItem { item_id: ITEM_DAGGER, cost: 50 },
+                TrainerItem { item_id: ITEM_SWORD, cost: 75 },
+                TrainerItem { item_id: ITEM_WAND, cost: 100 },
+                TrainerItem { item_id: ITEM_STAFF, cost: 150 },
+                TrainerItem { item_id: ITEM_MACE, cost: 125 },
+                TrainerItem { item_id: ITEM_BOW, cost: 100 },
+                TrainerItem { item_id: ITEM_AXE, cost: 125 },
+            ],
+        });
+
+        Self { trainers }
+    }
+}
+
+pub struct TrainerDefinition {
+    pub name: String,
+    pub items: Vec<TrainerItem>,
 }

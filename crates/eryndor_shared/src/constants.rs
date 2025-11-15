@@ -86,14 +86,26 @@ pub const LEASH_RANGE: f32 = 300.0;
 // ABILITY IDS
 // ============================================================================
 
-// Rogue abilities (Dagger)
-pub const ABILITY_QUICK_STRIKE: u32 = 1;
+// Rogue abilities (Dagger) - IDs 300-399
+pub const ABILITY_QUICK_STRIKE: u32 = 300;
 
-// Mage abilities (Wand)
-pub const ABILITY_FIREBALL: u32 = 2;
+// Mage abilities (Wand) - IDs 200-299
+pub const ABILITY_FIREBALL: u32 = 200;
 
-// Knight abilities (Sword)
-pub const ABILITY_HEAVY_SLASH: u32 = 3;
+// Knight abilities (Sword) - IDs 100-199
+pub const ABILITY_HEAVY_SLASH: u32 = 100;
+
+// Wizard abilities (Staff) - IDs 400-499
+pub const ABILITY_ARCANE_BLAST: u32 = 400;
+
+// Cleric abilities (Mace) - IDs 500-599
+pub const ABILITY_SMITE: u32 = 500;
+
+// Ranger abilities (Bow) - IDs 600-699
+pub const ABILITY_AIMED_SHOT: u32 = 600;
+
+// Berserker abilities (Axe) - IDs 700-799
+pub const ABILITY_RENDING_STRIKE: u32 = 700;
 
 // ============================================================================
 // ITEM IDS
@@ -103,6 +115,10 @@ pub const ABILITY_HEAVY_SLASH: u32 = 3;
 pub const ITEM_DAGGER: u32 = 1;
 pub const ITEM_WAND: u32 = 2;
 pub const ITEM_SWORD: u32 = 3;
+pub const ITEM_STAFF: u32 = 4;
+pub const ITEM_MACE: u32 = 5;
+pub const ITEM_BOW: u32 = 6;
+pub const ITEM_AXE: u32 = 7;
 
 // Armor - Helmets
 pub const ITEM_LEATHER_CAP: u32 = 10;
@@ -135,6 +151,11 @@ pub const QUEST_FIRST_WEAPON: u32 = 1;
 // ============================================================================
 
 pub const ENEMY_TYPE_SLIME: u32 = 1;
+pub const ENEMY_TYPE_GOBLIN: u32 = 2;
+pub const ENEMY_TYPE_WOLF: u32 = 3;
+pub const ENEMY_TYPE_SKELETON: u32 = 4;
+pub const ENEMY_TYPE_ORC: u32 = 5;
+pub const ENEMY_TYPE_SPIDER: u32 = 6;
 
 // ============================================================================
 // SPAWN LOCATIONS

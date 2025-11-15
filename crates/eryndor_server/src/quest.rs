@@ -9,7 +9,7 @@ pub fn handle_interact_npc(
     mut commands: Commands,
     clients: Query<&ActiveCharacterEntity>,
     players: Query<(&Position, &QuestLog)>,
-    npcs: Query<(Entity, (&Position, &QuestGiver, &NpcName)), With<Npc>>,
+    npcs: Query<(Entity, &Position, Option<&QuestGiver>, Option<&Trainer>, &NpcName), With<Npc>>,
     quest_db: Res<QuestDatabase>,
 ) {
     info!("=== INTERACT NPC HANDLER CALLED ===");
@@ -40,23 +40,23 @@ pub fn handle_interact_npc(
     info!("Got player position: {:?}", player_pos.0);
 
     // Find the closest NPC to the player within interaction range
-    let mut closest_npc: Option<(Entity, f32, &Position, &QuestGiver, &NpcName)> = None;
-    for (entity, (npc_pos, quest_giver, npc_name)) in npcs.iter() {
+    let mut closest_npc: Option<(Entity, f32, &Position, Option<&QuestGiver>, Option<&Trainer>, &NpcName)> = None;
+    for (entity, npc_pos, quest_giver, trainer, npc_name) in npcs.iter() {
         let distance = player_pos.0.distance(npc_pos.0);
         info!("Found NPC '{}' at {:?}, distance: {:.2}", npc_name.0, npc_pos.0, distance);
 
         if distance <= INTERACTION_RANGE {
-            if let Some((_, closest_dist, _, _, _)) = closest_npc {
+            if let Some((_, closest_dist, _, _, _, _)) = closest_npc {
                 if distance < closest_dist {
-                    closest_npc = Some((entity, distance, npc_pos, quest_giver, npc_name));
+                    closest_npc = Some((entity, distance, npc_pos, quest_giver, trainer, npc_name));
                 }
             } else {
-                closest_npc = Some((entity, distance, npc_pos, quest_giver, npc_name));
+                closest_npc = Some((entity, distance, npc_pos, quest_giver, trainer, npc_name));
             }
         }
     }
 
-    let Some((npc_entity, distance, npc_pos, quest_giver, npc_name)) = closest_npc else {
+    let Some((npc_entity, distance, npc_pos, quest_giver, trainer, npc_name)) = closest_npc else {
         info!("No NPC found within interaction range");
         commands.server_trigger(ToClients {
             mode: SendMode::Direct(ClientId::Client(client_entity)),
@@ -69,9 +69,35 @@ pub fn handle_interact_npc(
     };
 
     info!("Found closest NPC: {} at distance {:.2}", npc_name.0, distance);
-    // Distance was already checked in the loop above, player_pos and quest_log already retrieved
-
     info!("Player interacting with NPC: {}", npc_name.0);
+
+    // Check if NPC is a trainer
+    if let Some(trainer_comp) = trainer {
+        info!("NPC is a trainer with {} items for sale", trainer_comp.items_for_sale.len());
+        // Send trainer dialogue event to open the shop window
+        commands.server_trigger(ToClients {
+            mode: SendMode::Direct(ClientId::Client(client_entity)),
+            message: TrainerDialogueEvent {
+                npc_name: npc_name.0.clone(),
+                items_for_sale: trainer_comp.items_for_sale.clone(),
+            },
+        });
+        return;
+    }
+
+    // Check if NPC is a quest giver
+    let Some(quest_giver) = quest_giver else {
+        info!("NPC is neither a trainer nor a quest giver");
+        commands.server_trigger(ToClients {
+            mode: SendMode::Direct(ClientId::Client(client_entity)),
+            message: NotificationEvent {
+                message: "This NPC has nothing to offer.".to_string(),
+                notification_type: NotificationType::Info,
+            },
+        });
+        return;
+    };
+
     info!("NPC has {} quests available", quest_giver.available_quests.len());
     info!("Player quest log - Active: {}, Completed: {}",
         quest_log.active_quests.len(), quest_log.completed_quests.len());

@@ -28,6 +28,18 @@ pub const ABILITY_SHADOW_STEP: u32 = 303;
 pub const ABILITY_SMOKE_BOMB: u32 = 304;
 pub const ABILITY_EVISCERATE: u32 = 305;
 
+// Wizard abilities (IDs 400-499)
+pub const ABILITY_ARCANE_BLAST: u32 = 400;
+
+// Cleric abilities (IDs 500-599)
+pub const ABILITY_SMITE: u32 = 500;
+
+// Ranger abilities (IDs 600-699)
+pub const ABILITY_AIMED_SHOT: u32 = 600;
+
+// Berserker abilities (IDs 700-799)
+pub const ABILITY_RENDING_STRIKE: u32 = 700;
+
 // ============================================================================
 // KNIGHT ABILITIES
 // ============================================================================
@@ -395,6 +407,98 @@ pub fn create_rogue_abilities() -> Vec<AbilityDefinition> {
                 AbilityType::DirectDamage { multiplier: 3.0 },
             ],
             unlock_requirement: AbilityUnlockRequirement::Level(12),
+        },
+    ]
+}
+
+// ============================================================================
+// WIZARD ABILITIES
+// ============================================================================
+
+pub fn create_wizard_abilities() -> Vec<AbilityDefinition> {
+    vec![
+        // Arcane Blast - Starting ability
+        AbilityDefinition {
+            id: ABILITY_ARCANE_BLAST,
+            name: "Arcane Blast".to_string(),
+            description: "Unleash pure arcane energy at your target.".to_string(),
+            damage_multiplier: 2.2,
+            cooldown: 3.0,
+            range: 15.0,
+            mana_cost: 30.0,
+            ability_types: vec![
+                AbilityType::DirectDamage { multiplier: 2.2 },
+            ],
+            unlock_requirement: AbilityUnlockRequirement::None,
+        },
+    ]
+}
+
+// ============================================================================
+// CLERIC ABILITIES
+// ============================================================================
+
+pub fn create_cleric_abilities() -> Vec<AbilityDefinition> {
+    vec![
+        // Smite - Starting ability
+        AbilityDefinition {
+            id: ABILITY_SMITE,
+            name: "Smite".to_string(),
+            description: "Strike with holy power, dealing moderate damage.".to_string(),
+            damage_multiplier: 1.7,
+            cooldown: 2.5,
+            range: 1.5,
+            mana_cost: 20.0,
+            ability_types: vec![
+                AbilityType::DirectDamage { multiplier: 1.7 },
+            ],
+            unlock_requirement: AbilityUnlockRequirement::None,
+        },
+    ]
+}
+
+// ============================================================================
+// RANGER ABILITIES
+// ============================================================================
+
+pub fn create_ranger_abilities() -> Vec<AbilityDefinition> {
+    vec![
+        // Aimed Shot - Starting ability
+        AbilityDefinition {
+            id: ABILITY_AIMED_SHOT,
+            name: "Aimed Shot".to_string(),
+            description: "A careful shot with increased critical chance.".to_string(),
+            damage_multiplier: 1.8,
+            cooldown: 3.0,
+            range: 15.0,
+            mana_cost: 15.0,
+            ability_types: vec![
+                AbilityType::DirectDamage { multiplier: 1.8 },
+            ],
+            unlock_requirement: AbilityUnlockRequirement::None,
+        },
+    ]
+}
+
+// ============================================================================
+// BERSERKER ABILITIES
+// ============================================================================
+
+pub fn create_berserker_abilities() -> Vec<AbilityDefinition> {
+    vec![
+        // Rending Strike - Starting ability
+        AbilityDefinition {
+            id: ABILITY_RENDING_STRIKE,
+            name: "Rending Strike".to_string(),
+            description: "A brutal axe strike that rends flesh.".to_string(),
+            damage_multiplier: 2.5,
+            cooldown: 4.0,
+            range: 1.5,
+            mana_cost: 25.0,
+            ability_types: vec![
+                AbilityType::DirectDamage { multiplier: 2.5 },
+            ],
+            unlock_requirement: AbilityUnlockRequirement::None,
         },
     ]
 }

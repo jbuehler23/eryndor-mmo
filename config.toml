@@ -1,0 +1,37 @@
+# Eryndor MMO Server Configuration
+# Copy this file to config.toml and update with your settings
+
+[server]
+port = 5000
+max_players = 100
+
+[admin]
+dashboard_enabled = true
+dashboard_port = 8080
+# IMPORTANT: Generate a secure JWT secret with: openssl rand -base64 32
+jwt_secret = "REPLACE-WITH-SECURE-SECRET"
+jwt_expiry_hours = 24
+
+[security]
+guest_expiry_days = 7
+max_login_attempts = 5
+login_lockout_minutes = 30
+password_min_length = 8
+require_uppercase = false
+require_numbers = false
+
+[rate_limits]
+account_creation_per_hour = 5
+login_attempts_per_hour = 10
+chat_messages_per_minute = 10
+trade_requests_per_hour = 10
+
+[moderation]
+enable_profanity_filter = true
+block_profane_messages = true
+censor_instead_of_block = false
+
+[oauth]
+# Get these from https://console.cloud.google.com/apis/credentials
+google_client_id = ""
+google_client_secret = ""

@@ -134,6 +134,19 @@ pub struct CompleteQuestRequest {
     pub quest_id: u32,
 }
 
+/// Purchase item from trainer
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct PurchaseFromTrainerRequest {
+    pub trainer_entity: Entity,
+    pub item_id: u32,
+}
+
+impl MapEntities for PurchaseFromTrainerRequest {
+    fn map_entities<M: bevy::ecs::entity::EntityMapper>(&mut self, entity_mapper: &mut M) {
+        self.trainer_entity = entity_mapper.get_mapped(self.trainer_entity);
+    }
+}
+
 /// Set hotbar slot
 #[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
 pub struct SetHotbarSlotRequest {
@@ -334,6 +347,13 @@ pub struct QuestDialogueEvent {
     pub description: String,
     pub objectives_text: String,
     pub rewards_text: String,
+}
+
+/// Trainer dialogue data - sent when player interacts with trainer
+#[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
+pub struct TrainerDialogueEvent {
+    pub npc_name: String,
+    pub items_for_sale: Vec<TrainerItem>,
 }
 
 /// Level up event - notifies client of level up

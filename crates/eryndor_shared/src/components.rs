@@ -478,6 +478,19 @@ pub struct QuestGiver {
 #[derive(Component, Serialize, Deserialize, Clone, Debug)]
 pub struct NpcName(pub String);
 
+/// NPC that sells items (weapon trainer, merchant, etc.)
+#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+pub struct Trainer {
+    pub items_for_sale: Vec<TrainerItem>,
+}
+
+/// An item available for purchase from a trainer
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct TrainerItem {
+    pub item_id: u32,
+    pub cost: u32, // Gold cost
+}
+
 // ============================================================================
 // ENEMY COMPONENTS
 // ============================================================================
@@ -485,6 +498,10 @@ pub struct NpcName(pub String);
 /// Marker for enemy entities
 #[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct Enemy;
+
+/// Enemy name (replicated to clients for display)
+#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+pub struct EnemyName(pub String);
 
 /// Enemy type identifier
 #[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]

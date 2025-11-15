@@ -111,6 +111,7 @@ pub fn spawn_name_labels(
     mut commands: Commands,
     player_query: Query<(Entity, &Character), (With<Player>, Without<NameLabel>)>,
     npc_query: Query<(Entity, &NpcName), (With<Npc>, Without<NameLabel>)>,
+    enemy_query: Query<(Entity, &EnemyName), (With<Enemy>, Without<NameLabel>)>,
     label_query: Query<&NameLabel>,
 ) {
     // Spawn labels for players (white)
@@ -152,19 +153,41 @@ pub fn spawn_name_labels(
             TextColor(Color::srgb(1.0, 0.84, 0.0)), // Gold color
         ));
     }
+
+    // Spawn labels for enemies (red color for hostile mobs)
+    for (game_entity, enemy_name) in &enemy_query {
+        // Check if name label already exists
+        let already_has_label = label_query.iter().any(|l| l.game_entity == game_entity);
+        if already_has_label {
+            continue;
+        }
+
+        // Spawn enemy name label with red color
+        commands.spawn((
+            NameLabel { game_entity },
+            Text2d::new(enemy_name.0.clone()),
+            TextFont {
+                font_size: 16.0,
+                ..default()
+            },
+            TextColor(Color::srgb(1.0, 0.3, 0.3)), // Red color for enemies
+        ));
+    }
 }
 
 pub fn update_name_label_positions(
     player_entities: Query<(Entity, &Position), With<Player>>,
     npc_entities: Query<(Entity, &Position), With<Npc>>,
+    enemy_entities: Query<(Entity, &Position), With<Enemy>>,
     mut label_entities: Query<(&NameLabel, &mut Transform)>,
 ) {
     for (label, mut transform) in &mut label_entities {
-        // Try to find position from either players or NPCs
+        // Try to find position from players, NPCs, or enemies
         let position = player_entities
             .get(label.game_entity)
             .map(|(_, pos)| pos)
-            .or_else(|_| npc_entities.get(label.game_entity).map(|(_, pos)| pos));
+            .or_else(|_| npc_entities.get(label.game_entity).map(|(_, pos)| pos))
+            .or_else(|_| enemy_entities.get(label.game_entity).map(|(_, pos)| pos));
 
         if let Ok(position) = position {
             // Position name label above the entity

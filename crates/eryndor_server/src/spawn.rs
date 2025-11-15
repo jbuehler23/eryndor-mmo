@@ -30,6 +30,7 @@ pub enum EntityTemplate {
 #[derive(Clone, Debug)]
 pub struct EnemyTemplate {
     pub enemy_type_id: u32,
+    pub name: String,
     pub health: f32,
     pub move_speed: f32,
     pub attack_power: f32,
@@ -45,6 +46,7 @@ impl EntityTemplate {
     /// Create an enemy template from existing component data
     pub fn from_enemy_components(
         enemy_type: &EnemyType,
+        enemy_name: &EnemyName,
         health: &Health,
         move_speed: &MoveSpeed,
         stats: &CombatStats,
@@ -53,6 +55,7 @@ impl EntityTemplate {
     ) -> Self {
         EntityTemplate::Enemy(EnemyTemplate {
             enemy_type_id: enemy_type.0,
+            name: enemy_name.0.clone(),
             health: health.max,
             move_speed: move_speed.0,
             attack_power: stats.attack_power,
@@ -73,6 +76,7 @@ impl EntityTemplate {
                     Replicated,
                     Enemy,
                     EnemyType(template.enemy_type_id),
+                    EnemyName(template.name.clone()),
                     Position(position),
                     Velocity::default(),
                     MoveSpeed(template.move_speed),
@@ -152,6 +156,7 @@ pub fn schedule_respawn(
     query: Query<(
         &SpawnPoint,
         Option<&EnemyType>,
+        Option<&EnemyName>,
         Option<&Health>,
         Option<&MoveSpeed>,
         Option<&CombatStats>,
@@ -163,12 +168,12 @@ pub fn schedule_respawn(
     let event = trigger.event();
 
     // Check if the dead entity had a spawn point
-    if let Ok((spawn_point, enemy_type, health, move_speed, stats, visual, loot_table)) = query.get(event.entity) {
+    if let Ok((spawn_point, enemy_type, enemy_name, health, move_speed, stats, visual, loot_table)) = query.get(event.entity) {
         // Create template based on entity components
-        let template = if let (Some(enemy_type), Some(health), Some(move_speed), Some(stats), Some(visual), Some(loot_table)) =
-            (enemy_type, health, move_speed, stats, visual, loot_table)
+        let template = if let (Some(enemy_type), Some(enemy_name), Some(health), Some(move_speed), Some(stats), Some(visual), Some(loot_table)) =
+            (enemy_type, enemy_name, health, move_speed, stats, visual, loot_table)
         {
-            EntityTemplate::from_enemy_components(enemy_type, health, move_speed, stats, visual, loot_table)
+            EntityTemplate::from_enemy_components(enemy_type, enemy_name, health, move_speed, stats, visual, loot_table)
         } else {
             warn!("Entity {:?} has SpawnPoint but missing required components for respawn", event.entity);
             return;

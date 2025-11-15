@@ -13,6 +13,7 @@ mod moderation;
 mod movement;
 mod quest;
 mod spawn;
+mod trainer;
 mod weapon;
 mod world;
 
@@ -89,6 +90,8 @@ fn main() {
         .init_resource::<abilities::AbilityDatabase>()
         .init_resource::<game_data::ItemDatabase>()
         .init_resource::<game_data::QuestDatabase>()
+        .init_resource::<game_data::TrainerDatabase>()
+        .init_resource::<game_data::EnemyDatabase>()
         // Register replicated components
         .replicate::<Player>()
         .replicate::<Character>()
@@ -149,6 +152,7 @@ fn main() {
         .add_mapped_client_event::<InteractNpcRequest>(Channel::Ordered)
         .add_client_event::<AcceptQuestRequest>(Channel::Ordered)
         .add_client_event::<CompleteQuestRequest>(Channel::Ordered)
+        .add_mapped_client_event::<PurchaseFromTrainerRequest>(Channel::Ordered)
         .add_client_event::<SetHotbarSlotRequest>(Channel::Ordered)
         .add_client_event::<DisconnectCharacterRequest>(Channel::Ordered)
         .add_client_event::<AdminCommandRequest>(Channel::Ordered)
@@ -170,6 +174,7 @@ fn main() {
         .add_mapped_server_event::<DeathEvent>(Channel::Ordered)
         .add_server_event::<NotificationEvent>(Channel::Ordered)
         .add_server_event::<QuestDialogueEvent>(Channel::Ordered)
+        .add_server_event::<TrainerDialogueEvent>(Channel::Ordered)
         .add_mapped_server_event::<LootContainerContentsEvent>(Channel::Ordered)
         .add_server_event::<LevelUpEvent>(Channel::Ordered)
         .add_server_event::<ProficiencyLevelUpEvent>(Channel::Ordered)
@@ -199,6 +204,7 @@ fn main() {
         .add_observer(quest::handle_interact_npc)
         .add_observer(quest::handle_accept_quest)
         .add_observer(quest::handle_complete_quest)
+        .add_observer(trainer::handle_purchase_from_trainer)
         .add_observer(auth::handle_disconnect_character)
         .add_observer(admin::handle_admin_command)
         .add_observer(admin::handle_chat_message)

@@ -3,8 +3,9 @@ use bevy_replicon::prelude::*;
 use eryndor_shared::*;
 use avian2d::prelude::{RigidBody, Collider, CollisionLayers};
 use crate::{PhysicsPosition, PhysicsVelocity};
+use crate::game_data::EnemyDatabase;
 
-pub fn spawn_world(mut commands: Commands) {
+pub fn spawn_world(mut commands: Commands, enemy_db: Res<EnemyDatabase>) {
     info!("Spawning world entities...");
 
     // Spawn NPC Quest Giver
@@ -31,61 +32,196 @@ pub fn spawn_world(mut commands: Commands) {
 
     info!("Spawned NPC: Elder");
 
+    // Spawn Weapon Master Trainer
+    commands.spawn((
+        Replicated,
+        Npc,
+        NpcName("Weapon Master".to_string()),
+        Trainer {
+            items_for_sale: vec![
+                TrainerItem { item_id: ITEM_DAGGER, cost: 50 },
+                TrainerItem { item_id: ITEM_SWORD, cost: 75 },
+                TrainerItem { item_id: ITEM_WAND, cost: 100 },
+                TrainerItem { item_id: ITEM_STAFF, cost: 150 },
+                TrainerItem { item_id: ITEM_MACE, cost: 125 },
+                TrainerItem { item_id: ITEM_BOW, cost: 100 },
+                TrainerItem { item_id: ITEM_AXE, cost: 125 },
+            ],
+        },
+        Position(Vec2::new(60.0, -20.0)), // To the right of the Elder
+        Interactable::npc(),
+        VisualShape {
+            shape_type: ShapeType::Circle,
+            color: [0.8, 0.6, 0.2, 1.0], // Orange/bronze color for trainer
+            size: NPC_SIZE,
+        },
+        // Physics components - static NPC
+        PhysicsPosition(Vec2::new(60.0, -20.0)),
+        RigidBody::Static,
+        Collider::circle(NPC_SIZE / 2.0),
+        CollisionLayers::new(GameLayer::Npc, [GameLayer::Player, GameLayer::Enemy]),
+    ));
+
+    info!("Spawned NPC: Weapon Master");
+
     // Note: Weapons are now given as quest rewards, not spawned in the world
 
-    // Spawn enemies with respawn points
-    for (i, pos) in [ENEMY_SPAWN_1, ENEMY_SPAWN_2, ENEMY_SPAWN_3].iter().enumerate() {
-        let enemy_entity = commands.spawn((
-            Replicated,
-            Enemy,
-            EnemyType(ENEMY_TYPE_SLIME),
-            Position(*pos),
-            Velocity::default(),
-            MoveSpeed(80.0),
-            Health::new(50.0),
-            CombatStats {
-                attack_power: 5.0,
-                defense: 2.0,
-                crit_chance: 0.0,
-            },
-            CurrentTarget::default(),
-        )).id();
+    // Helper function to spawn enemies using the database
+    let spawn_enemy = |commands: &mut Commands, enemy_type_id: u32, position: Vec2, shape: ShapeType, color: [f32; 4], loot_table: LootTable| {
+        if let Some(def) = enemy_db.enemies.get(&enemy_type_id) {
+            let enemy_entity = commands.spawn((
+                Replicated,
+                Enemy,
+                EnemyType(enemy_type_id),
+                EnemyName(def.name.clone()),
+                Position(position),
+                Velocity::default(),
+                MoveSpeed(def.move_speed),
+                Health::new(def.max_health),
+                CombatStats {
+                    attack_power: def.attack_power,
+                    defense: def.defense,
+                    crit_chance: 0.0,
+                },
+                CurrentTarget::default(),
+            )).id();
 
-        commands.entity(enemy_entity).insert((
-            AiState::default(),
-            Interactable::enemy(),
-            VisualShape {
-                shape_type: ShapeType::Circle,
-                color: COLOR_ENEMY,
-                size: ENEMY_SIZE,
-            },
-            AbilityCooldowns::default(),
-            // Add spawn point for respawn system
-            crate::spawn::SpawnPoint {
-                position: *pos,
-                respawn_delay: 5.0, // 5 seconds
-            },
-            // Loot table for this enemy
-            LootTable {
-                gold_min: 5,
-                gold_max: 15,
-                items: vec![], // No item drops for slimes yet
-            },
-        ));
+            commands.entity(enemy_entity).insert((
+                AiState::default(),
+                Interactable::enemy(),
+                VisualShape {
+                    shape_type: shape,
+                    color,
+                    size: ENEMY_SIZE,
+                },
+                AbilityCooldowns::default(),
+                crate::spawn::SpawnPoint {
+                    position,
+                    respawn_delay: 10.0, // 10 seconds
+                },
+                loot_table,
+            ));
 
-        // Physics components
-        commands.entity(enemy_entity).insert((
-            PhysicsPosition(*pos),
-            PhysicsVelocity::default(),
-            RigidBody::Dynamic,
-            Collider::circle(ENEMY_SIZE / 2.0),
-            CollisionLayers::new(GameLayer::Enemy, [GameLayer::Player, GameLayer::Npc, GameLayer::Enemy, GameLayer::Environment]),
-        ));
+            // Physics components
+            commands.entity(enemy_entity).insert((
+                PhysicsPosition(position),
+                PhysicsVelocity::default(),
+                RigidBody::Dynamic,
+                Collider::circle(ENEMY_SIZE / 2.0),
+                CollisionLayers::new(GameLayer::Enemy, [GameLayer::Player, GameLayer::Npc, GameLayer::Enemy, GameLayer::Environment]),
+            ));
 
-        info!("Spawned enemy #{} at {:?} with entity ID: {:?}", i + 1, pos, enemy_entity);
+            info!("Spawned {} at {:?}", def.name, position);
+        }
+    };
+
+    info!("Spawning enemies throughout the world...");
+    let mut total_enemies = 0;
+
+    // ========== STARTER AREA - Slimes (Level 1) ==========
+    // Northeast starter area - 4 slimes
+    let slime_positions = vec![
+        Vec2::new(150.0, 150.0),
+        Vec2::new(200.0, 180.0),
+        Vec2::new(180.0, 120.0),
+        Vec2::new(220.0, 150.0),
+    ];
+    for pos in slime_positions {
+        spawn_enemy(&mut commands, ENEMY_TYPE_SLIME, pos, ShapeType::Circle, [0.2, 0.8, 0.2, 1.0], LootTable {
+            gold_min: 3,
+            gold_max: 8,
+            items: vec![],
+        });
+        total_enemies += 1;
     }
 
-    info!("Finished spawning 3 enemies");
+    // ========== GOBLIN CAMP - Goblins (Level 2) ==========
+    // Northwest area - 5 goblins
+    let goblin_positions = vec![
+        Vec2::new(-200.0, 200.0),
+        Vec2::new(-250.0, 220.0),
+        Vec2::new(-180.0, 180.0),
+        Vec2::new(-220.0, 250.0),
+        Vec2::new(-200.0, 150.0),
+    ];
+    for pos in goblin_positions {
+        spawn_enemy(&mut commands, ENEMY_TYPE_GOBLIN, pos, ShapeType::Square, [0.4, 0.6, 0.2, 1.0], LootTable {
+            gold_min: 8,
+            gold_max: 15,
+            items: vec![],
+        });
+        total_enemies += 1;
+    }
+
+    // ========== WOLF PACK - Wolves (Level 3) ==========
+    // East forest area - 4 wolves
+    let wolf_positions = vec![
+        Vec2::new(400.0, 50.0),
+        Vec2::new(450.0, 80.0),
+        Vec2::new(420.0, -20.0),
+        Vec2::new(480.0, 40.0),
+    ];
+    for pos in wolf_positions {
+        spawn_enemy(&mut commands, ENEMY_TYPE_WOLF, pos, ShapeType::Circle, [0.6, 0.5, 0.3, 1.0], LootTable {
+            gold_min: 12,
+            gold_max: 20,
+            items: vec![],
+        });
+        total_enemies += 1;
+    }
+
+    // ========== SPIDER DEN - Spiders (Level 3) ==========
+    // Southwest corner - 5 spiders
+    let spider_positions = vec![
+        Vec2::new(-400.0, -300.0),
+        Vec2::new(-450.0, -280.0),
+        Vec2::new(-380.0, -350.0),
+        Vec2::new(-420.0, -320.0),
+        Vec2::new(-460.0, -340.0),
+    ];
+    for pos in spider_positions {
+        spawn_enemy(&mut commands, ENEMY_TYPE_SPIDER, pos, ShapeType::Circle, [0.3, 0.1, 0.3, 1.0], LootTable {
+            gold_min: 10,
+            gold_max: 18,
+            items: vec![],
+        });
+        total_enemies += 1;
+    }
+
+    // ========== GRAVEYARD - Skeletons (Level 4) ==========
+    // South central area - 4 skeletons
+    let skeleton_positions = vec![
+        Vec2::new(0.0, -400.0),
+        Vec2::new(50.0, -420.0),
+        Vec2::new(-50.0, -380.0),
+        Vec2::new(20.0, -450.0),
+    ];
+    for pos in skeleton_positions {
+        spawn_enemy(&mut commands, ENEMY_TYPE_SKELETON, pos, ShapeType::Square, [0.9, 0.9, 0.8, 1.0], LootTable {
+            gold_min: 15,
+            gold_max: 25,
+            items: vec![],
+        });
+        total_enemies += 1;
+    }
+
+    // ========== ORC STRONGHOLD - Orcs (Level 5) ==========
+    // Far north area - 3 orcs (stronger enemies, fewer spawns)
+    let orc_positions = vec![
+        Vec2::new(0.0, 500.0),
+        Vec2::new(-80.0, 520.0),
+        Vec2::new(80.0, 480.0),
+    ];
+    for pos in orc_positions {
+        spawn_enemy(&mut commands, ENEMY_TYPE_ORC, pos, ShapeType::Square, [0.3, 0.5, 0.3, 1.0], LootTable {
+            gold_min: 20,
+            gold_max: 35,
+            items: vec![],
+        });
+        total_enemies += 1;
+    }
+
+    info!("Finished spawning {} enemies across the world", total_enemies);
 
     // Spawn world boundaries - visible red walls
     let wall_thickness = 20.0;

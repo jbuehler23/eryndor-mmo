@@ -72,6 +72,7 @@ pub struct UiState {
     pub show_character_stats: bool,
     pub show_esc_menu: bool,
     pub quest_dialogue: Option<QuestDialogueData>,
+    pub trainer_window: Option<TrainerWindowData>,
     pub loot_window: Option<LootWindowData>,
     pub show_register_tab: bool,  // Toggle between Login and Register tabs
     pub oauth_checked: bool,  // Track if we've checked for OAuth callback
@@ -99,6 +100,7 @@ impl Default for UiState {
             show_character_stats: false,
             show_esc_menu: false,
             quest_dialogue: None,
+            trainer_window: None,
             loot_window: None,
             show_register_tab: false,
             oauth_checked: false,
@@ -128,6 +130,12 @@ pub struct QuestDialogueData {
     pub description: String,
     pub objectives_text: String,
     pub rewards_text: String,
+}
+
+#[derive(Clone)]
+pub struct TrainerWindowData {
+    pub npc_name: String,
+    pub items_for_sale: Vec<TrainerItem>,
 }
 
 pub fn login_ui(
@@ -851,6 +859,97 @@ pub fn game_ui(
             });
     }
 
+    // Trainer Shop Window
+    if let Some(trainer_data) = ui_state.trainer_window.clone() {
+        egui::Window::new(format!("{} - Weapon Shop", trainer_data.npc_name))
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .fixed_size([400.0, 500.0])
+            .show(ctx, |ui| {
+                ui.vertical_centered(|ui| {
+                    ui.add_space(10.0);
+                    ui.heading("Weapons for Sale");
+                    ui.add_space(5.0);
+                });
+
+                ui.separator();
+                ui.add_space(10.0);
+
+                // Show player's current gold
+                ui.horizontal(|ui| {
+                    ui.label("Your Gold:");
+                    ui.colored_label(egui::Color32::GOLD, format!("{}", gold.0));
+                });
+
+                ui.add_space(10.0);
+                ui.separator();
+                ui.add_space(10.0);
+
+                // Display each item for sale
+                egui::ScrollArea::vertical()
+                    .max_height(300.0)
+                    .show(ui, |ui| {
+                        for trainer_item in &trainer_data.items_for_sale {
+                            if let Some(item_def) = item_db.items.get(&trainer_item.item_id) {
+                                ui.group(|ui| {
+                                    ui.horizontal(|ui| {
+                                        ui.vertical(|ui| {
+                                            ui.label(egui::RichText::new(&item_def.name).strong().size(16.0));
+
+                                            // Show item stats
+                                            let bonuses = &item_def.stat_bonuses;
+                                            if bonuses.attack_power > 0.0 {
+                                                ui.label(format!("Attack: +{:.1}", bonuses.attack_power));
+                                            }
+                                            if bonuses.crit_chance > 0.0 {
+                                                ui.label(format!("Crit: +{:.1}%", bonuses.crit_chance * 100.0));
+                                            }
+                                            if bonuses.max_mana > 0.0 {
+                                                ui.label(format!("Mana: +{:.0}", bonuses.max_mana));
+                                            }
+                                            if bonuses.max_health > 0.0 {
+                                                ui.label(format!("Health: +{:.0}", bonuses.max_health));
+                                            }
+                                            if bonuses.defense > 0.0 {
+                                                ui.label(format!("Defense: +{:.1}", bonuses.defense));
+                                            }
+                                        });
+
+                                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                            let can_afford = gold.0 >= trainer_item.cost;
+                                            let button = egui::Button::new(format!("Buy\n{} gold", trainer_item.cost));
+
+                                            if ui.add_enabled(can_afford, button).clicked() {
+                                                commands.client_trigger(PurchaseFromTrainerRequest {
+                                                    trainer_entity: Entity::PLACEHOLDER, // Server finds nearest trainer
+                                                    item_id: trainer_item.item_id,
+                                                });
+                                            }
+
+                                            if !can_afford {
+                                                ui.colored_label(egui::Color32::RED, "Not enough gold");
+                                            }
+                                        });
+                                    });
+                                });
+                                ui.add_space(5.0);
+                            }
+                        }
+                    });
+
+                ui.add_space(10.0);
+                ui.separator();
+
+                // Close button
+                ui.vertical_centered(|ui| {
+                    if ui.button("Close").clicked() {
+                        ui_state.trainer_window = None;
+                    }
+                });
+            });
+    }
+
     // Loot Container Window
     if let Some(loot_data) = ui_state.loot_window.clone() {
         let mut should_close = false;
@@ -1488,6 +1587,20 @@ pub fn handle_loot_container_contents(
         source_name: event.source_name.clone(),
     });
     info!("Opened loot container: {}", event.source_name);
+}
+
+/// Observer for TrainerDialogueEvent - opens the trainer shop window
+pub fn handle_trainer_dialogue(
+    trigger: On<TrainerDialogueEvent>,
+    mut ui_state: ResMut<UiState>,
+) {
+    let event = trigger.event();
+    info!("[TRAINER DIALOGUE] Received event from NPC: {}", event.npc_name);
+    ui_state.trainer_window = Some(TrainerWindowData {
+        npc_name: event.npc_name.clone(),
+        items_for_sale: event.items_for_sale.clone(),
+    });
+    info!("[TRAINER DIALOGUE] Trainer shop window opened: {}", event.npc_name);
 }
 
 // Check for OAuth callback tokens in URL (WASM only)
