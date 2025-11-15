@@ -48,4 +48,8 @@ debug-assertions = false
 codegen-units = 1
 # Do a second optimization pass over the entire program, including dependencies.
 # Slows compile times, marginal improvements.
-lto = "thin"
+lto = true
+
+[profile.web-release]
+inherits = "release"
+opt-level = "z"
