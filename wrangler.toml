@@ -3,4 +3,4 @@
 name = "eryndor-mmo"
 
 # IMPORTANT: This is required for Pages
-pages_build_output_dir = "crates/eryndor_client/bevy-web/web-release/client"
+pages_build_output_dir = "crates/eryndor_client/bevy_web/web-release/client"
