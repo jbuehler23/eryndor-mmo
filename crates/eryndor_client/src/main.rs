@@ -203,38 +203,13 @@ fn main() {
     // Set up panic hook for better error messages in browser console
     console_error_panic_hook::set_once();
 
-    wasm_bindgen_futures::spawn_local(async {
-        web_sys::console::log_1(&"Fetching certificate hash from server...".into());
-
-        // Fetch certificate hash as raw bytes from server before starting app
-        let response = reqwest::get("http://127.0.0.1:8080/cert")
-            .await
-            .expect("Failed to fetch certificate hash from http://127.0.0.1:8080/cert");
-
-        web_sys::console::log_1(&format!("Certificate fetch response status: {}", response.status()).into());
-
-        let cert_bytes: Vec<u8> = response
-            .json()
-            .await
-            .expect("Failed to parse certificate hash as JSON");
-
-        web_sys::console::log_1(&format!("Certificate hash length: {} bytes", cert_bytes.len()).into());
-        web_sys::console::log_1(&format!("Certificate hash: {:?}", cert_bytes).into());
-
-        // Convert bytes to ServerCertHash (must be exactly 32 bytes)
-        let cert_hash: bevy_renet2::netcode::ServerCertHash = cert_bytes
-            .try_into()
-            .expect("Invalid certificate hash (must be 32 bytes)");
-
-        web_sys::console::log_1(&"Certificate hash loaded successfully, starting app...".into());
-
-        // Start Bevy app with the cert hash
-        start_app(cert_hash);
-    });
+    // Start the app directly (no certificate needed for WebSocket)
+    web_sys::console::log_1(&"Starting Eryndor MMO client...".into());
+    start_app();
 }
 
 #[cfg(target_family = "wasm")]
-fn start_app(cert_hash: bevy_renet2::netcode::ServerCertHash) {
+fn start_app() {
     App::new()
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
@@ -250,8 +225,6 @@ fn start_app(cert_hash: bevy_renet2::netcode::ServerCertHash) {
             ShapePlugin,
             EguiPlugin::default(),
         ))
-        // Insert cert hash resource before game state
-        .insert_resource(ServerCertHashResource { cert_hash })
         // Game state
         .init_state::<GameState>()
         .init_resource::<MyClientState>()

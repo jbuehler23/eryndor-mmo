@@ -23,12 +23,6 @@ pub struct MyClientState {
     pub connection_error_shown: bool,
 }
 
-#[cfg(target_family = "wasm")]
-#[derive(Resource)]
-pub struct ServerCertHashResource {
-    pub cert_hash: bevy_renet2::netcode::ServerCertHash,
-}
-
 pub fn handle_login_response(
     trigger: On<LoginResponse>,
     mut client_state: ResMut<MyClientState>,
@@ -198,7 +192,7 @@ pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>
 }
 
 #[cfg(target_family = "wasm")]
-pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>, time: Res<Time>, _cert_hash_res: Res<ServerCertHashResource>) {
+pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>, time: Res<Time>) {
     info!("Connecting to server...");
 
     let connection_config = ConnectionConfig::from_channels(
