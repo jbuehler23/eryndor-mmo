@@ -235,13 +235,16 @@ pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>
 
     info!("Connecting via WebSocket to {}", ws_url);
 
-    // Parse the URL to extract host and port for server_addr
+    // Parse the URL
     let url: url::Url = ws_url.parse().expect("Invalid WebSocket URL");
-    let host = url.host_str().expect("WebSocket URL must have a host");
-    let port = url.port().unwrap_or(if url.scheme() == "wss" { 443 } else { 5003 });
-    let ws_server_addr: std::net::SocketAddr = format!("{}:{}", host, port)
+
+    // For WebSocket connections, the actual connection uses the URL directly.
+    // The server_addr field is just metadata, so we use a placeholder.
+    // We can't parse hostnames as SocketAddr (only IP addresses work),
+    // so we use 0.0.0.0:0 as a dummy address.
+    let ws_server_addr: std::net::SocketAddr = "0.0.0.0:0"
         .parse()
-        .expect("Invalid WebSocket server address");
+        .expect("Failed to parse placeholder address");
 
     let ws_config = WebSocketClientConfig {
         server_url: ws_url.parse().expect("Invalid WebSocket URL"),
