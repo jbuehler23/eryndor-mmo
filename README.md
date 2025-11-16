@@ -70,6 +70,46 @@ cargo run -p eryndor_client
 # ./target/release/client
 ```
 
+## Deployment
+
+### Automated Production Deployment
+
+This project includes 1-button deployment automation for production environments:
+
+- **Server**: Docker container on DigitalOcean Droplet
+- **Client**: WASM build on DigitalOcean App Platform
+- **SSL/TLS**: Free via Cloudflare
+- **CI/CD**: GitHub Actions (automated testing + deployment)
+
+#### Quick Setup (45 minutes)
+
+1. Run the setup script:
+   ```bash
+   bash scripts/setup-deployment.sh
+   ```
+
+2. Follow the instructions in `QUICK_START.md`
+
+3. Deploy with a single command:
+   ```bash
+   git push
+   ```
+
+**Documentation:**
+- `DEPLOYMENT_AUTOMATION.md` - Complete deployment guide
+- `QUICK_START.md` - Fast setup guide
+- `.github/workflows/` - CI/CD workflows
+- `scripts/` - Deployment scripts
+
+**Architecture:**
+```
+Browser → Cloudflare (free SSL) → Docker Container on Droplet
+```
+
+**Cost:** $12-18/month (DigitalOcean droplet + free SSL + free static hosting)
+
+For detailed instructions, see `DEPLOYMENT_AUTOMATION.md`.
+
 ## Getting Started
 
 1. **Create Account**

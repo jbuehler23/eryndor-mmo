@@ -1,0 +1,49 @@
+name: Deploy Client
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-wasm-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Bevy CLI
+        run: cargo install --git https://github.com/TheBevyFlock/bevy_cli --tag cli-v0.1.0-alpha.2 --locked bevy_cli
+
+      - name: Build WASM client
+        run: |
+          cd crates/eryndor_client
+          bevy build web --release
+        env:
+          SERVER_WS_URL: wss://eryndor-online.com/
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DO_API_TOKEN }}
+
+      - name: Deploy to DigitalOcean App Platform
+        run: |
+          # Note: You'll need to create the app first via UI or doctl
+          # Then get the app ID and store it as a GitHub secret
+          doctl apps create-deployment ${{ secrets.DO_APP_ID }} --wait

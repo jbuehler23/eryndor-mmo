@@ -1,0 +1,27 @@
+name: eryndor-mmo-client
+region: nyc
+
+static_sites:
+  - name: web
+    github:
+      repo: jbuehler23/eryndor-mmo
+      branch: main
+      deploy_on_push: true
+
+    source_dir: crates/eryndor_client/bevy_web/web-release/client
+
+    routes:
+      - path: /
+
+    environment_slug: html
+
+    cors:
+      allow_origins:
+        - prefix: https://
+      allow_methods:
+        - GET
+        - POST
+        - OPTIONS
+      allow_headers:
+        - Content-Type
+        - Authorization
