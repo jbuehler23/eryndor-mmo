@@ -22,7 +22,16 @@
       "Bash(cat:*)",
       "WebFetch(domain:cbournhonesque.github.io)",
       "Bash(taskkill:*)",
-      "Bash(sqlite3:*)"
+      "Bash(sqlite3:*)",
+      "Bash(where:*)",
+      "WebFetch(domain:thebevyflock.github.io)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(tasklist:*)",
+      "Bash(bevy run:*)",
+      "Bash(timeout 10 cd:*)",
+      "Bash(bevy build:*)",
+      "Bash(gh run:*)"
     ],
     "deny": [],
     "ask": []
