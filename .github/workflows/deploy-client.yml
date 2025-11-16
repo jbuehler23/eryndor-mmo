@@ -36,7 +36,6 @@ jobs:
           bevy build --yes --release web --bundle
         env:
           SERVER_WS_URL: wss://eryndor-online.com/
-          RUSTFLAGS: '--cfg getrandom_backend="wasm_js"'
 
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
