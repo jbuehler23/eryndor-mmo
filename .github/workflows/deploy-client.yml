@@ -33,7 +33,7 @@ jobs:
       - name: Build WASM client
         run: |
           cd crates/eryndor_client
-          bevy build --release web --yes --bundle
+          bevy build --yes --release web --bundle
         env:
           SERVER_WS_URL: wss://eryndor-online.com/
           RUSTFLAGS: '--cfg getrandom_backend="wasm_js"'
