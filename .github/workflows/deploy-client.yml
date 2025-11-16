@@ -36,6 +36,7 @@ jobs:
           bevy build web --release
         env:
           SERVER_WS_URL: wss://eryndor-online.com/
+          RUSTFLAGS: '--cfg getrandom_backend="wasm_js"'
 
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
@@ -44,6 +45,15 @@ jobs:
 
       - name: Deploy to DigitalOcean App Platform
         run: |
-          # Note: You'll need to create the app first via UI or doctl
-          # Then get the app ID and store it as a GitHub secret
-          doctl apps create-deployment ${{ secrets.DO_APP_ID }} --wait
+          # Get the app ID by name
+          APP_ID=$(doctl apps list --format ID,Spec.Name --no-header | grep "eryndor-mmo-web-app" | awk '{print $1}')
+
+          if [ -z "$APP_ID" ]; then
+            echo "Error: Could not find app 'eryndor-mmo-web-app'"
+            exit 1
+          fi
+
+          echo "Found app ID: $APP_ID"
+
+          # Trigger deployment
+          doctl apps create-deployment $APP_ID --wait
