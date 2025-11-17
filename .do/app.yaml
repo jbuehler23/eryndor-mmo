@@ -28,7 +28,7 @@ static_sites:
 
     envs:
       - key: SERVER_WS_URL
-        value: wss://ws.eryndor-online.com/
+        value: wss://ws.eryndor-online.com/ws
 
     routes:
       - path: /
