@@ -9,7 +9,8 @@
 # =============================================================================
 
 # Stage 1: Build the server
-FROM rust:1.83-slim AS builder
+# Using nightly because Bevy 0.17.2 requires edition2024
+FROM rustlang/rust:nightly-slim AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
