@@ -8,12 +8,34 @@ static_sites:
       branch: main
       deploy_on_push: true
 
-    source_dir: crates/eryndor_client/bevy_web/web-release/client
+    build_command: |
+      # Install Rust
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+      . $HOME/.cargo/env
+      rustup target add wasm32-unknown-unknown
+
+      # Install system dependencies
+      apt-get update && apt-get install -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+
+      # Install Bevy CLI
+      cargo install --git https://github.com/TheBevyFlock/bevy_cli --tag cli-v0.1.0-alpha.2 --locked bevy_cli
+
+      # Build WASM client
+      cd crates/eryndor_client
+      bevy build --yes --release web --bundle
+
+      # Copy output to expected location
+      mkdir -p ../../crates/eryndor_client/bevy_web/web-release
+      cp -r ../../target/bevy_web/web-release/client ../../crates/eryndor_client/bevy_web/web-release/
+
+    output_dir: crates/eryndor_client/bevy_web/web-release/client
+
+    envs:
+      - key: SERVER_WS_URL
+        value: wss://ws.eryndor-online.com/
 
     routes:
       - path: /
-
-    environment_slug: html
 
     cors:
       allow_origins:
