@@ -16,6 +16,9 @@ FROM rustlang/rust:nightly-slim AS builder
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
+    libasound2-dev \
+    libudev-dev \
+    libwayland-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
@@ -51,6 +54,9 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
+    libasound2 \
+    libudev1 \
+    libwayland-client0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
