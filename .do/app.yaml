@@ -24,11 +24,7 @@ static_sites:
       cd crates/eryndor_client
       bevy build --yes --release web --bundle
 
-      # Copy output to expected location
-      mkdir -p ../../crates/eryndor_client/bevy_web/web-release
-      cp -r ../../target/bevy_web/web-release/client ../../crates/eryndor_client/bevy_web/web-release/
-
-    output_dir: crates/eryndor_client/bevy_web/web-release/client
+    output_dir: target/bevy_web/web-release/client
 
     envs:
       - key: SERVER_WS_URL
