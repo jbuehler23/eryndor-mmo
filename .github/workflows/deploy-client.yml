@@ -40,6 +40,11 @@ jobs:
         env:
           SERVER_WS_URL: wss://ws.eryndor-online.com/
 
+      - name: Copy build output to expected location
+        run: |
+          mkdir -p crates/eryndor_client/bevy_web/web-release
+          cp -r target/bevy_web/web-release/client crates/eryndor_client/bevy_web/web-release/
+
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
         with:

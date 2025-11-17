@@ -10,8 +10,8 @@ path = "src/main.rs"
 [dependencies]
 bevy = { workspace = true, features = ["bevy_core_pipeline", "bevy_render"] }
 bevy_replicon = { workspace = true }
-bevy_renet2 = { workspace = true }
-bevy_replicon_renet2 = { workspace = true, features = ["server"] }
+bevy_renet2 = { version = "0.11", default-features = false, features = ["native_transport", "wt_server_transport", "ws_server_transport"] }
+bevy_replicon_renet2 = { version = "0.11", default-features = false, features = ["server", "native_transport", "wt_server_transport", "ws_server_transport"] }
 avian2d = { workspace = true }
 serde = { workspace = true }
 serde_json = "1.0"

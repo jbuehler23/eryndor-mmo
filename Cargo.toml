@@ -9,12 +9,8 @@ resolver = "2"
 [workspace.dependencies]
 bevy = { version = "0.17", default-features = false }
 bevy_replicon = "0.36"
-# Multi-transport support:
-# - Native: UDP for native clients (Windows/Mac/Linux)
-# - WebSocket: For WASM clients (simpler dependencies, no cmake required)
-# - WebTransport: Server-side only for now (requires cmake/clang which are problematic on MSYS)
-bevy_renet2 = { version = "0.11", features = ["native_transport", "wt_server_transport", "ws_server_transport", "ws_client_transport"] }
-bevy_replicon_renet2 = { version = "0.11", features = ["native_transport", "wt_server_transport", "ws_server_transport", "ws_client_transport"] }
+# NOTE: bevy_renet2 and bevy_replicon_renet2 are NOT workspace dependencies
+# because each crate needs different transport features (server vs client, native vs WASM)
 avian2d = { version = "0.4", default-features = false, features = ["2d", "f32", "parry-f32", "xpbd_joints", "parallel", "bevy_picking", "serialize"] }
 serde = { version = "1.0", features = ["derive"] }
 log = { version = "0.4", features = [

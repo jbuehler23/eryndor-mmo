@@ -6149,7 +6149,6 @@ dependencies = [
  "rustls",
  "rustls-pki-types",
  "send_wrapper",
- "serde",
  "serde_json",
  "time",
  "tokio",
