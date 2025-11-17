@@ -49,12 +49,18 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DO_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
       - name: Backup database
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.DO_DROPLET_IP }}
           username: root
-          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          key_path: ~/.ssh/deploy_key
           script: |
             mkdir -p /var/backups/eryndor
             if [ -f /var/lib/eryndor/eryndor.db ]; then
@@ -68,7 +74,7 @@ jobs:
         with:
           host: ${{ secrets.DO_DROPLET_IP }}
           username: root
-          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          key_path: ~/.ssh/deploy_key
           script: |
             # Login to GitHub Container Registry
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
@@ -103,7 +109,7 @@ jobs:
         with:
           host: ${{ secrets.DO_DROPLET_IP }}
           username: root
-          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          key_path: ~/.ssh/deploy_key
           script: |
             sleep 10
             if docker ps | grep eryndor-server; then
