@@ -4,7 +4,7 @@ region: nyc
 static_sites:
   - name: web
     github:
-      repo: jbuehler23/eryndor-mmo-web-app
+      repo: jbuehler23/eryndor-mmo
       branch: main
       deploy_on_push: true
 
