@@ -69,7 +69,9 @@ RUN mkdir -p /opt/eryndor /data && \
 # Copy binary from builder
 COPY --from=builder /build/target/release/server /opt/eryndor/server
 
-# Copy example config
+# Copy config files
+# Use example config as the base config (override OAuth via env vars)
+COPY config.example.toml /opt/eryndor/config.toml
 COPY config.example.toml /opt/eryndor/config.example.toml
 
 USER eryndor

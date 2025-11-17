@@ -68,8 +68,21 @@ impl ServerConfig {
         let config_str = fs::read_to_string("config.toml")
             .map_err(|e| format!("Failed to read config.toml: {}", e))?;
 
-        let config: ServerConfig = toml::from_str(&config_str)
+        let mut config: ServerConfig = toml::from_str(&config_str)
             .map_err(|e| format!("Failed to parse config.toml: {}", e))?;
+
+        // Override OAuth credentials from environment variables (for production secrets)
+        if let Ok(client_id) = std::env::var("GOOGLE_CLIENT_ID") {
+            config.oauth.google_client_id = client_id;
+        }
+        if let Ok(client_secret) = std::env::var("GOOGLE_CLIENT_SECRET") {
+            config.oauth.google_client_secret = client_secret;
+        }
+
+        // Override JWT secret from environment variable (for production secrets)
+        if let Ok(jwt_secret) = std::env::var("JWT_SECRET") {
+            config.admin.jwt_secret = jwt_secret;
+        }
 
         // Validate configuration
         if config.admin.dashboard_enabled && config.admin.jwt_secret == "dev-secret-change-in-production-please" {
