@@ -19,7 +19,7 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Install build dependencies
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends libasound2-dev libudev-dev libwayland-dev
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -38,7 +38,7 @@ jobs:
           cd crates/eryndor_client
           bevy build --yes --release web --bundle
         env:
-          SERVER_WS_URL: wss://eryndor-online.com/
+          SERVER_WS_URL: wss://ws.eryndor-online.com/
 
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
