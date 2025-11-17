@@ -1,6 +1,12 @@
 name: eryndor-mmo-web-app
 region: nyc
 
+domains:
+  - domain: eryndor-online.com
+    type: PRIMARY
+  - domain: www.eryndor-online.com
+    type: ALIAS
+
 static_sites:
   - name: web
     github:
