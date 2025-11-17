@@ -34,7 +34,7 @@ pub struct ClientMetadata {
 /// System that captures client IP addresses when they connect
 /// and enforces IP bans
 pub fn track_client_connections(
-    mut server_events: EventReader<ServerEvent>,
+    mut server_events: MessageReader<ServerEvent>,
     network_id_map: Res<NetworkIdMap>,
     transport: Res<NetcodeServerTransport>,
     db: Res<DatabaseConnection>,

@@ -143,7 +143,7 @@ pub fn detect_player_entity(
 }
 
 #[cfg(not(target_family = "wasm"))]
-pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>, time: Res<Time>) {
+pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>, _time: Res<Time>) {
     info!("Connecting to server...");
 
     let connection_config = ConnectionConfig::from_channels(
@@ -156,7 +156,6 @@ pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>
         .expect("Invalid server address");
 
     use bevy_renet2::netcode::{ClientAuthentication, NetcodeClientTransport};
-    use std::time::Duration;
 
     // Create RenetClient first (UDP is not reliable)
     let client = RenetClient::new(connection_config, false);

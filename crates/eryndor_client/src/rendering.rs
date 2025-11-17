@@ -451,7 +451,7 @@ pub fn update_damage_numbers(
         text_color.0.set_alpha(alpha);
 
         // Despawn when lifetime expires
-        if damage_num.lifetime.finished() {
+        if damage_num.lifetime.is_finished() {
             commands.entity(entity).despawn();
         }
     }

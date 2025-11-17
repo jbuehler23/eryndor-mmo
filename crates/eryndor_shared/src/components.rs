@@ -214,15 +214,9 @@ impl Default for CombatStats {
 }
 
 /// Current combat target
-#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug, Default)]
 #[component(map_entities)]
 pub struct CurrentTarget(pub Option<Entity>);
-
-impl Default for CurrentTarget {
-    fn default() -> Self {
-        Self(None)
-    }
-}
 
 impl bevy::ecs::entity::MapEntities for CurrentTarget {
     fn map_entities<M: bevy::ecs::entity::EntityMapper>(&mut self, entity_mapper: &mut M) {
@@ -338,7 +332,7 @@ pub struct ItemStack {
 }
 
 /// Equipment slots
-#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+#[derive(Component, Serialize, Deserialize, Clone, Debug, Default)]
 pub struct Equipment {
     pub weapon: Option<u32>,  // Item ID
     pub helmet: Option<u32>,  // Item ID
@@ -347,34 +341,14 @@ pub struct Equipment {
     pub boots: Option<u32>,   // Item ID
 }
 
-impl Default for Equipment {
-    fn default() -> Self {
-        Self {
-            weapon: None,
-            helmet: None,
-            chest: None,
-            legs: None,
-            boots: None,
-        }
-    }
-}
-
 // ============================================================================
 // ABILITY & HOTBAR COMPONENTS
 // ============================================================================
 
 /// Player hotbar
-#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+#[derive(Component, Serialize, Deserialize, Clone, Debug, Default)]
 pub struct Hotbar {
     pub slots: [Option<HotbarSlot>; 10],
-}
-
-impl Default for Hotbar {
-    fn default() -> Self {
-        Self {
-            slots: [None, None, None, None, None, None, None, None, None, None],
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
@@ -383,17 +357,9 @@ pub enum HotbarSlot {
 }
 
 /// Learned abilities
-#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+#[derive(Component, Serialize, Deserialize, Clone, Debug, Default)]
 pub struct LearnedAbilities {
     pub abilities: HashSet<u32>,
-}
-
-impl Default for LearnedAbilities {
-    fn default() -> Self {
-        Self {
-            abilities: HashSet::new(),
-        }
-    }
 }
 
 impl LearnedAbilities {
@@ -407,17 +373,9 @@ impl LearnedAbilities {
 }
 
 /// Ability cooldowns (server-side only, not replicated)
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct AbilityCooldowns {
     pub cooldowns: HashMap<u32, Timer>,
-}
-
-impl Default for AbilityCooldowns {
-    fn default() -> Self {
-        Self {
-            cooldowns: HashMap::new(),
-        }
-    }
 }
 
 // ============================================================================
@@ -425,19 +383,10 @@ impl Default for AbilityCooldowns {
 // ============================================================================
 
 /// Player quest log
-#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+#[derive(Component, Serialize, Deserialize, Clone, Debug, Default)]
 pub struct QuestLog {
     pub active_quests: Vec<ActiveQuest>,
     pub completed_quests: HashSet<u32>,
-}
-
-impl Default for QuestLog {
-    fn default() -> Self {
-        Self {
-            active_quests: Vec::new(),
-            completed_quests: HashSet::new(),
-        }
-    }
 }
 
 impl QuestLog {
@@ -508,18 +457,13 @@ pub struct EnemyName(pub String);
 pub struct EnemyType(pub u32);
 
 /// Enemy AI state
-#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug, Default)]
 #[component(map_entities)]
 pub enum AiState {
+    #[default]
     Idle,
     Chasing(Entity),
     Attacking(Entity),
-}
-
-impl Default for AiState {
-    fn default() -> Self {
-        Self::Idle
-    }
 }
 
 /// Loot table for enemies - defines what they drop on death
@@ -649,7 +593,7 @@ impl Experience {
 }
 
 /// Weapon proficiency experience tracking
-#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug, Default)]
 pub struct WeaponProficiencyExp {
     pub sword_xp: u32,
     pub dagger_xp: u32,
@@ -658,20 +602,6 @@ pub struct WeaponProficiencyExp {
     pub mace_xp: u32,
     pub bow_xp: u32,
     pub axe_xp: u32,
-}
-
-impl Default for WeaponProficiencyExp {
-    fn default() -> Self {
-        Self {
-            sword_xp: 0,
-            dagger_xp: 0,
-            staff_xp: 0,
-            wand_xp: 0,
-            mace_xp: 0,
-            bow_xp: 0,
-            axe_xp: 0,
-        }
-    }
 }
 
 impl WeaponProficiencyExp {
@@ -706,35 +636,17 @@ impl Default for ArmorProficiency {
 }
 
 /// Armor proficiency experience tracking
-#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug, Default)]
 pub struct ArmorProficiencyExp {
     pub light_xp: u32,
     pub medium_xp: u32,
     pub heavy_xp: u32,
 }
 
-impl Default for ArmorProficiencyExp {
-    fn default() -> Self {
-        Self {
-            light_xp: 0,
-            medium_xp: 0,
-            heavy_xp: 0,
-        }
-    }
-}
-
 /// Unlocked armor passive skills
-#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+#[derive(Component, Serialize, Deserialize, Clone, Debug, Default)]
 pub struct UnlockedArmorPassives {
     pub passives: HashSet<u32>,
-}
-
-impl Default for UnlockedArmorPassives {
-    fn default() -> Self {
-        Self {
-            passives: HashSet::new(),
-        }
-    }
 }
 
 // ============================================================================

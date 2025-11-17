@@ -199,7 +199,7 @@ pub fn process_respawns(
     for (timer_entity, mut respawn_timer) in &mut respawn_query {
         respawn_timer.timer.tick(time.delta());
 
-        if respawn_timer.timer.finished() {
+        if respawn_timer.timer.is_finished() {
             // Spawn the entity from template at the stored position
             let new_entity = respawn_timer.template.spawn(&mut commands, respawn_timer.spawn_position);
 

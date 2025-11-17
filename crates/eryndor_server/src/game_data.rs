@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use std::collections::HashMap;
 use eryndor_shared::*;
-use crate::abilities::*;
 
 // ============================================================================
 // ITEM DEFINITIONS

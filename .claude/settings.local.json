@@ -31,7 +31,8 @@
       "Bash(bevy run:*)",
       "Bash(timeout 10 cd:*)",
       "Bash(bevy build:*)",
-      "Bash(gh run:*)"
+      "Bash(gh run:*)",
+      "Bash(cargo clippy:*)"
     ],
     "deny": [],
     "ask": []

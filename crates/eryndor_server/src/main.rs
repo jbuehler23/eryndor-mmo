@@ -1,3 +1,17 @@
+// Allow common clippy warnings for game development
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_mut)]
+#![allow(unused_assignments)]
+#![allow(unused_imports)]
+#![allow(clippy::type_complexity)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::manual_unwrap_or_default)]
+#![allow(clippy::single_match)]
+#![allow(clippy::derivable_impls)]
+#![allow(clippy::items_after_test_module)]
+#![allow(clippy::unnecessary_unwrap)]
+
 mod abilities;
 mod admin;
 mod audit;

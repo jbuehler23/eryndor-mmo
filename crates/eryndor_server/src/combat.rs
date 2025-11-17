@@ -775,7 +775,7 @@ pub fn update_ai_activation_delays(
     for (entity, mut delay) in &mut query {
         delay.timer.tick(time.delta());
 
-        if delay.timer.finished() {
+        if delay.timer.is_finished() {
             commands.entity(entity).remove::<AiActivationDelay>();
             info!("Enemy {:?} AI activated", entity);
         }

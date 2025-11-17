@@ -46,7 +46,7 @@ pub fn handle_targeting_input(
     windows: Query<&Window>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
     targetable_query: Query<(Entity, &Position, &VisualShape), With<Interactable>>,
-    npc_query: Query<Entity, With<Npc>>,
+    _npc_query: Query<Entity, With<Npc>>,
     enemy_query: Query<Entity, With<Enemy>>,
     loot_query: Query<Entity, With<LootContainer>>,
     mut input_state: ResMut<InputState>,
@@ -189,11 +189,10 @@ pub fn handle_interaction_input(
     let mut nearest_loot: Option<(Entity, f32)> = None;
     for (loot_entity, loot_pos) in &loot_query {
         let distance = player_pos.0.distance(loot_pos.0);
-        if distance <= PICKUP_RANGE {
-            if nearest_loot.is_none() || distance < nearest_loot.unwrap().1 {
+        if distance <= PICKUP_RANGE
+            && (nearest_loot.is_none() || distance < nearest_loot.unwrap().1) {
                 nearest_loot = Some((loot_entity, distance));
             }
-        }
     }
 
     if let Some((loot_entity, distance)) = nearest_loot {

@@ -178,15 +178,14 @@ pub fn login_ui(
                 ui.add(egui::TextEdit::singleline(&mut ui_state.password).password(true));
                 ui.add_space(20.0);
 
-                if ui.button("Login").clicked() {
-                    if !ui_state.username.is_empty() && !ui_state.password.is_empty() {
+                if ui.button("Login").clicked()
+                    && !ui_state.username.is_empty() && !ui_state.password.is_empty() {
                         info!("Sending login request for user: {}", ui_state.username);
                         commands.client_trigger(LoginRequest {
                             username: ui_state.username.clone(),
                             password: ui_state.password.clone(),
                         });
                     }
-                }
             } else {
                 // Register form
                 ui.heading("Create New Account");
@@ -206,8 +205,8 @@ pub fn login_ui(
                 ui.colored_label(egui::Color32::GRAY, "Min 8 characters, 1 uppercase, 1 number");
                 ui.add_space(20.0);
 
-                if ui.button("Create Account").clicked() {
-                    if !ui_state.email.is_empty() && !ui_state.username.is_empty() && !ui_state.password.is_empty() {
+                if ui.button("Create Account").clicked()
+                    && !ui_state.email.is_empty() && !ui_state.username.is_empty() && !ui_state.password.is_empty() {
                         info!("Sending create account request for user: {}", ui_state.username);
                         commands.client_trigger(CreateAccountRequest {
                             email: ui_state.email.clone(),
@@ -215,7 +214,6 @@ pub fn login_ui(
                             password: ui_state.password.clone(),
                         });
                     }
-                }
             }
 
             ui.add_space(20.0);
@@ -354,8 +352,8 @@ pub fn character_select_ui(
                 ui.add_space(10.0);
 
                 ui.horizontal(|ui| {
-                    if ui.button("Create").clicked() {
-                        if !ui_state.new_character_name.is_empty() {
+                    if ui.button("Create").clicked()
+                        && !ui_state.new_character_name.is_empty() {
                             commands.client_trigger(CreateCharacterRequest {
                                 name: ui_state.new_character_name.clone(),
                                 class: ui_state.selected_class,
@@ -363,7 +361,6 @@ pub fn character_select_ui(
                             ui_state.show_create_character = false;
                             ui_state.new_character_name.clear();
                         }
-                    }
 
                     if ui.button("Cancel").clicked() {
                         ui_state.show_create_character = false;
@@ -514,7 +511,7 @@ pub fn game_ui(
             .fixed_pos([540.0, 600.0])
             .fixed_size([200.0, 40.0])
             .title_bar(false)
-            .frame(egui::Frame::none().fill(egui::Color32::from_rgba_unmultiplied(0, 0, 0, 180)))
+            .frame(egui::Frame::NONE.fill(egui::Color32::from_rgba_unmultiplied(0, 0, 0, 180)))
             .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
                     ui.colored_label(egui::Color32::YELLOW, "Press E to Loot");
@@ -553,7 +550,7 @@ pub fn game_ui(
                             response.context_menu(|ui| {
                                 if ui.button("Unequip").clicked() {
                                     commands.client_trigger(UnequipItemRequest { slot });
-                                    ui.close_menu();
+                                    ui.close();
                                 }
                             });
                         }
@@ -694,13 +691,13 @@ pub fn game_ui(
                                         commands.client_trigger(EquipItemRequest {
                                             slot_index: i,
                                         });
-                                        ui.close_menu();
+                                        ui.close();
                                     }
                                     if ui.button("Drop").clicked() {
                                         commands.client_trigger(DropItemRequest {
                                             slot_index: i,
                                         });
-                                        ui.close_menu();
+                                        ui.close();
                                     }
                                 });
                             } else {
@@ -1770,7 +1767,7 @@ pub fn chat_window(
 /// Receive chat messages from server and add them to chat history
 pub fn receive_chat_messages(
     mut ui_state: ResMut<UiState>,
-    mut chat_events: Option<EventReader<ChatMessage>>,
+    mut chat_events: Option<MessageReader<ChatMessage>>,
 ) {
     // Handle case where ChatMessage events haven't been initialized yet
     let Some(chat_events) = chat_events.as_mut() else {
