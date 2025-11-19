@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE accounts SET is_admin = 0 WHERE email = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "2e9e7a1ba72d504c816420fde685c304bb07940407c16a5ae18a75f1c7818b2d"
+}
