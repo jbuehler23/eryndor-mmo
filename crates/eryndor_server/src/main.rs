@@ -14,6 +14,7 @@
 
 mod abilities;
 mod admin;
+mod admin_cli;
 mod audit;
 mod auth;
 mod character;
