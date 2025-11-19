@@ -80,6 +80,19 @@ fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
         .init();
 
+    // Check if we're running a CLI command (e.g., make-admin, list-users, etc.)
+    // CLI commands are identified by having args that don't start with "--"
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() > 1 && !args[1].starts_with("--") {
+        // This is a CLI command, not a server flag - run it and exit
+        let rt = tokio::runtime::Runtime::new()
+            .expect("Failed to create tokio runtime for CLI");
+        rt.block_on(async {
+            admin_cli::run_admin_command().await;
+        });
+        return;
+    }
+
     // Load environment variables from .env file (if it exists)
     // This allows for production secrets to be configured via environment
     dotenvy::dotenv().ok();
