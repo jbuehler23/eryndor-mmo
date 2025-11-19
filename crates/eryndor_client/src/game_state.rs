@@ -231,13 +231,24 @@ pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>
     // Parse the URL
     let url: url::Url = ws_url.parse().expect("Invalid WebSocket URL");
 
-    // For WebSocket connections, the actual connection uses the URL directly.
-    // The server_addr field is just metadata, so we use a placeholder.
-    // We can't parse hostnames as SocketAddr (only IP addresses work),
-    // so we use 0.0.0.0:0 as a dummy address.
-    let ws_server_addr: std::net::SocketAddr = "0.0.0.0:0"
-        .parse()
-        .expect("Failed to parse placeholder address");
+    // Extract host and port from WebSocket URL
+    let host = url.host_str().expect("WebSocket URL missing host");
+    let port = url.port().unwrap_or(5003); // Default WebSocket port
+
+    // For WebSocket connections, we need a valid SocketAddr
+    // The actual connection uses the WebSocket URL, so this is mainly for netcode metadata
+    let ws_server_addr: std::net::SocketAddr = if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+        // Host is already an IP address
+        std::net::SocketAddr::new(ip, port)
+    } else if host == "localhost" {
+        // localhost -> 127.0.0.1
+        std::net::SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::new(127, 0, 0, 1)), port)
+    } else {
+        // For production hostnames (like ws.eryndor-online.com), we can't do DNS resolution in WASM
+        // Use a dummy valid IP since WebSocket uses the URL directly, not this SocketAddr
+        info!("Using dummy IP 1.1.1.1 for hostname '{}' (WebSocket uses URL directly)", host);
+        std::net::SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::new(1, 1, 1, 1)), port)
+    };
 
     let ws_config = WebSocketClientConfig {
         server_url: ws_url.parse().expect("Invalid WebSocket URL"),
