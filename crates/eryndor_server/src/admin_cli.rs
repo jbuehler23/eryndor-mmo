@@ -137,7 +137,7 @@ async fn list_admins() {
     }
 
     println!("\nAdmin Users:");
-    println!("{:<30} {:<20} {}", "Email", "Username", "Created At");
+    println!("{:<30} {:<20} Created At", "Email", "Username");
     println!("{}", "-".repeat(70));
 
     for admin in admins {
@@ -215,7 +215,7 @@ async fn list_users() {
     }
 
     println!("\nUsers (most recent 50):");
-    println!("{:<30} {:<20} {:<8} {:<12} {}", "Email", "Username", "Admin", "Type", "Created At");
+    println!("{:<30} {:<20} {:<8} {:<12} Created At", "Email", "Username", "Admin", "Type");
     println!("{}", "-".repeat(90));
 
     for user in users {
