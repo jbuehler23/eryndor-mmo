@@ -29,6 +29,9 @@ COPY crates/eryndor_server/Cargo.toml ./crates/eryndor_server/
 COPY crates/eryndor_shared/Cargo.toml ./crates/eryndor_shared/
 COPY crates/eryndor_client/Cargo.toml ./crates/eryndor_client/
 
+# Copy SQLx offline query cache for compile-time verification
+COPY .sqlx ./.sqlx
+
 # Create dummy source files to build dependencies
 RUN mkdir -p crates/eryndor_server/src crates/eryndor_shared/src crates/eryndor_client/src && \
     echo "fn main() {}" > crates/eryndor_server/src/main.rs && \
