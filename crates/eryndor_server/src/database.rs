@@ -24,8 +24,14 @@ pub fn setup_database(mut db_res: ResMut<DatabaseConnection>) {
     let runtime = tokio::runtime::Runtime::new().unwrap();
 
     let pool = runtime.block_on(async {
+        // Support DATABASE_PATH environment variable, default to "eryndor.db"
+        let db_path = std::env::var("DATABASE_PATH").unwrap_or_else(|_| "eryndor.db".to_string());
+        let connection_string = format!("sqlite:{}?mode=rwc", db_path);
+
+        eprintln!("Connecting to database: {}", connection_string);
+
         // Create database file with explicit create flag
-        let pool = SqlitePool::connect("sqlite:eryndor.db?mode=rwc")
+        let pool = SqlitePool::connect(&connection_string)
             .await
             .expect("Failed to connect to database");
 

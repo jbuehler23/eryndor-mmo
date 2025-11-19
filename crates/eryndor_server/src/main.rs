@@ -74,13 +74,36 @@ use avian2d::prelude::Position as PhysicsPosition;
 use avian2d::prelude::LinearVelocity as PhysicsVelocity;
 
 fn main() {
+    // Initialize early logging BEFORE any other operations
+    // This ensures we can see errors during config loading
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
+        .init();
+
     // Load environment variables from .env file (if it exists)
     // This allows for production secrets to be configured via environment
     dotenvy::dotenv().ok();
 
+    // Debug output to help diagnose startup issues
+    eprintln!("=== Eryndor Server Startup Debug ===");
+    eprintln!("Current directory: {:?}", std::env::current_dir());
+    eprintln!("CONFIG_PATH env: {:?}", std::env::var("CONFIG_PATH"));
+    eprintln!("DATABASE_PATH env: {:?}", std::env::var("DATABASE_PATH"));
+    eprintln!("SERVER_ADDR env: {:?}", std::env::var("SERVER_ADDR"));
+    eprintln!("====================================");
+
     // Load configuration from config.toml
-    let config = config::ServerConfig::load()
-        .expect("Failed to load configuration. Make sure config.toml exists and is valid.");
+    let config = match config::ServerConfig::load() {
+        Ok(cfg) => {
+            eprintln!("Configuration loaded successfully");
+            cfg
+        }
+        Err(e) => {
+            eprintln!("FATAL ERROR: Failed to load configuration: {}", e);
+            eprintln!("Make sure config.toml exists and is valid.");
+            eprintln!("Current directory: {:?}", std::env::current_dir());
+            std::process::exit(1);
+        }
+    };
 
     App::new()
         .add_plugins((

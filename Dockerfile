@@ -44,8 +44,9 @@ RUN rm -rf crates/eryndor_server/src crates/eryndor_shared/src crates/eryndor_cl
 # Copy actual source code
 COPY crates ./crates
 
-# Build the actual server
-RUN cargo build --release --bin server
+# Clean and rebuild the server packages to force recompilation with real source
+RUN cargo clean -p eryndor_server -p eryndor_shared --release && \
+    cargo build --release --bin server
 
 # Stage 2: Create minimal runtime image
 FROM debian:bookworm-slim
@@ -73,6 +74,9 @@ COPY --from=builder /build/target/release/server /opt/eryndor/server
 # Use example config as the base config (override OAuth via env vars)
 COPY config.example.toml /opt/eryndor/config.toml
 COPY config.example.toml /opt/eryndor/config.example.toml
+
+# Fix ownership of all copied files
+RUN chown -R eryndor:eryndor /opt/eryndor
 
 USER eryndor
 WORKDIR /opt/eryndor

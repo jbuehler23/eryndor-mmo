@@ -65,11 +65,21 @@ impl OAuth {
 
 impl ServerConfig {
     pub fn load() -> Result<Self, String> {
-        let config_str = fs::read_to_string("config.toml")
-            .map_err(|e| format!("Failed to read config.toml: {}", e))?;
+        // Support CONFIG_PATH environment variable, default to "config.toml"
+        let config_path = std::env::var("CONFIG_PATH").unwrap_or_else(|_| "config.toml".to_string());
+
+        let config_str = fs::read_to_string(&config_path)
+            .map_err(|e| {
+                format!(
+                    "Failed to read config file '{}' from directory {:?}: {}",
+                    config_path,
+                    std::env::current_dir().ok(),
+                    e
+                )
+            })?;
 
         let mut config: ServerConfig = toml::from_str(&config_str)
-            .map_err(|e| format!("Failed to parse config.toml: {}", e))?;
+            .map_err(|e| format!("Failed to parse config file '{}': {}", config_path, e))?;
 
         // Override OAuth credentials from environment variables (for production secrets)
         if let Ok(client_id) = std::env::var("GOOGLE_CLIENT_ID") {
