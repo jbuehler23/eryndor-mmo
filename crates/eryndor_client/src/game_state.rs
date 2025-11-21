@@ -243,10 +243,14 @@ pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>
     } else if host == "localhost" {
         // localhost -> 127.0.0.1
         std::net::SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::new(127, 0, 0, 1)), port)
+    } else if host == "ws.eryndor-online.com" {
+        // Production server - use actual IP (ws.eryndor-online.com resolves to this)
+        // This IP is public and discoverable via DNS, so it's safe to hardcode
+        info!("Using production server IP 165.227.217.144 for hostname '{}'", host);
+        std::net::SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::new(165, 227, 217, 144)), port)
     } else {
-        // For production hostnames (like ws.eryndor-online.com), we can't do DNS resolution in WASM
-        // Use a dummy valid IP since WebSocket uses the URL directly, not this SocketAddr
-        info!("Using dummy IP 1.1.1.1 for hostname '{}' (WebSocket uses URL directly)", host);
+        // Unknown hostname - use dummy IP as fallback
+        info!("Using dummy IP 1.1.1.1 for unknown hostname '{}' (WebSocket uses URL directly)", host);
         std::net::SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::new(1, 1, 1, 1)), port)
     };
 
