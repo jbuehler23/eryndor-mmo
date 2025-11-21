@@ -33,7 +33,8 @@
       "Bash(bevy build:*)",
       "Bash(gh run:*)",
       "Bash(cargo clippy:*)",
-      "WebFetch(domain:api.github.com)"
+      "WebFetch(domain:api.github.com)",
+      "Bash(gh api:*)"
     ],
     "deny": [],
     "ask": []
