@@ -12,7 +12,7 @@ static_sites:
     github:
       repo: jbuehler23/eryndor-mmo
       branch: main
-      deploy_on_push: false
+      deploy_on_push: true
 
     build_command: |
       # Install Rust
