@@ -26,23 +26,11 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install --no-install-recommends libasound2-dev libudev-dev libwayland-dev
 
-      - name: Cache cargo registry
-        uses: actions/cache@v4
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Cache cargo index
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Cache target directory
-        uses: actions/cache@v4
-        with:
-          path: target
-          key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
+          shared-key: ci-test
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # Tests disabled due to disk space constraints on GitHub Actions runners
       # Re-enable when you have comprehensive unit tests
@@ -66,14 +54,11 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install --no-install-recommends libasound2-dev libudev-dev libwayland-dev
 
-      - name: Cache cargo
-        uses: actions/cache@v4
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          shared-key: ci-server
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Check server compiles
         run: cargo check --bin server --release
@@ -94,14 +79,12 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
 
-      - name: Cache cargo
-        uses: actions/cache@v4
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-wasm-cargo-${{ hashFiles('**/Cargo.lock') }}
+          shared-key: ci-client
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+          workspaces: "crates/eryndor_client"
 
       - name: Install Bevy CLI
         run: cargo install --git https://github.com/TheBevyFlock/bevy_cli --tag cli-v0.1.0-alpha.2 --locked bevy_cli
