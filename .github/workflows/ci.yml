@@ -84,7 +84,6 @@ jobs:
         with:
           shared-key: ci-client
           save-if: ${{ github.ref == 'refs/heads/main' }}
-          workspaces: "crates/eryndor_client"
 
       - name: Install Bevy CLI
         run: cargo install --git https://github.com/TheBevyFlock/bevy_cli --tag cli-v0.1.0-alpha.2 --locked bevy_cli
