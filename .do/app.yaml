@@ -34,7 +34,9 @@ static_sites:
 
     envs:
       - key: SERVER_WS_URL
-        value: wss://ws.eryndor-online.com/ws
+        # NOTE: renet2's WebSocket implementation requires IP addresses, not domain names
+        # ws.eryndor-online.com resolves to 165.227.217.144
+        value: wss://165.227.217.144/ws
 
     routes:
       - path: /

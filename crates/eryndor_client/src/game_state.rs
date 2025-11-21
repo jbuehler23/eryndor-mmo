@@ -222,37 +222,22 @@ pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>
     use bevy_renet2::netcode::{WebSocketClient, WebSocketClientConfig};
 
     // Use compile-time environment variable for production, development default otherwise
-    // For production builds: SERVER_WS_URL="wss://yourdomain.com/ws" cargo build --target wasm32-unknown-unknown --release
+    // For production builds: SERVER_WS_URL="wss://165.227.217.144/ws" cargo build --target wasm32-unknown-unknown --release
+    // NOTE: renet2's WebSocket implementation requires IP addresses in the URL, not domain names
     let ws_url = option_env!("SERVER_WS_URL")
         .unwrap_or("ws://127.0.0.1:5003");
 
     info!("Connecting via WebSocket to {}", ws_url);
 
-    // Parse the URL
+    // Parse the URL to extract IP and port
     let url: url::Url = ws_url.parse().expect("Invalid WebSocket URL");
 
-    // Extract host and port from WebSocket URL
+    // Extract IP address and port from WebSocket URL
+    // NOTE: renet2 requires IP addresses in URLs, not domain names
     let host = url.host_str().expect("WebSocket URL missing host");
+    let ip: std::net::IpAddr = host.parse().expect("WebSocket URL must contain an IP address, not a domain name");
     let port = url.port().unwrap_or(5003); // Default WebSocket port
-
-    // For WebSocket connections, we need a valid SocketAddr
-    // The actual connection uses the WebSocket URL, so this is mainly for netcode metadata
-    let ws_server_addr: std::net::SocketAddr = if let Ok(ip) = host.parse::<std::net::IpAddr>() {
-        // Host is already an IP address
-        std::net::SocketAddr::new(ip, port)
-    } else if host == "localhost" {
-        // localhost -> 127.0.0.1
-        std::net::SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::new(127, 0, 0, 1)), port)
-    } else if host == "ws.eryndor-online.com" {
-        // Production server - use actual IP (ws.eryndor-online.com resolves to this)
-        // This IP is public and discoverable via DNS, so it's safe to hardcode
-        info!("Using production server IP 165.227.217.144 for hostname '{}'", host);
-        std::net::SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::new(165, 227, 217, 144)), port)
-    } else {
-        // Unknown hostname - use dummy IP as fallback
-        info!("Using dummy IP 1.1.1.1 for unknown hostname '{}' (WebSocket uses URL directly)", host);
-        std::net::SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::new(1, 1, 1, 1)), port)
-    };
+    let ws_server_addr = std::net::SocketAddr::new(ip, port);
 
     let ws_config = WebSocketClientConfig {
         server_url: ws_url.parse().expect("Invalid WebSocket URL"),
