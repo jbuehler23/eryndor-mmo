@@ -313,8 +313,8 @@ pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>
             let transport = NetcodeClientTransport::new(current_time, authentication, wt_client)
                 .map_err(|e| format!("Failed to create transport: {}", e))?;
 
-            // Create RenetClient (WebTransport is reliable like TCP)
-            let client = RenetClient::new(connection_config, true);
+            // Create RenetClient (use false to match channel config across all transports)
+            let client = RenetClient::new(connection_config, false);
 
             Ok((client, transport))
         }.await {
