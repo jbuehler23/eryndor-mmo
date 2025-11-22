@@ -3260,6 +3260,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "fragile"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "28dd6caf6059519a65843af8fe2a3ae298b14b80179855aeb4adc2c1934ee619"
+
+[[package]]
 name = "fs_extra"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6217,9 +6223,8 @@ dependencies = [
  "bevy_ecs",
  "bytes",
  "crossbeam",
+ "fragile",
  "futures",
- "futures-channel",
- "futures-util",
  "hmac-sha256",
  "http",
  "js-sys",
@@ -6231,7 +6236,7 @@ dependencies = [
  "renetcode2",
  "rustls",
  "rustls-pki-types",
- "serde_json",
+ "send_wrapper",
  "time",
  "tokio",
  "tokio-tungstenite",
@@ -6623,6 +6628,9 @@ name = "send_wrapper"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd0b0ec5f1c1ca621c432a25813d8d60c88abe6d3e08a3eb9cf37d97a0fe3d73"
+dependencies = [
+ "futures-core",
+]
 
 [[package]]
 name = "serde"

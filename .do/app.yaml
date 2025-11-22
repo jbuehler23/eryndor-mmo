@@ -33,10 +33,11 @@ static_sites:
     output_dir: target/bevy_web/web-release/client
 
     envs:
-      - key: SERVER_WS_URL
-        # NOTE: renet2's WebSocket implementation requires IP addresses, not domain names
-        # ws.eryndor-online.com resolves to 165.227.217.144
-        value: wss://165.227.217.144/ws
+      - key: SERVER_IP
+        # WebTransport server IP (uses self-signed cert on port 5002)
+        # Certificate hash is fetched from http://165.227.217.144:8080/cert
+        # Ports default to 5002 (WebTransport) and 8080 (cert server)
+        value: 165.227.217.144
 
     routes:
       - path: /

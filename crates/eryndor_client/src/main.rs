@@ -369,6 +369,8 @@ fn start_app() {
             ui::check_oauth_callback.run_if(in_state(GameState::Login)),
             // Chat message receiver
             ui::receive_chat_messages.run_if(in_state(GameState::InGame)),
+            // WebTransport connection polling (WASM only)
+            game_state::poll_webtransport_connection,
             // Connection monitoring
             game_state::monitor_connection,
             // Player entity detection

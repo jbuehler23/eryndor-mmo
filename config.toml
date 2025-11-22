@@ -7,7 +7,7 @@ max_players = 100
 
 [admin]
 dashboard_enabled = true
-dashboard_port = 8080
+dashboard_port = 8081  # Changed from 8080 to avoid conflict with WebTransport cert server
 # IMPORTANT: Generate a secure JWT secret with: openssl rand -base64 32
 jwt_secret = "REPLACE-WITH-SECURE-SECRET"
 jwt_expiry_hours = 24

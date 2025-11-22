@@ -190,95 +190,178 @@ pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>
     info!("Connected to server at {} (UDP)", server_addr);
 }
 
+// Resource to hold pending WebTransport connection from async task
 #[cfg(target_family = "wasm")]
-pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>, time: Res<Time>) {
-    info!("Connecting to server...");
+#[derive(Resource)]
+pub struct PendingWebTransportConnection {
+    receiver: std::sync::Arc<std::sync::Mutex<Option<(RenetClient, bevy_replicon_renet2::netcode::NetcodeClientTransport)>>>,
+}
+
+#[cfg(target_family = "wasm")]
+pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>, _time: Res<Time>) {
+    // WASM Client: Uses WebTransport (HTTP/3 + QUIC)
+    // - Production: Connects to SERVER_IP (from .do/app.yaml) via port 5002
+    // - Local dev: Defaults to 127.0.0.1:5002
+    // - Test local against prod: SERVER_IP=165.227.217.144 bevy run web
+    //
+    // Certificate hash is fetched from http://SERVER_IP:8080/cert
+    // Server uses self-signed cert, hash validates the connection
+
+    info!("Connecting to server via WebTransport...");
+
+    // Environment-based configuration - allows testing local client against prod server
+    // Local dev: defaults to 127.0.0.1
+    // Test against prod: SERVER_IP=165.227.217.144 bevy run web
+    // Production build: .do/app.yaml sets SERVER_IP
+    let server_ip = option_env!("SERVER_IP").unwrap_or("127.0.0.1");
+    let wt_port: u16 = option_env!("SERVER_PORT_WT")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(5002);
+    let cert_port: u16 = option_env!("SERVER_CERT_PORT")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(8080);
+
+    info!("Server IP: {}, WebTransport port: {}, Cert port: {}", server_ip, wt_port, cert_port);
 
     let connection_config = ConnectionConfig::from_channels(
         channels.server_configs(),
         channels.client_configs(),
     );
 
-    use bevy_renet2::netcode::{ClientAuthentication, NetcodeClientTransport};
+    // Get current time for netcode
     use std::time::Duration;
-
-    // Use js_sys::Date::now() to get Unix timestamp in WASM
-    // (SystemTime is not available in WASM)
-    let timestamp_ms = js_sys::Date::now() as u64; // Milliseconds since Unix epoch
-
+    let timestamp_ms = js_sys::Date::now() as u64;
     let current_time = Duration::from_millis(timestamp_ms);
 
-    // Generate unique client ID from timestamp + random bytes to avoid collisions
-    // Mix timestamp (upper 48 bits) with random data (lower 16 bits)
+    // Generate unique client ID
     let mut random_bytes = [0u8; 2];
     getrandom::getrandom(&mut random_bytes).expect("Failed to generate random bytes");
     let random_component = u16::from_le_bytes(random_bytes) as u64;
     let client_id = (timestamp_ms << 16) | random_component;
 
-    info!("Generated client_id: {} (timestamp: {}, random: {})", client_id, timestamp_ms, random_component);
+    info!("Generated client_id: {}", client_id);
 
-    // Use WebSocket for now (WebTransport requires complex server setup with certificates)
-    // TODO: Add WebTransport support once server is properly configured
-    use bevy_renet2::netcode::{WebSocketClient, WebSocketClientConfig};
+    // Fetch certificate hash and connect - this must be async
+    let cert_url = format!("http://{}:{}/cert", server_ip, cert_port);
+    let server_url_str = format!("https://{}:{}", server_ip, wt_port);
 
-    // Use compile-time environment variable for production, development default otherwise
-    // For production builds: SERVER_WS_URL="wss://165.227.217.144/ws" cargo build --target wasm32-unknown-unknown --release
-    // NOTE: renet2's WebSocket implementation requires IP addresses in the URL, not domain names
-    let ws_url = option_env!("SERVER_WS_URL")
-        .unwrap_or("ws://127.0.0.1:5003");
+    info!("Fetching WebTransport certificate hash from {}", cert_url);
 
-    info!("Connecting via WebSocket to {}", ws_url);
+    // Create channel to receive connection from async task
+    let connection_receiver = std::sync::Arc::new(std::sync::Mutex::new(None));
+    let connection_sender = connection_receiver.clone();
 
-    // Parse the URL to extract IP and port
-    let url: url::Url = ws_url.parse().expect("Invalid WebSocket URL");
+    // Insert resource for polling system
+    commands.insert_resource(PendingWebTransportConnection {
+        receiver: connection_receiver,
+    });
 
-    // Extract IP address and port from WebSocket URL
-    // NOTE: renet2 requires IP addresses in URLs, not domain names
-    let host = url.host_str().expect("WebSocket URL missing host");
-    let ip: std::net::IpAddr = host.parse().expect("WebSocket URL must contain an IP address, not a domain name");
-    let port = url.port().unwrap_or(5003); // Default WebSocket port
-    let ws_server_addr = std::net::SocketAddr::new(ip, port);
+    // Spawn async task to fetch cert and connect
+    use wasm_bindgen_futures::spawn_local;
 
-    let ws_config = WebSocketClientConfig {
-        server_url: ws_url.parse().expect("Invalid WebSocket URL"),
-    };
+    spawn_local(async move {
+        use bevy_renet2::prelude::RenetClient;
+        use bevy_renet2::netcode::{NetcodeClientTransport, ClientAuthentication, WebTransportClient, WebTransportClientConfig, ServerCertHash, WebServerDestination, CongestionControl};
 
-    let ws_client = WebSocketClient::new(ws_config)
-        .expect("Failed to create WebSocket client");
+        match async {
+            // Fetch certificate hash
+            let response = reqwest::get(&cert_url).await
+                .map_err(|e| format!("Failed to fetch cert: {}", e))?;
+            let cert_hash_bytes: Vec<u8> = response.json().await
+                .map_err(|e| format!("Failed to parse cert hash: {}", e))?;
 
-    let authentication = ClientAuthentication::Unsecure {
-        client_id,
-        protocol_id: 0,
-        socket_id: 2,  // Socket 2 = WebSocket
-        server_addr: ws_server_addr,
-        user_data: None,
-    };
+            if cert_hash_bytes.len() != 32 {
+                return Err(format!("Invalid cert hash length: {} (expected 32)", cert_hash_bytes.len()));
+            }
 
-    let transport = NetcodeClientTransport::new(current_time, authentication, ws_client)
-        .expect("Failed to create WebSocket transport");
+            let mut hash_array = [0u8; 32];
+            hash_array.copy_from_slice(&cert_hash_bytes);
+            let cert_hash = ServerCertHash { hash: hash_array };
 
-    // Create RenetClient (WebSocket is reliable)
-    let client = RenetClient::new(connection_config, true);
+            info!("Received certificate hash, connecting to {}", server_url_str);
 
-    commands.insert_resource(client);
-    commands.insert_resource(transport);
+            // Build WebTransport URL
+            let server_url: url::Url = server_url_str.parse()
+                .map_err(|e| format!("Invalid server URL: {}", e))?;
 
-    info!("Connected to server via WebSocket (client_id: {})", client_id);
+            // Create WebServerDestination
+            let server_dest = WebServerDestination::Url(server_url);
+
+            // Create WebTransport configuration
+            let wt_config = WebTransportClientConfig {
+                server_dest: server_dest.clone(),
+                congestion_control: CongestionControl::default(),
+                server_cert_hashes: vec![cert_hash],
+            };
+
+            // Create WebTransport client (synchronous, no .await)
+            let wt_client = WebTransportClient::new(wt_config);
+
+            // Server address for netcode authentication
+            let server_addr: std::net::SocketAddr = format!("{}:{}", server_ip, wt_port).parse()
+                .map_err(|e| format!("Invalid server address: {}", e))?;
+
+            let authentication = ClientAuthentication::Unsecure {
+                client_id,
+                protocol_id: 0,
+                socket_id: 1,  // Socket 1 = WebTransport
+                server_addr,
+                user_data: None,
+            };
+
+            let transport = NetcodeClientTransport::new(current_time, authentication, wt_client)
+                .map_err(|e| format!("Failed to create transport: {}", e))?;
+
+            // Create RenetClient (WebTransport is reliable like TCP)
+            let client = RenetClient::new(connection_config, true);
+
+            Ok((client, transport))
+        }.await {
+            Ok((client, transport)) => {
+                info!("Successfully connected to WebTransport server (client_id: {})", client_id);
+                // Send the connection resources to the polling system
+                if let Ok(mut guard) = connection_sender.lock() {
+                    *guard = Some((client, transport));
+                    info!("WebTransport connection ready for insertion into Bevy ECS");
+                } else {
+                    error!("Failed to lock connection sender mutex");
+                }
+            }
+            Err(e) => {
+                error!("Failed to connect via WebTransport: {}", e);
+            }
+        }
+    });
+
+    info!("WebTransport connection initiated...");
 }
 
-// Explicit system to update WebSocket transport for WASM
+// System to poll for completed WebTransport connection and insert resources
 #[cfg(target_family = "wasm")]
-pub fn update_websocket_transport(
-    mut transport: ResMut<bevy_renet2::netcode::NetcodeClientTransport>,
-    mut client: ResMut<RenetClient>,
-    time: Res<Time>,
+pub fn poll_webtransport_connection(
+    mut commands: Commands,
+    pending: Option<Res<PendingWebTransportConnection>>,
+    existing_client: Option<Res<RenetClient>>,
 ) {
-    use std::time::Duration;
-    let delta = Duration::from_secs_f64(time.delta_secs_f64());
-    if let Err(e) = transport.update(delta, &mut client) {
-        error!("Transport update error: {}", e);
+    // Only poll if we have a pending connection and no existing client
+    if existing_client.is_some() {
+        return;
+    }
+
+    if let Some(pending) = pending {
+        if let Ok(mut guard) = pending.receiver.lock() {
+            if let Some((client, transport)) = guard.take() {
+                info!("Inserting WebTransport client and transport into Bevy ECS");
+                commands.insert_resource(client);
+                commands.insert_resource(transport);
+                commands.remove_resource::<PendingWebTransportConnection>();
+            }
+        }
     }
 }
+
+// WebTransport doesn't need explicit update calls like WebSocket did
+// The transport handles its own async operations
 
 pub fn monitor_connection(
     client: Option<Res<RenetClient>>,

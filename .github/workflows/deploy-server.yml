@@ -85,9 +85,15 @@ jobs:
               --name eryndor-server \
               --restart unless-stopped \
               -p 5001:5001/udp \
+              -p 5002:5002 \
               -p 5003:5003 \
+              -p 8080:8080 \
               -v /var/lib/eryndor:/data \
               -e SERVER_ADDR=0.0.0.0 \
+              -e SERVER_PORT=5001 \
+              -e SERVER_PORT_WEBTRANSPORT=5002 \
+              -e SERVER_PORT_WEBSOCKET=5003 \
+              -e SERVER_CERT_PORT=8080 \
               -e DATABASE_PATH=/data/eryndor.db \
               -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
               -e GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
