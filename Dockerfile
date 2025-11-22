@@ -92,8 +92,10 @@ ENV DATABASE_PATH=/data/eryndor.db
 ENV RUST_LOG=info
 
 # Expose ports
-EXPOSE 5001/udp
-EXPOSE 5003
+EXPOSE 5001/udp    # Native UDP clients
+EXPOSE 5002/udp    # WebTransport (QUIC)
+EXPOSE 5003        # WebSocket
+EXPOSE 8080        # Certificate server
 
 # Run the server
 CMD ["./server"]

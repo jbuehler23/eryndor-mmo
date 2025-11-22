@@ -298,8 +298,9 @@ pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>
             let wt_client = WebTransportClient::new(wt_config);
 
             // Server address for netcode authentication
-            let server_addr: std::net::SocketAddr = format!("{}:{}", server_ip, wt_port).parse()
-                .map_err(|e| format!("Invalid server address: {}", e))?;
+            // IMPORTANT: Must use the same WebServerDestination to ensure SocketAddr matches
+            // what WebTransportClient stores internally (hash of URL, not literal IP:PORT)
+            let server_addr: std::net::SocketAddr = server_dest.clone().into();
 
             let authentication = ClientAuthentication::Unsecure {
                 client_id,
