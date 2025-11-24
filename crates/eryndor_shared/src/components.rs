@@ -502,7 +502,7 @@ pub struct AiActivationDelay {
 impl Default for AiActivationDelay {
     fn default() -> Self {
         Self {
-            timer: Timer::from_seconds(0.2, TimerMode::Once), // 200ms delay (3-4 frames at 60Hz)
+            timer: Timer::from_seconds(0.5, TimerMode::Once), // 500ms delay ensures entity replication completes
         }
     }
 }

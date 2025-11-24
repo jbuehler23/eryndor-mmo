@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use std::collections::HashMap;
 use eryndor_shared::*;
+use serde::{Serialize, Deserialize};
 
 // ============================================================================
 // ITEM DEFINITIONS
@@ -268,6 +269,7 @@ impl Default for ItemDatabase {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ItemDefinition {
     pub id: u32,
     pub name: String,
@@ -277,7 +279,7 @@ pub struct ItemDefinition {
 }
 
 /// Stat bonuses provided by an item when equipped
-#[derive(Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct ItemStatBonuses {
     pub attack_power: f32,
     pub defense: f32,
@@ -333,6 +335,7 @@ impl ItemDatabase {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy)]
 pub enum ItemType {
     Weapon,
     Helmet,
@@ -365,20 +368,27 @@ impl Default for QuestDatabase {
                 npc_id: 1, // Elder
             }],
             reward_exp: 100,
+            proficiency_requirements: vec![], // No requirements for starter quest
+            reward_abilities: vec![], // Weapon grants starter ability
         });
 
         Self { quests }
     }
 }
 
+#[derive(Serialize, Deserialize, Clone)]
 pub struct QuestDefinition {
     pub id: u32,
     pub name: String,
     pub description: String,
     pub objectives: Vec<QuestObjective>,
     pub reward_exp: u32,
+    pub proficiency_requirements: Vec<(crate::weapon::WeaponType, u32)>,
+    pub reward_abilities: Vec<u32>,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(tag = "type")]
 pub enum QuestObjective {
     ObtainItem { item_id: u32, count: u32 },
     KillEnemy { enemy_type: u32, count: u32 },
@@ -462,6 +472,7 @@ impl Default for EnemyDatabase {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone)]
 pub struct EnemyDefinition {
     pub id: u32,
     pub name: String,
@@ -469,6 +480,76 @@ pub struct EnemyDefinition {
     pub attack_power: f32,
     pub defense: f32,
     pub move_speed: f32,
+}
+
+// ============================================================================
+// ZONE & SPAWN DEFINITIONS
+// ============================================================================
+
+#[derive(Resource, Default)]
+pub struct ZoneDatabase {
+    pub zones: HashMap<String, ZoneDefinition>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ZoneDefinition {
+    pub zone_id: String,
+    pub zone_name: String,
+    pub enemy_spawns: Vec<EnemySpawnRegion>,
+    pub npc_spawns: Vec<NpcSpawnDef>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct EnemySpawnRegion {
+    pub region_id: String,
+    pub enemy_type: u32,
+    pub spawn_points: Vec<Vec2Data>,
+    pub respawn_delay: f32,
+    pub loot_table: LootTable,
+    pub visual: VisualData,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct NpcSpawnDef {
+    pub npc_id: u32,
+    pub name: String,
+    pub npc_type: String,  // "QuestGiver" or "Trainer"
+    pub position: Vec2Data,
+    pub quests: Vec<u32>,
+    pub trainer_items: Vec<TrainerItem>,
+    pub visual: VisualData,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy)]
+pub struct Vec2Data {
+    pub x: f32,
+    pub y: f32,
+}
+
+impl From<Vec2Data> for Vec2 {
+    fn from(v: Vec2Data) -> Self {
+        Vec2::new(v.x, v.y)
+    }
+}
+
+#[derive(Component, Serialize, Deserialize, Clone)]
+pub struct LootTable {
+    pub gold_min: u32,
+    pub gold_max: u32,
+    pub items: Vec<u32>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct VisualData {
+    pub shape: String,  // "Circle", "Rectangle", etc.
+    pub color: [f32; 4],  // RGBA
+    pub size: f32,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct TrainerItem {
+    pub item_id: u32,
+    pub cost: u32,
 }
 
 // ============================================================================

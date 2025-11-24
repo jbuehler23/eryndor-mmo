@@ -383,7 +383,6 @@ pub fn monitor_connection(
             } else if client.is_disconnected() {
                 warn!("Client is disconnected");
             }
-            // Note: Removed "Client is connected!" log spam
         }
     } else {
         // This would indicate the RenetClient resource was never created

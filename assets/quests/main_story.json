@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "name": "Choose Your Path",
+    "description": "Return to me when you're ready to receive your class weapon and begin your training. As a member of your class, you will wield the weapon that best suits your abilities.",
+    "objectives": [
+      {
+        "type": "TalkToNpc",
+        "npc_id": 1
+      }
+    ],
+    "reward_exp": 100,
+    "proficiency_requirements": [],
+    "reward_abilities": []
+  }
+]

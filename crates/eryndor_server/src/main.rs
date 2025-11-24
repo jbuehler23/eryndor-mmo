@@ -15,6 +15,7 @@
 mod abilities;
 mod admin;
 mod admin_cli;
+mod assets;
 mod audit;
 mod auth;
 mod character;
@@ -124,6 +125,11 @@ fn main() {
             MinimalPlugins,
             bevy::log::LogPlugin::default(),
             bevy::state::app::StatesPlugin,
+            bevy::asset::AssetPlugin {
+                file_path: "../../assets".to_string(),  // Use workspace root assets folder
+                watch_for_changes_override: Some(true),  // Enable automatic hot-reload
+                ..Default::default()
+            },
             RepliconPlugins,
         ))
         .add_plugins(RepliconRenetPlugins)
@@ -132,6 +138,8 @@ fn main() {
         .add_plugins(PhysicsPlugins::default().with_length_unit(1.0))
         .insert_resource(Gravity(Vec2::ZERO))  // Top-down game, no gravity
         .insert_resource(Time::<Fixed>::from_hz(60.0))  // 60 Hz physics tick rate
+        // Asset loading system for JSON content
+        .add_plugins(assets::GameAssetsPlugin)
         // Configuration
         .insert_resource(RateLimiters::from_config(&config))
         .insert_resource(config)
@@ -175,6 +183,7 @@ fn main() {
         .replicate::<NpcName>()
         .replicate::<Enemy>()
         .replicate::<EnemyType>()
+        .replicate::<EnemyName>()
         .replicate::<AiState>()
         .replicate::<WorldItem>()
         .replicate::<GoldDrop>()
@@ -220,9 +229,9 @@ fn main() {
         .add_server_event::<CharacterListResponse>(Channel::Ordered)
         .add_server_event::<CreateCharacterResponse>(Channel::Ordered)
         .add_server_event::<SelectCharacterResponse>(Channel::Ordered)
-        .add_mapped_server_event::<CombatEvent>(Channel::Ordered)
+        .add_server_event::<CombatEvent>(Channel::Ordered)
         .add_server_event::<QuestUpdateEvent>(Channel::Ordered)
-        .add_mapped_server_event::<DeathEvent>(Channel::Ordered)
+        .add_server_event::<DeathEvent>(Channel::Ordered)
         .add_server_event::<NotificationEvent>(Channel::Ordered)
         .add_server_event::<QuestDialogueEvent>(Channel::Ordered)
         .add_server_event::<TrainerDialogueEvent>(Channel::Ordered)
@@ -273,6 +282,8 @@ fn main() {
             world::spawn_world,
         ))
         .add_systems(Update, (
+            // Network keep-alive to prevent QUIC idle timeout
+            send_keepalive_packets,
             // Connection tracking (must run first to capture IPs)
             auth::track_client_connections,
             // Auth systems
@@ -313,6 +324,25 @@ fn sync_physics_to_position(
     }
 }
 
+/// Send periodic keep-alive packets to prevent QUIC idle timeout
+/// This prevents browser tab throttling from causing disconnections
+fn send_keepalive_packets(
+    time: Res<Time>,
+    mut server: ResMut<bevy_renet2::prelude::RenetServer>,
+    mut last_keepalive: Local<f32>,
+) {
+    *last_keepalive += time.delta_secs();
+
+    if *last_keepalive >= 10.0 {
+        // Send minimal unreliable packet to each connected client
+        for client_id in server.clients_id() {
+            // Channel 0 = Unreliable, single byte payload
+            server.send_message(client_id, 0, vec![0u8]);
+        }
+        *last_keepalive = 0.0;
+    }
+}
+
 fn setup_server(mut commands: Commands, channels: Res<RepliconChannels>) {
     info!("Starting Eryndor MMO Server with multi-transport support...");
 
@@ -324,7 +354,7 @@ fn setup_server(mut commands: Commands, channels: Res<RepliconChannels>) {
     };
     use bevy_replicon_renet2::RenetChannelsExt;
     use std::net::UdpSocket;
-    use std::time::SystemTime;
+    use std::time::{SystemTime, Duration};
 
     let connection_config = ConnectionConfig::from_channels(
         channels.server_configs(),

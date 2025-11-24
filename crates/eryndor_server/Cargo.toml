@@ -8,7 +8,7 @@ name = "server"
 path = "src/main.rs"
 
 [dependencies]
-bevy = { workspace = true, features = ["bevy_core_pipeline", "bevy_render"] }
+bevy = { workspace = true, features = ["bevy_asset", "file_watcher"] }
 bevy_replicon = { workspace = true }
 bevy_renet2 = { version = "0.11", default-features = false, features = ["native_transport", "wt_server_transport", "ws_server_transport"] }
 bevy_replicon_renet2 = { version = "0.11", default-features = false, features = ["server", "native_transport", "wt_server_transport", "ws_server_transport"] }
@@ -31,8 +31,8 @@ rand = "0.8"
 toml = "0.8"
 dotenvy = "0.15"
 
-# OAuth verification
-reqwest = { version = "0.12", features = ["json"] }
+# OAuth verification (using native-tls to avoid aws-lc-sys build issues on Windows)
+reqwest = { version = "0.12", default-features = false, features = ["json", "native-tls"] }
 
 # Content moderation
 rustrict = "0.7"

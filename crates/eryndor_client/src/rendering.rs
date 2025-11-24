@@ -376,17 +376,10 @@ pub fn draw_target_indicator(
 pub fn spawn_damage_numbers(
     trigger: On<CombatEvent>,
     mut commands: Commands,
-    position_query: Query<&Position>,
 ) {
     let event = trigger.event();
-    info!("CombatEvent received! Attacker: {:?}, Target: {:?}, Damage: {:.1}, Crit: {}",
-        event.attacker, event.target, event.damage, event.is_crit);
-
-    // Get target position to spawn damage number
-    let Ok(target_pos) = position_query.get(event.target) else {
-        warn!("Could not find position for target entity {:?}", event.target);
-        return;
-    };
+    info!("CombatEvent received! Target position: {:?}, Damage: {:.1}, Crit: {}",
+        event.target_position, event.damage, event.is_crit);
 
     // Calculate font size based on damage (bigger for more damage)
     let base_size = 20.0;
@@ -407,10 +400,10 @@ pub fn spawn_damage_numbers(
         format!("{:.0}", event.damage)
     };
 
-    // Spawn damage number slightly above target
+    // Spawn damage number slightly above target (using position from event to avoid entity mapping issues)
     let spawn_pos = Vec3::new(
-        target_pos.0.x,
-        target_pos.0.y + 20.0, // Offset upward from entity
+        event.target_position.x,
+        event.target_position.y + 20.0, // Offset upward from entity
         10.0, // Higher z-index to appear on top
     );
 

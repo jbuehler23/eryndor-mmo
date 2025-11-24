@@ -16,6 +16,16 @@ A proof-of-concept 2D MMO built with Bevy and bevy_replicon featuring server-aut
   - **Mage** - Fireball (ranged magical damage)
   - **Knight** - Heavy Slash (slow but powerful strikes)
 
+## Data Architecture
+
+Game content is defined in JSON files for easy modification without recompilation:
+- `assets/items/` - Weapon definitions and stats
+- `assets/enemies/` - Enemy type definitions
+- `assets/quests/` - Quest definitions and objectives
+- `assets/zones/` - Zone layouts with enemy/NPC spawn positions
+
+Hot-reload is enabled via the `file_watcher` feature - edit JSON files and the server reloads automatically (dev mode).
+
 ## Project Structure
 
 ```

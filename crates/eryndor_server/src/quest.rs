@@ -8,7 +8,7 @@ pub fn handle_interact_npc(
     trigger: On<FromClient<InteractNpcRequest>>,
     mut commands: Commands,
     clients: Query<&ActiveCharacterEntity>,
-    players: Query<(&Position, &QuestLog)>,
+    players: Query<(&Position, &QuestLog, &WeaponProficiency)>,
     npcs: Query<(Entity, &Position, Option<&QuestGiver>, Option<&Trainer>, &NpcName), With<Npc>>,
     quest_db: Res<QuestDatabase>,
 ) {
@@ -33,7 +33,7 @@ pub fn handle_interact_npc(
     info!("Client sent NPC entity: {:?} (this is a client-side replicated entity)", request.npc_entity);
 
     // Get player position first
-    let Ok((player_pos, quest_log)) = players.get(char_entity) else {
+    let Ok((player_pos, quest_log, weapon_prof)) = players.get(char_entity) else {
         info!("Failed to get player data for character {:?}", char_entity);
         return;
     };
@@ -107,8 +107,24 @@ pub fn handle_interact_npc(
     for quest_id in &quest_giver.available_quests {
         info!("Checking quest {} - can_accept: {}", quest_id, quest_log.can_accept_quest(*quest_id));
         if quest_log.can_accept_quest(*quest_id) {
-            has_available_quest = true;
             if let Some(quest_def) = quest_db.quests.get(quest_id) {
+                // Check proficiency requirements
+                let mut meets_prof_requirements = true;
+                for (weapon_type, required_level) in &quest_def.proficiency_requirements {
+                    let current_level = crate::weapon::get_proficiency_level(weapon_prof, weapon_type);
+                    if current_level < *required_level {
+                        meets_prof_requirements = false;
+                        info!("Player doesn't meet proficiency requirement for quest {}: {:?} level {} (has {})",
+                            quest_id, weapon_type, required_level, current_level);
+                        break;
+                    }
+                }
+
+                if !meets_prof_requirements {
+                    continue; // Skip this quest
+                }
+
+                has_available_quest = true;
                 // Format objectives text
                 let objectives_vec: Vec<String> = quest_def.objectives.iter().enumerate()
                     .map(|(i, obj)| match obj {
@@ -160,7 +176,7 @@ pub fn handle_accept_quest(
     trigger: On<FromClient<AcceptQuestRequest>>,
     mut commands: Commands,
     clients: Query<&ActiveCharacterEntity>,
-    mut players: Query<&mut QuestLog>,
+    mut players: Query<(&mut QuestLog, &WeaponProficiency)>,
     quest_db: Res<QuestDatabase>,
 ) {
     let Some(client_entity) = trigger.client_id.entity() else { return };
@@ -175,8 +191,8 @@ pub fn handle_accept_quest(
         return;
     };
 
-    // Get player quest log
-    let Ok(mut quest_log) = players.get_mut(char_entity) else { return };
+    // Get player quest log and proficiency
+    let Ok((mut quest_log, weapon_prof)) = players.get_mut(char_entity) else { return };
 
     // Check if can accept quest
     if !quest_log.can_accept_quest(request.quest_id) {
@@ -188,6 +204,21 @@ pub fn handle_accept_quest(
             },
         });
         return;
+    }
+
+    // Check proficiency requirements
+    for (weapon_type, required_level) in &quest_def.proficiency_requirements {
+        let current_level = crate::weapon::get_proficiency_level(weapon_prof, weapon_type);
+        if current_level < *required_level {
+            commands.server_trigger(ToClients {
+                mode: SendMode::Direct(ClientId::Client(client_entity)),
+                message: NotificationEvent {
+                    message: format!("You need {:?} proficiency level {} to accept this quest!", weapon_type, required_level),
+                    notification_type: NotificationType::Warning,
+                },
+            });
+            return;
+        }
     }
 
     // Add quest to active quests
@@ -219,8 +250,9 @@ pub fn handle_complete_quest(
     trigger: On<FromClient<CompleteQuestRequest>>,
     mut commands: Commands,
     clients: Query<&ActiveCharacterEntity>,
-    mut players: Query<(&mut QuestLog, &Character, &Position, &mut Inventory)>,
+    mut players: Query<(&mut QuestLog, &Character, &Position, &mut Inventory, &mut LearnedAbilities)>,
     quest_db: Res<QuestDatabase>,
+    ability_db: Res<crate::abilities::AbilityDatabase>,
 ) {
     let Some(client_entity) = trigger.client_id.entity() else { return };
     let request = trigger.event();
@@ -235,7 +267,7 @@ pub fn handle_complete_quest(
     };
 
     // Get player data
-    let Ok((mut quest_log, character, position, mut inventory)) = players.get_mut(char_entity) else { return };
+    let Ok((mut quest_log, character, position, mut inventory, mut learned_abilities)) = players.get_mut(char_entity) else { return };
 
     // Find active quest
     let quest_index = quest_log.active_quests.iter().position(|q| q.quest_id == request.quest_id);
@@ -300,6 +332,27 @@ pub fn handle_complete_quest(
                 mode: SendMode::Direct(ClientId::Client(client_entity)),
                 message: NotificationEvent {
                     message: format!("Received: {}!", weapon_name),
+                    notification_type: NotificationType::Success,
+                },
+            });
+        }
+    }
+
+    // Grant ability rewards
+    for ability_id in &quest_def.reward_abilities {
+        if !learned_abilities.abilities.contains(ability_id) {
+            learned_abilities.abilities.insert(*ability_id);
+            info!("Player learned ability {} from quest {}", ability_id, quest_def.name);
+
+            let ability_name = ability_db
+                .get(*ability_id)
+                .map(|def| def.name.clone())
+                .unwrap_or_else(|| format!("Ability {}", ability_id));
+
+            commands.server_trigger(ToClients {
+                mode: SendMode::Direct(ClientId::Client(client_entity)),
+                message: NotificationEvent {
+                    message: format!("New ability unlocked: {}!", ability_name),
                     notification_type: NotificationType::Success,
                 },
             });

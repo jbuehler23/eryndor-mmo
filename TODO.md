@@ -213,6 +213,40 @@ Current UI issues:
 - ✅ Database persistence on character disconnect
 - ✅ Camera following player
 - ✅ Prevent duplicate account logins
+- ✅ JSON data-driven content system (items, enemies, quests, zones)
+- ✅ Zone-based spawn system with hot-reload support
+- ✅ AssetServer integration with headless server architecture
+
+---
+
+## Data Architecture
+
+### JSON Content System
+
+All game content is now externalized to JSON files for easy modification without recompilation:
+
+- **`assets/items/weapons.json`** - Weapon definitions with stats, proficiency requirements, abilities
+- **`assets/enemies/enemy_types.json`** - Enemy definitions with health, damage, AI behavior
+- **`assets/quests/main_story.json`** - Quest definitions with objectives, rewards, unlock requirements
+- **`assets/zones/starter_zone.zone.json`** - Zone layouts with enemy/NPC spawn positions
+
+**Benefits:**
+- Edit content without recompiling (instant iteration)
+- Hot-reload enabled via `file_watcher` feature in dev mode
+- Easy for designers to add/modify content
+- Version control friendly (track content changes separately)
+
+**Zone System:**
+- Zones define spawn regions with multiple spawn points
+- Each region has enemy type, loot tables, visual data
+- NPCs defined with positions, quests, shop inventories
+- Supports multiple zones for future expansion
+
+**Future Plans:**
+- Add more zones (forest, desert, dungeon, etc.)
+- Zone transition system
+- Zone-specific loot tables
+- Zone difficulty scaling
 
 ---
 

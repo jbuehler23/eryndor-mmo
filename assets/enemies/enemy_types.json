@@ -1,0 +1,50 @@
+[
+  {
+    "id": 1,
+    "name": "Slime",
+    "max_health": 50.0,
+    "attack_power": 5.0,
+    "defense": 2.0,
+    "move_speed": 80.0
+  },
+  {
+    "id": 2,
+    "name": "Goblin",
+    "max_health": 80.0,
+    "attack_power": 8.0,
+    "defense": 3.0,
+    "move_speed": 90.0
+  },
+  {
+    "id": 3,
+    "name": "Wolf",
+    "max_health": 100.0,
+    "attack_power": 12.0,
+    "defense": 4.0,
+    "move_speed": 120.0
+  },
+  {
+    "id": 4,
+    "name": "Skeleton",
+    "max_health": 121.0,
+    "attack_power": 15.0,
+    "defense": 5.0,
+    "move_speed": 85.0
+  },
+  {
+    "id": 5,
+    "name": "Orc",
+    "max_health": 150.0,
+    "attack_power": 18.0,
+    "defense": 6.0,
+    "move_speed": 75.0
+  },
+  {
+    "id": 6,
+    "name": "Spider",
+    "max_health": 90.0,
+    "attack_power": 10.0,
+    "defense": 3.0,
+    "move_speed": 110.0
+  }
+]

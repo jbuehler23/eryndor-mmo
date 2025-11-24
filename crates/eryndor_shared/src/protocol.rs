@@ -266,20 +266,14 @@ pub struct SelectCharacterResponse {
 }
 
 /// Combat event for visual feedback
+/// Uses positions instead of entity mapping to avoid replication race conditions
 #[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
 pub struct CombatEvent {
-    pub attacker: Entity,
-    pub target: Entity,
+    pub attacker_position: Vec2,
+    pub target_position: Vec2,
     pub damage: f32,
     pub ability_id: u32,
     pub is_crit: bool,
-}
-
-impl MapEntities for CombatEvent {
-    fn map_entities<M: bevy::ecs::entity::EntityMapper>(&mut self, entity_mapper: &mut M) {
-        self.attacker = entity_mapper.get_mapped(self.attacker);
-        self.target = entity_mapper.get_mapped(self.target);
-    }
 }
 
 /// Quest update notification
@@ -290,15 +284,11 @@ pub struct QuestUpdateEvent {
 }
 
 /// Entity death event
+/// Uses position instead of entity mapping to avoid replication race conditions
 #[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
 pub struct DeathEvent {
-    pub entity: Entity,
-}
-
-impl MapEntities for DeathEvent {
-    fn map_entities<M: bevy::ecs::entity::EntityMapper>(&mut self, entity_mapper: &mut M) {
-        self.entity = entity_mapper.get_mapped(self.entity);
-    }
+    pub entity: Entity,  // Keep for server-side observers
+    pub position: Vec2,  // Position for client VFX
 }
 
 /// Chat message

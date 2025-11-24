@@ -3,11 +3,153 @@ use bevy_replicon::prelude::*;
 use eryndor_shared::*;
 use avian2d::prelude::{RigidBody, Collider, CollisionLayers};
 use crate::{PhysicsPosition, PhysicsVelocity};
-use crate::game_data::EnemyDatabase;
+use crate::game_data::{EnemyDatabase, ZoneDatabase};
+use crate::spawn::SpawnPoint;
 
-pub fn spawn_world(mut commands: Commands, enemy_db: Res<EnemyDatabase>) {
+pub fn spawn_world(
+    mut commands: Commands,
+    enemy_db: Res<EnemyDatabase>,
+    zone_db: Res<ZoneDatabase>,
+) {
     info!("Spawning world entities...");
 
+    // Try to spawn from zone data first
+    if let Some(zone) = zone_db.zones.get("starter_zone") {
+        info!("Spawning world from zone: {}", zone.zone_name);
+        spawn_zone_npcs(&mut commands, zone);
+        spawn_zone_enemies(&mut commands, zone, &enemy_db);
+        return;
+    }
+
+    // Fallback to hardcoded spawns if zone data not loaded yet
+    warn!("Zone data not loaded, using hardcoded spawns");
+    spawn_hardcoded_world(&mut commands, &enemy_db);
+}
+
+/// Spawn NPCs from zone definition
+fn spawn_zone_npcs(commands: &mut Commands, zone: &crate::game_data::ZoneDefinition) {
+    for npc in &zone.npc_spawns {
+        let position = Vec2::from(npc.position);
+
+        match npc.npc_type.as_str() {
+            "QuestGiver" => {
+                commands.spawn((
+                    Replicated,
+                    Npc,
+                    NpcName(npc.name.clone()),
+                    QuestGiver {
+                        available_quests: npc.quests.clone(),
+                    },
+                    Position(position),
+                    Interactable::npc(),
+                    VisualShape {
+                        shape_type: ShapeType::Circle,
+                        color: npc.visual.color,
+                        size: npc.visual.size,
+                    },
+                    PhysicsPosition(position),
+                    RigidBody::Static,
+                    Collider::circle(npc.visual.size / 2.0),
+                    CollisionLayers::new(GameLayer::Npc, [GameLayer::Player, GameLayer::Enemy]),
+                ));
+                info!("Spawned NPC Quest Giver: {}", npc.name);
+            }
+            "Trainer" => {
+                commands.spawn((
+                    Replicated,
+                    Npc,
+                    NpcName(npc.name.clone()),
+                    Trainer {
+                        items_for_sale: npc.trainer_items.iter().map(|ti| TrainerItem {
+                            item_id: ti.item_id,
+                            cost: ti.cost,
+                        }).collect(),
+                    },
+                    Position(position),
+                    Interactable::npc(),
+                    VisualShape {
+                        shape_type: ShapeType::Circle,
+                        color: npc.visual.color,
+                        size: npc.visual.size,
+                    },
+                    PhysicsPosition(position),
+                    RigidBody::Static,
+                    Collider::circle(npc.visual.size / 2.0),
+                    CollisionLayers::new(GameLayer::Npc, [GameLayer::Player, GameLayer::Enemy]),
+                ));
+                info!("Spawned NPC Trainer: {}", npc.name);
+            }
+            _ => {
+                warn!("Unknown NPC type: {}", npc.npc_type);
+            }
+        }
+    }
+}
+
+/// Spawn enemies from zone definition
+fn spawn_zone_enemies(
+    commands: &mut Commands,
+    zone: &crate::game_data::ZoneDefinition,
+    enemy_db: &EnemyDatabase,
+) {
+    for region in &zone.enemy_spawns {
+        if let Some(def) = enemy_db.enemies.get(&region.enemy_type) {
+            for spawn_point in &region.spawn_points {
+                let position = Vec2::from(*spawn_point);
+
+                let enemy_entity = commands.spawn((
+                    Replicated,
+                    Enemy,
+                    EnemyType(region.enemy_type),
+                    EnemyName(def.name.clone()),
+                    Position(position),
+                    Velocity::default(),
+                    MoveSpeed(def.move_speed),
+                    Health::new(def.max_health),
+                    CombatStats {
+                        attack_power: def.attack_power,
+                        defense: def.defense,
+                        crit_chance: 0.0,
+                    },
+                    CurrentTarget::default(),
+                )).id();
+
+                commands.entity(enemy_entity).insert((
+                    AiState::default(),
+                    Interactable::enemy(),
+                    VisualShape {
+                        shape_type: ShapeType::Circle,
+                        color: region.visual.color,
+                        size: region.visual.size,
+                    },
+                    AbilityCooldowns::default(),
+                    SpawnPoint {
+                        position,
+                        respawn_delay: region.respawn_delay,
+                    },
+                    region.loot_table.clone(),
+                ));
+
+                // Physics components
+                commands.entity(enemy_entity).insert((
+                    PhysicsPosition(position),
+                    PhysicsVelocity(Vec2::ZERO),
+                    RigidBody::Dynamic,
+                    Collider::circle(region.visual.size / 2.0),
+                    CollisionLayers::new(GameLayer::Enemy, [GameLayer::Player, GameLayer::Npc]),
+                ));
+            }
+            info!("Spawned {} {} enemies in region: {}",
+                region.spawn_points.len(), def.name, region.region_id);
+        } else {
+            warn!("Enemy type {} not found in database for region: {}",
+                region.enemy_type, region.region_id);
+        }
+    }
+}
+
+/// Hardcoded fallback spawn function (legacy)
+fn spawn_hardcoded_world(commands: &mut Commands, enemy_db: &EnemyDatabase) {
     // Spawn NPC Quest Giver
     commands.spawn((
         Replicated,
@@ -127,7 +269,7 @@ pub fn spawn_world(mut commands: Commands, enemy_db: Res<EnemyDatabase>) {
         Vec2::new(220.0, 150.0),
     ];
     for pos in slime_positions {
-        spawn_enemy(&mut commands, ENEMY_TYPE_SLIME, pos, ShapeType::Circle, [0.2, 0.8, 0.2, 1.0], LootTable {
+        spawn_enemy(commands, ENEMY_TYPE_SLIME, pos, ShapeType::Circle, [0.2, 0.8, 0.2, 1.0], LootTable {
             gold_min: 3,
             gold_max: 8,
             items: vec![],
@@ -145,7 +287,7 @@ pub fn spawn_world(mut commands: Commands, enemy_db: Res<EnemyDatabase>) {
         Vec2::new(-200.0, 150.0),
     ];
     for pos in goblin_positions {
-        spawn_enemy(&mut commands, ENEMY_TYPE_GOBLIN, pos, ShapeType::Square, [0.4, 0.6, 0.2, 1.0], LootTable {
+        spawn_enemy(commands, ENEMY_TYPE_GOBLIN, pos, ShapeType::Square, [0.4, 0.6, 0.2, 1.0], LootTable {
             gold_min: 8,
             gold_max: 15,
             items: vec![],
@@ -162,7 +304,7 @@ pub fn spawn_world(mut commands: Commands, enemy_db: Res<EnemyDatabase>) {
         Vec2::new(480.0, 40.0),
     ];
     for pos in wolf_positions {
-        spawn_enemy(&mut commands, ENEMY_TYPE_WOLF, pos, ShapeType::Circle, [0.6, 0.5, 0.3, 1.0], LootTable {
+        spawn_enemy(commands, ENEMY_TYPE_WOLF, pos, ShapeType::Circle, [0.6, 0.5, 0.3, 1.0], LootTable {
             gold_min: 12,
             gold_max: 20,
             items: vec![],
@@ -180,7 +322,7 @@ pub fn spawn_world(mut commands: Commands, enemy_db: Res<EnemyDatabase>) {
         Vec2::new(-460.0, -340.0),
     ];
     for pos in spider_positions {
-        spawn_enemy(&mut commands, ENEMY_TYPE_SPIDER, pos, ShapeType::Circle, [0.3, 0.1, 0.3, 1.0], LootTable {
+        spawn_enemy(commands, ENEMY_TYPE_SPIDER, pos, ShapeType::Circle, [0.3, 0.1, 0.3, 1.0], LootTable {
             gold_min: 10,
             gold_max: 18,
             items: vec![],
@@ -197,7 +339,7 @@ pub fn spawn_world(mut commands: Commands, enemy_db: Res<EnemyDatabase>) {
         Vec2::new(20.0, -450.0),
     ];
     for pos in skeleton_positions {
-        spawn_enemy(&mut commands, ENEMY_TYPE_SKELETON, pos, ShapeType::Square, [0.9, 0.9, 0.8, 1.0], LootTable {
+        spawn_enemy(commands, ENEMY_TYPE_SKELETON, pos, ShapeType::Square, [0.9, 0.9, 0.8, 1.0], LootTable {
             gold_min: 15,
             gold_max: 25,
             items: vec![],
@@ -213,7 +355,7 @@ pub fn spawn_world(mut commands: Commands, enemy_db: Res<EnemyDatabase>) {
         Vec2::new(80.0, 480.0),
     ];
     for pos in orc_positions {
-        spawn_enemy(&mut commands, ENEMY_TYPE_ORC, pos, ShapeType::Square, [0.3, 0.5, 0.3, 1.0], LootTable {
+        spawn_enemy(commands, ENEMY_TYPE_ORC, pos, ShapeType::Square, [0.3, 0.5, 0.3, 1.0], LootTable {
             gold_min: 20,
             gold_max: 35,
             items: vec![],

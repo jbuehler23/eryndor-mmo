@@ -1,7 +1,8 @@
 use eryndor_shared::*;
+use serde::{Serialize, Deserialize};
 
 /// Weapon types in the game
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum WeaponType {
     Sword,
     Dagger,
@@ -99,5 +100,18 @@ pub fn get_starting_proficiencies(class: CharacterClass) -> Vec<(WeaponType, u32
             (WeaponType::Bow, 5),
             (WeaponType::Sword, 5),
         ],
+    }
+}
+
+/// Helper function to get proficiency level for a weapon type
+pub fn get_proficiency_level(prof: &WeaponProficiency, weapon_type: &WeaponType) -> u32 {
+    match weapon_type {
+        WeaponType::Sword => prof.sword,
+        WeaponType::Dagger => prof.dagger,
+        WeaponType::Staff => prof.staff,
+        WeaponType::Wand => prof.wand,
+        WeaponType::Mace => prof.mace,
+        WeaponType::Bow => prof.bow,
+        WeaponType::Axe => prof.axe,
     }
 }

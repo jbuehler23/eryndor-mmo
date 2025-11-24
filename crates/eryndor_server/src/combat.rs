@@ -60,13 +60,14 @@ pub fn process_auto_attacks(
         &mut AutoAttack,
         &Equipment,
         &mut WeaponProficiencyExp,
+        &WeaponProficiency,
     ), With<Player>>,
-    mut targets: Query<(&Position, &mut Health, &CombatStats), With<Enemy>>,
+    mut targets: Query<(&Position, &mut Health, &CombatStats), (With<Enemy>, Without<AiActivationDelay>)>,
     all_enemies: Query<Entity, With<Enemy>>,
     item_db: Res<crate::game_data::ItemDatabase>,
     time: Res<Time>,
 ) {
-    for (attacker_entity, attacker_pos, current_target, attacker_stats, mut auto_attack, equipment, mut weapon_exp) in &mut attackers {
+    for (attacker_entity, attacker_pos, current_target, attacker_stats, mut auto_attack, equipment, mut weapon_exp, weapon_prof) in &mut attackers {
         // Skip if auto-attack is disabled
         if !auto_attack.enabled {
             continue;
@@ -144,9 +145,14 @@ pub fn process_auto_attacks(
         // Calculate damage: total attack * weapon multiplier
         let base_damage = total_attack * weapon_stats.damage_multiplier;
 
+        // Apply weapon proficiency bonus (2% per level)
+        let prof_level = crate::weapon::get_proficiency_level(weapon_prof, &weapon_stats.weapon_type);
+        let prof_bonus = 1.0 + ((prof_level - 1) as f32 * 0.02);
+        let damage_with_prof = base_damage * prof_bonus;
+
         // Apply defense mitigation
         let mitigation = target_stats.defense / (target_stats.defense + 100.0);
-        let mut damage = base_damage * (1.0 - mitigation);
+        let mut damage = damage_with_prof * (1.0 - mitigation);
 
         // Critical hit check
         let is_crit = rand::random::<f32>() < total_crit;
@@ -206,12 +212,12 @@ pub fn process_auto_attacks(
             },
         }
 
-        // Send combat event to all clients for VFX
+        // Send combat event to all clients for VFX (using positions to avoid entity mapping issues)
         commands.server_trigger(ToClients {
             mode: SendMode::Broadcast,
             message: CombatEvent {
-                attacker: attacker_entity,
-                target: target_entity,
+                attacker_position: attacker_pos.0,
+                target_position: target_pos.0,
                 damage,
                 ability_id: 0, // 0 indicates auto-attack (not an ability)
                 is_crit,
@@ -234,7 +240,7 @@ pub fn handle_use_ability(
         &LearnedAbilities,
         &Equipment,
     )>,
-    mut targets: Query<(&Position, &mut Health, &CombatStats), With<Enemy>>,
+    mut targets: Query<(&Position, &mut Health, &CombatStats), (With<Enemy>, Without<AiActivationDelay>)>,
     ability_db: Res<AbilityDatabase>,
     item_db: Res<crate::game_data::ItemDatabase>,
     time: Res<Time>,
@@ -436,12 +442,12 @@ pub fn handle_use_ability(
         char_entity, ability.name, target_entity, total_damage, is_crit
     );
 
-    // Send combat event to all clients for VFX
+    // Send combat event to all clients for VFX (using positions to avoid entity mapping issues)
     commands.server_trigger(ToClients {
         mode: SendMode::Broadcast,
         message: CombatEvent {
-            attacker: char_entity,
-            target: target_entity,
+            attacker_position: attacker_pos.0,
+            target_position: target_pos.0,
             damage: total_damage,
             ability_id: ability.id,
             is_crit,
@@ -500,27 +506,29 @@ pub fn check_deaths(
     query: Query<(Entity, &Health, &Position, Option<&Enemy>, Option<&Player>, Option<&LootTable>, Option<&EnemyType>), Changed<Health>>,
     mut players: Query<(
         Entity,
-        &CurrentTarget,
+        &mut CurrentTarget,
         &mut AutoAttack,
         &mut InCombat,
         &Character,
         &mut Experience,
+        &mut QuestLog,
     )>,
+    quest_db: Res<crate::game_data::QuestDatabase>,
 ) {
     for (entity, health, position, is_enemy, is_player, loot_table, enemy_type) in &query {
         if health.is_dead() {
             info!("Entity {:?} died", entity);
 
             // Trigger death event both for server (observers) and clients (visuals)
-            commands.trigger(DeathEvent { entity });
+            commands.trigger(DeathEvent { entity, position: position.0 });
             commands.server_trigger(ToClients {
                 mode: SendMode::Broadcast,
-                message: DeathEvent { entity },
+                message: DeathEvent { entity, position: position.0 },
             });
 
             if is_enemy.is_some() {
                 // Grant XP to all players who had this enemy as their target
-                for (_player_entity, current_target, mut auto_attack, mut in_combat, character, mut experience) in &mut players {
+                for (player_entity, mut current_target, mut auto_attack, mut in_combat, character, mut experience, mut quest_log) in &mut players {
                     if current_target.0 == Some(entity) {
                         // Grant 50 base XP for killing an enemy
                         let xp_gained = 50;
@@ -534,9 +542,36 @@ pub fn check_deaths(
                             info!("{} leveled up!", character.name);
                         }
 
-                        // Exit combat
+                        // Update quest progress for kill objectives
+                        if let Some(enemy_type_val) = enemy_type {
+                            for active_quest in &mut quest_log.active_quests {
+                                if let Some(quest_def) = quest_db.quests.get(&active_quest.quest_id) {
+                                    for (i, objective) in quest_def.objectives.iter().enumerate() {
+                                        if let crate::game_data::QuestObjective::KillEnemy { enemy_type: required_type, count } = objective {
+                                            if enemy_type_val.0 == *required_type && active_quest.progress[i] < *count {
+                                                active_quest.progress[i] += 1;
+                                                info!("{} quest {} kill progress: {}/{}",
+                                                    character.name, quest_def.name, active_quest.progress[i], count);
+
+                                                // Notify player of progress
+                                                commands.server_trigger(ToClients {
+                                                    mode: SendMode::Direct(player_entity.into()),
+                                                    message: QuestUpdateEvent {
+                                                        quest_id: active_quest.quest_id,
+                                                        message: format!("{}: {}/{}", quest_def.name, active_quest.progress[i], count),
+                                                    },
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Exit combat and clear target
                         auto_attack.enabled = false;
                         in_combat.0 = false;
+                        current_target.0 = None;
                         info!("Player exited combat - target died");
                     }
                 }

@@ -167,6 +167,7 @@ pub fn get_help_text() -> String {
 
 Duration formats: m=minutes, h=hours, d=days, w=weeks, perm=permanent
 Note: Ban and kick commands accept either username or character name
+Note: Game assets automatically hot-reload when JSON files are saved
 "#.to_string()
 }
 
@@ -229,6 +230,7 @@ pub fn handle_admin_command(
     client_query: Query<(&Authenticated, Option<&ClientMetadata>)>,
     characters: Query<(Entity, &Character, &OwnedBy)>,
     db: Res<DatabaseConnection>,
+    tokio_runtime: Res<crate::TokioRuntimeResource>,
 ) {
     let Some(client_entity) = trigger.client_id.entity() else {
         warn!("No client entity in admin command trigger");
@@ -257,8 +259,8 @@ pub fn handle_admin_command(
         return;
     };
 
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-    let is_admin_result = runtime.block_on(is_admin(pool, account_id));
+    // Use shared tokio runtime instead of creating a new one each time
+    let is_admin_result = tokio_runtime.0.block_on(is_admin(pool, account_id));
 
     match is_admin_result {
         Ok(true) => {
@@ -268,7 +270,7 @@ pub fn handle_admin_command(
             warn!("Non-admin account {} attempted admin command: {}", account_id, trigger.event().command);
 
             // AUDIT LOG: Unauthorized admin command attempt
-            let _ = runtime.block_on(crate::audit::log_audit_event(
+            let _ = tokio_runtime.0.block_on(crate::audit::log_audit_event(
                 pool,
                 crate::audit::AuditActionType::SuspiciousActivity,
                 Some(account_id),
@@ -312,12 +314,12 @@ pub fn handle_admin_command(
             info!("Admin {} executing ban command: username={}, duration={:?}, reason={}",
                   account_id, username, duration, reason);
 
-            let result = runtime.block_on(execute_ban(pool, &username, duration, &reason, account_id));
+            let result = tokio_runtime.0.block_on(execute_ban(pool, &username, duration, &reason, account_id));
 
             match result {
                 Ok(message) => {
                     // AUDIT LOG: Account banned
-                    let _ = runtime.block_on(crate::audit::log_audit_event(
+                    let _ = tokio_runtime.0.block_on(crate::audit::log_audit_event(
                         pool,
                         crate::audit::AuditActionType::AdminCommandExecuted,
                         Some(account_id),
@@ -351,12 +353,12 @@ pub fn handle_admin_command(
         AdminCommand::Unban { username } => {
             info!("Admin {} executing unban command: username={}", account_id, username);
 
-            let result = runtime.block_on(execute_unban(pool, &username));
+            let result = tokio_runtime.0.block_on(execute_unban(pool, &username));
 
             match result {
                 Ok(message) => {
                     // AUDIT LOG: Account unbanned
-                    let _ = runtime.block_on(crate::audit::log_audit_event(
+                    let _ = tokio_runtime.0.block_on(crate::audit::log_audit_event(
                         pool,
                         crate::audit::AuditActionType::AdminCommandExecuted,
                         Some(account_id),
@@ -402,7 +404,7 @@ pub fn handle_admin_command(
 
             if let Some((char_entity, client_entity)) = found_character {
                 // AUDIT LOG: Player kicked
-                let _ = runtime.block_on(crate::audit::log_audit_event(
+                let _ = tokio_runtime.0.block_on(crate::audit::log_audit_event(
                     pool,
                     crate::audit::AuditActionType::PlayerKicked,
                     Some(account_id),
@@ -451,7 +453,7 @@ pub fn handle_admin_command(
             info!("Admin {} broadcasting message: {}", account_id, message);
 
             // AUDIT LOG: Broadcast sent
-            let _ = runtime.block_on(crate::audit::log_audit_event(
+            let _ = tokio_runtime.0.block_on(crate::audit::log_audit_event(
                 pool,
                 crate::audit::AuditActionType::AdminBroadcast,
                 Some(account_id),
