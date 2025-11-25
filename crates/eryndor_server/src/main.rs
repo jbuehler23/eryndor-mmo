@@ -282,8 +282,6 @@ fn main() {
             world::spawn_world,
         ))
         .add_systems(Update, (
-            // Network keep-alive to prevent QUIC idle timeout
-            send_keepalive_packets,
             // Connection tracking (must run first to capture IPs)
             auth::track_client_connections,
             // Auth systems
@@ -324,24 +322,6 @@ fn sync_physics_to_position(
     }
 }
 
-/// Send periodic keep-alive packets to prevent QUIC idle timeout
-/// This prevents browser tab throttling from causing disconnections
-fn send_keepalive_packets(
-    time: Res<Time>,
-    mut server: ResMut<bevy_renet2::prelude::RenetServer>,
-    mut last_keepalive: Local<f32>,
-) {
-    *last_keepalive += time.delta_secs();
-
-    if *last_keepalive >= 10.0 {
-        // Send minimal unreliable packet to each connected client
-        for client_id in server.clients_id() {
-            // Channel 0 = Unreliable, single byte payload
-            server.send_message(client_id, 0, vec![0u8]);
-        }
-        *last_keepalive = 0.0;
-    }
-}
 
 fn setup_server(mut commands: Commands, channels: Res<RepliconChannels>) {
     info!("Starting Eryndor MMO Server with multi-transport support...");

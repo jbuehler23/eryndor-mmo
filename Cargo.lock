@@ -1883,6 +1883,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_web_keepalive"
+version = "0.4.0"
+source = "git+https://github.com/Nul-led/bevy_web_keepalive?branch=main#efc14fa86f6d1b67a68036163414a4981fa743be"
+dependencies = [
+ "bevy_app",
+ "bevy_ecs",
+ "bevy_time",
+ "bevy_winit",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "bevy_window"
 version = "0.17.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1944,7 +1957,7 @@ dependencies = [
  "bitflags 2.10.0",
  "cexpr",
  "clang-sys",
- "itertools 0.10.5",
+ "itertools 0.13.0",
  "log",
  "prettyplease",
  "proc-macro2",
@@ -2971,6 +2984,7 @@ dependencies = [
  "bevy_renet2",
  "bevy_replicon",
  "bevy_replicon_renet2",
+ "bevy_web_keepalive",
  "chrono",
  "console_error_panic_hook",
  "eryndor_shared",

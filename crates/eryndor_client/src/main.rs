@@ -25,6 +25,9 @@ use bevy_prototype_lyon::prelude::*;
 use eryndor_shared::*;
 use game_state::*;
 
+#[cfg(target_family = "wasm")]
+use bevy_web_keepalive::WebKeepalivePlugin;
+
 #[cfg(not(target_family = "wasm"))]
 fn main() {
     App::new()
@@ -236,6 +239,7 @@ fn start_app() {
             RepliconRenetPlugins,
             ShapePlugin,
             EguiPlugin::default(),
+            WebKeepalivePlugin { wake_delay: 1000.0 },
         ))
         // Game state
         .init_state::<GameState>()
