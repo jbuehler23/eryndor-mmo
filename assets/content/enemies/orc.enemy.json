@@ -1,0 +1,8 @@
+{
+  "id": 5,
+  "name": "Orc",
+  "max_health": 150.0,
+  "attack_power": 18.0,
+  "defense": 6.0,
+  "move_speed": 75.0
+}

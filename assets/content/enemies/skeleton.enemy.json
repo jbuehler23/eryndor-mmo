@@ -1,0 +1,8 @@
+{
+  "attack_power": 15.0,
+  "defense": 5.0,
+  "id": 4,
+  "max_health": 163.0,
+  "move_speed": 85.0,
+  "name": "Skeleton"
+}

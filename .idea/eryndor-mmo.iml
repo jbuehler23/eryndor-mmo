@@ -5,6 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/crates/eryndor_client/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/eryndor_server/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/eryndor_shared/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/eryndor_editor/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

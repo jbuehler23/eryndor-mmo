@@ -3,6 +3,7 @@ members = [
     "crates/eryndor_shared",
     "crates/eryndor_server",
     "crates/eryndor_client",
+    "crates/eryndor_editor",
 ]
 resolver = "2"
 

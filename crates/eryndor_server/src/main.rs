@@ -23,6 +23,7 @@ mod combat;
 mod config;
 mod dashboard;
 mod database;
+mod editor_api;
 mod game_data;
 mod inventory;
 mod moderation;
@@ -423,16 +424,21 @@ fn setup_server(mut commands: Commands, channels: Res<RepliconChannels>) {
     info!("Server ready - UDP: {}, WebTransport: {}, WebSocket: {}", udp_addr, wt_addr, ws_addr);
 }
 
-// HTTP server to serve WebTransport certificate hash for WASM clients
+// HTTP server to serve WebTransport certificate hash and editor API
 async fn serve_cert_hash(cert_hash: bevy_renet2::netcode::ServerCertHash) {
     use axum::{routing::get, Router, Json};
     use tower_http::cors::{CorsLayer, Any};
+
+    // Create editor API router
+    let editor_router = editor_api::create_editor_router();
 
     let app = Router::new()
         .route("/cert", get(move || async move {
             // Return the hash bytes as JSON array (matching renet2 example pattern)
             Json(cert_hash.hash.to_vec())
         }))
+        // Mount editor API at /api/editor
+        .nest("/api/editor", editor_router)
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)
@@ -448,7 +454,9 @@ async fn serve_cert_hash(cert_hash: bevy_renet2::netcode::ServerCertHash) {
         .await
         .expect("Failed to bind HTTP server");
 
-    info!("HTTP server for certificate hash listening on http://{}/cert", cert_server_addr);
+    info!("HTTP server listening on http://{}", cert_server_addr);
+    info!("  - Certificate hash: /cert");
+    info!("  - Editor API: /api/editor/*");
 
     axum::serve(listener, app)
         .await

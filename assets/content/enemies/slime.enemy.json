@@ -1,0 +1,8 @@
+{
+  "id": 1,
+  "name": "Slime",
+  "max_health": 50.0,
+  "attack_power": 5.0,
+  "defense": 2.0,
+  "move_speed": 80.0
+}

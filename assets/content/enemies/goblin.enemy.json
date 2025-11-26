@@ -1,0 +1,8 @@
+{
+  "id": 2,
+  "name": "Goblin",
+  "max_health": 80.0,
+  "attack_power": 8.0,
+  "defense": 3.0,
+  "move_speed": 90.0
+}

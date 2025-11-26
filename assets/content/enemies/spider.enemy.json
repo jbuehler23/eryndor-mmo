@@ -1,0 +1,8 @@
+{
+  "id": 6,
+  "name": "Spider",
+  "max_health": 90.0,
+  "attack_power": 10.0,
+  "defense": 3.0,
+  "move_speed": 110.0
+}
