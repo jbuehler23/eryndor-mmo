@@ -1,0 +1,24 @@
+{
+  "id": 204,
+  "name": "Mana Shield",
+  "description": "Surround yourself with a magical barrier, increasing defense.",
+  "damage_multiplier": 0.0,
+  "cooldown": 25.0,
+  "range": 0.0,
+  "mana_cost": 50.0,
+  "ability_types": [
+    {
+      "Buff": {
+        "duration": 15.0,
+        "stat_bonuses": {
+          "attack_power": 0.0,
+          "defense": 8.0,
+          "move_speed": 0.0
+        }
+      }
+    }
+  ],
+  "unlock_requirement": {
+    "Level": 10
+  }
+}

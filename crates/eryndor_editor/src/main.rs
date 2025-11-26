@@ -316,10 +316,20 @@ fn process_npc_quest_actions(
 
         let npc_id = (editor_state.npcs.npc_list.len() as u32 + 1000) as u32;
 
+        let npc_type = if editor_state.npcs.new_npc_role.is_empty() {
+            "QuestGiver".to_string()
+        } else {
+            editor_state.npcs.new_npc_role.clone()
+        };
+
         let npc_data = api_events::NpcData {
             id: npc_id,
             name: npc_name,
-            role: editor_state.npcs.new_npc_role.clone(),
+            npc_type,
+            position: api_events::NpcPosition { x: 0.0, y: 0.0 },
+            quests: Vec::new(),
+            trainer_items: Vec::new(),
+            visual: api_events::VisualData::default(),
         };
 
         editor_state.status_message = format!("Creating NPC: {}...", npc_data.name);
@@ -337,7 +347,23 @@ fn process_npc_quest_actions(
             let npc_data = api_events::NpcData {
                 id: editing_npc.id,
                 name: editing_npc.name.clone(),
-                role: editing_npc.role.clone(),
+                npc_type: editing_npc.npc_type.clone(),
+                position: api_events::NpcPosition {
+                    x: editing_npc.position_x,
+                    y: editing_npc.position_y,
+                },
+                quests: editing_npc.quests.clone(),
+                trainer_items: editing_npc.trainer_items.iter().map(|item| {
+                    api_events::TrainerItemData {
+                        item_id: item.item_id,
+                        cost: item.cost,
+                    }
+                }).collect(),
+                visual: api_events::VisualData {
+                    shape: editing_npc.visual_shape.clone(),
+                    color: editing_npc.visual_color,
+                    size: editing_npc.visual_size,
+                },
             };
 
             editor_state.status_message = format!("Saving NPC: {}...", npc_data.name);
@@ -375,7 +401,11 @@ fn process_npc_quest_actions(
         let quest_data = api_events::QuestData {
             id: quest_id,
             name: quest_name,
-            quest_type: editor_state.quests.new_quest_type.clone(),
+            description: String::new(),
+            objectives: Vec::new(),
+            reward_exp: 100,
+            proficiency_requirements: Vec::new(),
+            reward_abilities: Vec::new(),
         };
 
         editor_state.status_message = format!("Creating quest: {}...", quest_data.name);
@@ -390,10 +420,35 @@ fn process_npc_quest_actions(
         editor_state.action_save_quest = false;
 
         if let Some(ref editing_quest) = editor_state.quests.editing_quest {
+            // Convert objectives to JSON
+            let objectives: Vec<serde_json::Value> = editing_quest.objectives.iter().map(|obj| {
+                use editor_state::EditingQuestObjective;
+                match obj {
+                    EditingQuestObjective::TalkToNpc { npc_id } => {
+                        serde_json::json!({"type": "TalkToNpc", "npc_id": npc_id})
+                    }
+                    EditingQuestObjective::KillEnemy { enemy_type, count } => {
+                        serde_json::json!({"type": "KillEnemy", "enemy_type": enemy_type, "count": count})
+                    }
+                    EditingQuestObjective::ObtainItem { item_id, count } => {
+                        serde_json::json!({"type": "ObtainItem", "item_id": item_id, "count": count})
+                    }
+                }
+            }).collect();
+
+            // Convert proficiency requirements to JSON
+            let proficiency_requirements: Vec<serde_json::Value> = editing_quest.proficiency_requirements.iter().map(|req| {
+                serde_json::json!({"weapon_type": req.weapon_type, "level": req.level})
+            }).collect();
+
             let quest_data = api_events::QuestData {
                 id: editing_quest.id,
                 name: editing_quest.name.clone(),
-                quest_type: editing_quest.quest_type.clone(),
+                description: editing_quest.description.clone(),
+                objectives,
+                reward_exp: editing_quest.reward_exp,
+                proficiency_requirements,
+                reward_abilities: editing_quest.reward_abilities.iter().map(|id| format!("ability_{}", id)).collect(),
             };
 
             editor_state.status_message = format!("Saving quest: {}...", quest_data.name);
@@ -444,7 +499,13 @@ fn process_ability_loot_actions(
         let ability_data = api_events::AbilityData {
             id: ability_id,
             name: ability_name,
-            ability_type: editor_state.abilities.new_ability_type.clone(),
+            description: String::new(),
+            damage_multiplier: 1.0,
+            cooldown: 3.0,
+            range: 1.5,
+            mana_cost: 20.0,
+            ability_types: vec![serde_json::json!({"DirectDamage": {"multiplier": 1.0}})],
+            unlock_requirement: serde_json::json!("None"),
         };
 
         editor_state.status_message = format!("Creating ability: {}...", ability_data.name);
@@ -459,10 +520,63 @@ fn process_ability_loot_actions(
         editor_state.action_save_ability = false;
 
         if let Some(ref editing_ability) = editor_state.abilities.editing_ability {
+            // Convert EditingAbility effects to JSON
+            let ability_types: Vec<serde_json::Value> = editing_ability.ability_effects.iter().map(|effect| {
+                use editor_state::{EditingAbilityEffect, EditingDebuffType};
+                match effect {
+                    EditingAbilityEffect::DirectDamage { multiplier } => {
+                        serde_json::json!({"DirectDamage": {"multiplier": multiplier}})
+                    }
+                    EditingAbilityEffect::DamageOverTime { duration, ticks, damage_per_tick } => {
+                        serde_json::json!({"DamageOverTime": {"duration": duration, "ticks": ticks, "damage_per_tick": damage_per_tick}})
+                    }
+                    EditingAbilityEffect::AreaOfEffect { radius, max_targets } => {
+                        serde_json::json!({"AreaOfEffect": {"radius": radius, "max_targets": max_targets}})
+                    }
+                    EditingAbilityEffect::Buff { duration, attack_power, defense, move_speed } => {
+                        serde_json::json!({"Buff": {"duration": duration, "stat_bonuses": {"attack_power": attack_power, "defense": defense, "move_speed": move_speed}}})
+                    }
+                    EditingAbilityEffect::Debuff { duration, debuff_type } => {
+                        let effect_json = match debuff_type {
+                            EditingDebuffType::Stun => serde_json::json!("Stun"),
+                            EditingDebuffType::Root => serde_json::json!("Root"),
+                            EditingDebuffType::Slow { move_speed_reduction } => serde_json::json!({"Slow": {"move_speed_reduction": move_speed_reduction}}),
+                            EditingDebuffType::Weaken { attack_reduction } => serde_json::json!({"Weaken": {"attack_reduction": attack_reduction}}),
+                        };
+                        serde_json::json!({"Debuff": {"duration": duration, "effect": effect_json}})
+                    }
+                    EditingAbilityEffect::Mobility { distance, dash_speed } => {
+                        serde_json::json!({"Mobility": {"distance": distance, "dash_speed": dash_speed}})
+                    }
+                    EditingAbilityEffect::Heal { amount, is_percent } => {
+                        serde_json::json!({"Heal": {"amount": amount, "is_percent": is_percent}})
+                    }
+                }
+            }).collect();
+
+            // Convert unlock requirement to JSON
+            let unlock_requirement = {
+                use editor_state::EditingUnlockRequirement;
+                match &editing_ability.unlock_requirement {
+                    EditingUnlockRequirement::None => serde_json::json!("None"),
+                    EditingUnlockRequirement::Level(lvl) => serde_json::json!({"Level": lvl}),
+                    EditingUnlockRequirement::Quest(qid) => serde_json::json!({"Quest": qid}),
+                    EditingUnlockRequirement::WeaponProficiency { weapon, level } => {
+                        serde_json::json!({"WeaponProficiency": {"weapon": weapon, "level": level}})
+                    }
+                }
+            };
+
             let ability_data = api_events::AbilityData {
                 id: editing_ability.id,
                 name: editing_ability.name.clone(),
-                ability_type: editing_ability.ability_type.clone(),
+                description: editing_ability.description.clone(),
+                damage_multiplier: editing_ability.damage_multiplier,
+                cooldown: editing_ability.cooldown,
+                range: editing_ability.range,
+                mana_cost: editing_ability.mana_cost,
+                ability_types,
+                unlock_requirement,
             };
 
             editor_state.status_message = format!("Saving ability: {}...", ability_data.name);

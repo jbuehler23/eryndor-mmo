@@ -265,7 +265,44 @@ pub struct NpcData {
     pub id: u32,
     pub name: String,
     #[serde(default)]
-    pub role: String,
+    pub npc_type: String,
+    #[serde(default)]
+    pub position: NpcPosition,
+    #[serde(default)]
+    pub quests: Vec<u32>,
+    #[serde(default)]
+    pub trainer_items: Vec<TrainerItemData>,
+    #[serde(default)]
+    pub visual: VisualData,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct NpcPosition {
+    pub x: f32,
+    pub y: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct TrainerItemData {
+    pub item_id: u32,
+    pub cost: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VisualData {
+    pub shape: String,
+    pub color: [f32; 4],
+    pub size: f32,
+}
+
+impl Default for VisualData {
+    fn default() -> Self {
+        Self {
+            shape: "Circle".to_string(),
+            color: [0.2, 0.6, 0.9, 1.0],
+            size: 20.0,
+        }
+    }
 }
 
 /// Message to request loading the NPC list
@@ -300,7 +337,15 @@ pub struct QuestData {
     pub id: u32,
     pub name: String,
     #[serde(default)]
-    pub quest_type: String,
+    pub description: String,
+    #[serde(default)]
+    pub objectives: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub reward_exp: u32,
+    #[serde(default)]
+    pub proficiency_requirements: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub reward_abilities: Vec<String>,  // Use ability names instead of IDs
 }
 
 /// Message to request loading the quest list
@@ -330,12 +375,25 @@ pub struct DeleteQuestEvent {
 // =============================================================================
 
 /// Ability data structure matching the server API
+/// This is serialized directly to JSON for the server
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AbilityData {
     pub id: u32,
     pub name: String,
     #[serde(default)]
-    pub ability_type: String,
+    pub description: String,
+    #[serde(default)]
+    pub damage_multiplier: f32,
+    #[serde(default)]
+    pub cooldown: f32,
+    #[serde(default)]
+    pub range: f32,
+    #[serde(default)]
+    pub mana_cost: f32,
+    #[serde(default)]
+    pub ability_types: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub unlock_requirement: serde_json::Value,
 }
 
 /// Message to request loading the ability list

@@ -467,20 +467,27 @@ pub enum AiState {
 }
 
 /// Loot table for enemies - defines what they drop on death
-#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+#[derive(Component, Serialize, Deserialize, Clone, Debug, Default)]
 pub struct LootTable {
     pub gold_min: u32,
     pub gold_max: u32,
     pub items: Vec<LootItem>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct LootItem {
     pub item_id: u32,
+    #[serde(default = "default_drop_chance")]
     pub drop_chance: f32, // 0.0 to 1.0
+    #[serde(default = "default_quantity_min")]
     pub quantity_min: u32,
+    #[serde(default = "default_quantity_max")]
     pub quantity_max: u32,
 }
+
+fn default_drop_chance() -> f32 { 1.0 }
+fn default_quantity_min() -> u32 { 1 }
+fn default_quantity_max() -> u32 { 1 }
 
 impl bevy::ecs::entity::MapEntities for AiState {
     fn map_entities<M: bevy::ecs::entity::EntityMapper>(&mut self, entity_mapper: &mut M) {
@@ -503,6 +510,22 @@ impl Default for AiActivationDelay {
     fn default() -> Self {
         Self {
             timer: Timer::from_seconds(0.5, TimerMode::Once), // 500ms delay ensures entity replication completes
+        }
+    }
+}
+
+/// Per-enemy aggro and leash range configuration
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+pub struct AggroRange {
+    pub aggro: f32,
+    pub leash: f32,
+}
+
+impl Default for AggroRange {
+    fn default() -> Self {
+        Self {
+            aggro: 150.0,
+            leash: 300.0,
         }
     }
 }

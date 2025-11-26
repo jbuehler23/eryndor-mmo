@@ -3,6 +3,7 @@ use bevy_replicon::prelude::*;
 use eryndor_shared::*;
 use crate::auth::ActiveCharacterEntity;
 use crate::abilities::AbilityDatabase;
+use crate::spawn::{SpawnPoint, RespawnEvent, EntityTemplate};
 use avian2d::prelude::LinearVelocity;
 use rand::Rng;
 
@@ -503,7 +504,21 @@ pub fn regenerate_resources(
 
 pub fn check_deaths(
     mut commands: Commands,
-    query: Query<(Entity, &Health, &Position, Option<&Enemy>, Option<&Player>, Option<&LootTable>, Option<&EnemyType>), Changed<Health>>,
+    query: Query<(
+        Entity,
+        &Health,
+        &Position,
+        Option<&Enemy>,
+        Option<&Player>,
+        Option<&LootTable>,
+        Option<&EnemyType>,
+        Option<&EnemyName>,
+        Option<&SpawnPoint>,
+        Option<&MoveSpeed>,
+        Option<&CombatStats>,
+        Option<&VisualShape>,
+        Option<&AggroRange>,
+    ), Changed<Health>>,
     mut players: Query<(
         Entity,
         &mut CurrentTarget,
@@ -515,7 +530,7 @@ pub fn check_deaths(
     )>,
     quest_db: Res<crate::game_data::QuestDatabase>,
 ) {
-    for (entity, health, position, is_enemy, is_player, loot_table, enemy_type) in &query {
+    for (entity, health, position, is_enemy, is_player, loot_table, enemy_type, enemy_name, spawn_point, move_speed, combat_stats, visual_shape, aggro_range) in &query {
         if health.is_dead() {
             info!("Entity {:?} died", entity);
 
@@ -578,10 +593,36 @@ pub fn check_deaths(
 
                 // Drop loot if enemy has a loot table
                 if let Some(loot) = loot_table {
-                    drop_loot(&mut commands, loot, *position, enemy_type);
+                    drop_loot(&mut commands, loot, *position, enemy_name);
                 }
 
-                // Despawn enemies immediately (respawn will be handled by observer)
+                // Schedule respawn if enemy has a spawn point
+                // Build template from components BEFORE despawning
+                if let (Some(sp), Some(et), Some(en), Some(ms), Some(cs), Some(vs), Some(ar)) =
+                    (spawn_point, enemy_type, enemy_name, move_speed, combat_stats, visual_shape, aggro_range)
+                {
+                    let template = EntityTemplate::from_enemy_components(
+                        et,
+                        en,
+                        health,
+                        ms,
+                        cs,
+                        vs,
+                        loot_table.cloned().unwrap_or_default(),
+                        ar,
+                    );
+
+                    // Trigger respawn event with all data embedded
+                    commands.trigger(RespawnEvent {
+                        spawn_position: sp.position,
+                        respawn_delay: sp.respawn_delay,
+                        template,
+                    });
+
+                    info!("Scheduled respawn for {} at {:?} in {:.1}s", en.0, sp.position, sp.respawn_delay);
+                }
+
+                // Despawn enemy
                 commands.entity(entity).despawn();
             }
 
@@ -730,17 +771,18 @@ pub fn enemy_ai(
         &MoveSpeed,
         &CombatStats,
         &EnemyType,
+        &AggroRange,
     ), (With<Enemy>, Without<Player>, Without<AiActivationDelay>)>,
     mut players: Query<(Entity, &Position, &mut Health), (With<Player>, Without<Enemy>)>,
     time: Res<Time>,
 ) {
-    for (mut ai_state, mut enemy_pos, mut velocity, mut physics_velocity, mut current_target, move_speed, stats, _enemy_type) in &mut enemies {
+    for (mut ai_state, enemy_pos, mut velocity, mut physics_velocity, mut current_target, move_speed, stats, _enemy_type, aggro_range) in &mut enemies {
         match *ai_state {
             AiState::Idle => {
                 // Look for nearby players
                 for (player_entity, player_pos, _) in &players {
                     let distance = enemy_pos.0.distance(player_pos.0);
-                    if distance < AGGRO_RANGE {
+                    if distance < aggro_range.aggro {
                         *ai_state = AiState::Chasing(player_entity);
                         current_target.0 = Some(player_entity);
                         break;
@@ -753,7 +795,7 @@ pub fn enemy_ai(
                     let distance = enemy_pos.0.distance(target_pos.0);
 
                     // Check leash range
-                    if distance > LEASH_RANGE {
+                    if distance > aggro_range.leash {
                         *ai_state = AiState::Idle;
                         current_target.0 = None;
                         velocity.0 = Vec2::ZERO;
@@ -819,19 +861,14 @@ pub fn update_ai_activation_delays(
 
 /// Drop loot from an enemy based on its loot table
 /// Spawns a LootContainer entity containing all dropped gold and items
-fn drop_loot(commands: &mut Commands, loot_table: &LootTable, position: Position, enemy_type: Option<&EnemyType>) {
+fn drop_loot(commands: &mut Commands, loot_table: &LootTable, position: Position, enemy_name: Option<&EnemyName>) {
     let mut rng = rand::thread_rng();
     let mut loot_contents = Vec::new();
 
-    // Determine enemy name based on type
-    let source_name = if let Some(enemy_type) = enemy_type {
-        match enemy_type.0 {
-            ENEMY_TYPE_SLIME => "Slime".to_string(),
-            _ => format!("Enemy {}", enemy_type.0),
-        }
-    } else {
-        "Unknown Enemy".to_string()
-    };
+    // Get enemy name from component
+    let source_name = enemy_name
+        .map(|n| n.0.clone())
+        .unwrap_or_else(|| "Unknown Enemy".to_string());
 
     // Always drop gold if the range is non-zero
     if loot_table.gold_max > 0 {

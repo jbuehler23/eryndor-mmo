@@ -1,0 +1,25 @@
+{
+  "id": 203,
+  "name": "Arcane Explosion",
+  "description": "Release a burst of arcane energy, damaging all nearby enemies.",
+  "damage_multiplier": 1.2,
+  "cooldown": 10.0,
+  "range": 5.0,
+  "mana_cost": 45.0,
+  "ability_types": [
+    {
+      "DirectDamage": {
+        "multiplier": 1.2
+      }
+    },
+    {
+      "AreaOfEffect": {
+        "radius": 5.0,
+        "max_targets": 8
+      }
+    }
+  ],
+  "unlock_requirement": {
+    "Level": 7
+  }
+}

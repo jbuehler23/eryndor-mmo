@@ -4,5 +4,20 @@
   "max_health": 80.0,
   "attack_power": 8.0,
   "defense": 3.0,
-  "move_speed": 90.0
+  "move_speed": 90.0,
+  "aggro_range": 180.0,
+  "leash_range": 350.0,
+  "respawn_delay": 10.0,
+  "loot_table": {
+    "gold_min": 8,
+    "gold_max": 15,
+    "items": [
+      { "item_id": 1, "drop_chance": 0.25, "quantity_min": 1, "quantity_max": 1 }
+    ]
+  },
+  "visual": {
+    "shape": "Square",
+    "color": [0.4, 0.6, 0.2, 1.0],
+    "size": 16.0
+  }
 }

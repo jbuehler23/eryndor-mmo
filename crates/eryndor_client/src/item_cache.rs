@@ -60,6 +60,52 @@ impl Default for ClientItemDatabase {
             },
         });
 
+        items.insert(ITEM_STAFF, ClientItemInfo {
+            id: ITEM_STAFF,
+            name: "Staff".to_string(),
+            item_type: ItemType::Weapon,
+            stat_bonuses: ClientStatBonuses {
+                attack_power: 14.0,
+                max_mana: 30.0,
+                ..Default::default()
+            },
+        });
+
+        items.insert(ITEM_MACE, ClientItemInfo {
+            id: ITEM_MACE,
+            name: "Mace".to_string(),
+            item_type: ItemType::Weapon,
+            stat_bonuses: ClientStatBonuses {
+                attack_power: 11.0,
+                defense: 3.0,
+                max_health: 15.0,
+                ..Default::default()
+            },
+        });
+
+        items.insert(ITEM_BOW, ClientItemInfo {
+            id: ITEM_BOW,
+            name: "Bow".to_string(),
+            item_type: ItemType::Weapon,
+            stat_bonuses: ClientStatBonuses {
+                attack_power: 9.0,
+                crit_chance: 0.15,
+                ..Default::default()
+            },
+        });
+
+        items.insert(ITEM_AXE, ClientItemInfo {
+            id: ITEM_AXE,
+            name: "Axe".to_string(),
+            item_type: ItemType::Weapon,
+            stat_bonuses: ClientStatBonuses {
+                attack_power: 13.0,
+                max_health: 10.0,
+                crit_chance: 0.05,
+                ..Default::default()
+            },
+        });
+
         // ========== HELMETS ==========
 
         items.insert(ITEM_LEATHER_CAP, ClientItemInfo {

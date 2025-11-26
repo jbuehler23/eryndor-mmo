@@ -1,0 +1,17 @@
+{
+  "id": 300,
+  "name": "Quick Strike",
+  "description": "A fast melee attack.",
+  "damage_multiplier": 1.0,
+  "cooldown": 1.0,
+  "range": 1.5,
+  "mana_cost": 10.0,
+  "ability_types": [
+    {
+      "DirectDamage": {
+        "multiplier": 1.0
+      }
+    }
+  ],
+  "unlock_requirement": "None"
+}

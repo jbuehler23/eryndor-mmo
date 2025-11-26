@@ -1,0 +1,25 @@
+{
+  "id": 101,
+  "name": "Shield Bash",
+  "description": "Bash the enemy with your shield, dealing damage and stunning them.",
+  "damage_multiplier": 1.2,
+  "cooldown": 8.0,
+  "range": 1.5,
+  "mana_cost": 20.0,
+  "ability_types": [
+    {
+      "DirectDamage": {
+        "multiplier": 1.2
+      }
+    },
+    {
+      "Debuff": {
+        "duration": 2.0,
+        "effect": "Stun"
+      }
+    }
+  ],
+  "unlock_requirement": {
+    "Level": 3
+  }
+}

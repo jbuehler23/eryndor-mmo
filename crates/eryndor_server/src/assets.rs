@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 /// Load all items from individual JSON files in content/items/
-fn load_items_from_content() -> HashMap<u32, ItemDefinition> {
+pub fn load_items_from_content() -> HashMap<u32, ItemDefinition> {
     let content_path = Path::new("assets/content/items");
     let mut items = HashMap::new();
 
@@ -33,7 +33,7 @@ fn load_items_from_content() -> HashMap<u32, ItemDefinition> {
 }
 
 /// Load all enemies from individual JSON files in content/enemies/
-fn load_enemies_from_content() -> HashMap<u32, EnemyDefinition> {
+pub fn load_enemies_from_content() -> HashMap<u32, EnemyDefinition> {
     let content_path = Path::new("assets/content/enemies");
     let mut enemies = HashMap::new();
 
@@ -62,7 +62,7 @@ fn load_enemies_from_content() -> HashMap<u32, EnemyDefinition> {
 }
 
 /// Load all zones from individual JSON files in content/zones/
-fn load_zones_from_content() -> HashMap<String, ZoneDefinition> {
+pub fn load_zones_from_content() -> HashMap<String, ZoneDefinition> {
     let content_path = Path::new("assets/content/zones");
     let mut zones = HashMap::new();
 
@@ -91,7 +91,7 @@ fn load_zones_from_content() -> HashMap<String, ZoneDefinition> {
 }
 
 /// Load all quests from individual JSON files in content/quests/
-fn load_quests_from_content() -> HashMap<u32, QuestDefinition> {
+pub fn load_quests_from_content() -> HashMap<u32, QuestDefinition> {
     let content_path = Path::new("assets/content/quests");
     let mut quests = HashMap::new();
 

@@ -94,6 +94,12 @@ fn spawn_zone_enemies(
 ) {
     for region in &zone.enemy_spawns {
         if let Some(def) = enemy_db.enemies.get(&region.enemy_type) {
+            // Parse shape type from enemy definition
+            let shape_type = match def.visual.shape.as_str() {
+                "Square" | "Rectangle" => ShapeType::Square,
+                _ => ShapeType::Circle,
+            };
+
             for spawn_point in &region.spawn_points {
                 let position = Vec2::from(*spawn_point);
 
@@ -118,16 +124,21 @@ fn spawn_zone_enemies(
                     AiState::default(),
                     Interactable::enemy(),
                     VisualShape {
-                        shape_type: ShapeType::Circle,
-                        color: region.visual.color,
-                        size: region.visual.size,
+                        shape_type,
+                        color: def.visual.color,
+                        size: def.visual.size,
                     },
                     AbilityCooldowns::default(),
                     SpawnPoint {
                         position,
-                        respawn_delay: region.respawn_delay,
+                        respawn_delay: def.respawn_delay,
                     },
-                    region.loot_table.clone(),
+                    def.loot_table.clone(),
+                    AiActivationDelay::default(),
+                    AggroRange {
+                        aggro: def.aggro_range,
+                        leash: def.leash_range,
+                    },
                 ));
 
                 // Physics components
@@ -135,7 +146,7 @@ fn spawn_zone_enemies(
                     PhysicsPosition(position),
                     PhysicsVelocity(Vec2::ZERO),
                     RigidBody::Dynamic,
-                    Collider::circle(region.visual.size / 2.0),
+                    Collider::circle(def.visual.size / 2.0),
                     CollisionLayers::new(GameLayer::Enemy, [GameLayer::Player, GameLayer::Npc]),
                 ));
             }
@@ -242,6 +253,11 @@ fn spawn_hardcoded_world(commands: &mut Commands, enemy_db: &EnemyDatabase) {
                     respawn_delay: 10.0, // 10 seconds
                 },
                 loot_table,
+                AiActivationDelay::default(),
+                AggroRange {
+                    aggro: def.aggro_range,
+                    leash: def.leash_range,
+                },
             ));
 
             // Physics components

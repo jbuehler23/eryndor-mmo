@@ -366,6 +366,27 @@ pub struct EditingEnemy {
     pub attack_power: f32,
     pub defense: f32,
     pub move_speed: f32,
+    // Combat/AI
+    pub aggro_range: f32,
+    pub leash_range: f32,
+    pub respawn_delay: f32,
+    // Visual
+    pub visual_shape: String,  // "Circle", "Square"
+    pub visual_color: [f32; 4],  // RGBA
+    pub visual_size: f32,
+    // Loot
+    pub gold_min: u32,
+    pub gold_max: u32,
+    pub loot_items: Vec<EditingLootItem>,
+}
+
+/// Loot item in enemy's loot table
+#[derive(Debug, Clone, Default)]
+pub struct EditingLootItem {
+    pub item_id: u32,
+    pub drop_chance: f32,  // 0.0 to 1.0
+    pub quantity_min: u32,
+    pub quantity_max: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -380,7 +401,56 @@ pub struct EnemyListItem {
     pub defense: f32,
     #[serde(default)]
     pub move_speed: f32,
+    #[serde(default)]
+    pub aggro_range: f32,
+    #[serde(default)]
+    pub leash_range: f32,
+    #[serde(default)]
+    pub respawn_delay: f32,
+    #[serde(default)]
+    pub visual: VisualDataJson,
+    #[serde(default)]
+    pub loot_table: LootTableJson,
 }
+
+/// Visual data from JSON
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct VisualDataJson {
+    #[serde(default)]
+    pub shape: String,
+    #[serde(default)]
+    pub color: [f32; 4],
+    #[serde(default = "default_visual_size")]
+    pub size: f32,
+}
+
+fn default_visual_size() -> f32 { 16.0 }
+
+/// Loot table data from JSON
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct LootTableJson {
+    #[serde(default)]
+    pub gold_min: u32,
+    #[serde(default)]
+    pub gold_max: u32,
+    #[serde(default)]
+    pub items: Vec<LootItemData>,
+}
+
+/// Loot item data from server
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct LootItemData {
+    pub item_id: u32,
+    #[serde(default = "default_drop_chance")]
+    pub drop_chance: f32,
+    #[serde(default = "default_quantity")]
+    pub quantity_min: u32,
+    #[serde(default = "default_quantity")]
+    pub quantity_max: u32,
+}
+
+fn default_drop_chance() -> f32 { 1.0 }
+fn default_quantity() -> u32 { 1 }
 
 /// NPCs editor state
 #[derive(Debug, Clone, Default)]
@@ -410,12 +480,26 @@ pub struct NpcsEditorState {
     pub editing_npc: Option<EditingNpc>,
 }
 
-/// NPC being edited
+/// NPC being edited - mirrors NpcSpawnDef from server
 #[derive(Debug, Clone, Default)]
 pub struct EditingNpc {
     pub id: u32,
     pub name: String,
-    pub role: String,
+    pub npc_type: String,  // "QuestGiver" or "Trainer"
+    pub position_x: f32,
+    pub position_y: f32,
+    pub quests: Vec<u32>,  // Quest IDs for quest givers
+    pub trainer_items: Vec<EditingTrainerItem>,  // Items for sale by trainers
+    pub visual_shape: String,  // "Circle", "Rectangle"
+    pub visual_color: [f32; 4],  // RGBA
+    pub visual_size: f32,
+}
+
+/// Item sold by a trainer NPC
+#[derive(Debug, Clone, Default)]
+pub struct EditingTrainerItem {
+    pub item_id: u32,
+    pub cost: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -423,7 +507,9 @@ pub struct NpcListItem {
     pub id: u32,
     pub name: String,
     #[serde(default)]
-    pub role: String,
+    pub npc_type: String,
+    #[serde(default)]
+    pub quests: Vec<u32>,
 }
 
 /// Quests editor state
@@ -454,12 +540,37 @@ pub struct QuestsEditorState {
     pub editing_quest: Option<EditingQuest>,
 }
 
-/// Quest being edited
+/// Quest being edited - mirrors QuestDefinition from server
 #[derive(Debug, Clone, Default)]
 pub struct EditingQuest {
     pub id: u32,
     pub name: String,
-    pub quest_type: String,
+    pub description: String,
+    pub objectives: Vec<EditingQuestObjective>,
+    pub reward_exp: u32,
+    pub proficiency_requirements: Vec<EditingProficiencyRequirement>,
+    pub reward_abilities: Vec<u32>,
+}
+
+/// Quest objective types
+#[derive(Debug, Clone)]
+pub enum EditingQuestObjective {
+    ObtainItem { item_id: u32, count: u32 },
+    KillEnemy { enemy_type: u32, count: u32 },
+    TalkToNpc { npc_id: u32 },
+}
+
+impl Default for EditingQuestObjective {
+    fn default() -> Self {
+        Self::TalkToNpc { npc_id: 1 }
+    }
+}
+
+/// Proficiency requirement for quests
+#[derive(Debug, Clone, Default)]
+pub struct EditingProficiencyRequirement {
+    pub weapon_type: String,  // "Sword", "Dagger", "Wand", etc.
+    pub level: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -467,7 +578,9 @@ pub struct QuestListItem {
     pub id: u32,
     pub name: String,
     #[serde(default)]
-    pub quest_type: String,
+    pub description: String,
+    #[serde(default)]
+    pub reward_exp: u32,
 }
 
 /// Abilities editor state
@@ -498,12 +611,56 @@ pub struct AbilitiesEditorState {
     pub editing_ability: Option<EditingAbility>,
 }
 
-/// Ability being edited
+/// Ability being edited - mirrors AbilityDefinition from eryndor_shared
 #[derive(Debug, Clone, Default)]
 pub struct EditingAbility {
     pub id: u32,
     pub name: String,
-    pub ability_type: String,
+    pub description: String,
+    pub damage_multiplier: f32,
+    pub cooldown: f32,
+    pub range: f32,
+    pub mana_cost: f32,
+    pub ability_effects: Vec<EditingAbilityEffect>,
+    pub unlock_requirement: EditingUnlockRequirement,
+}
+
+/// Represents an ability effect in the editor
+#[derive(Debug, Clone)]
+pub enum EditingAbilityEffect {
+    DirectDamage { multiplier: f32 },
+    DamageOverTime { duration: f32, ticks: u32, damage_per_tick: f32 },
+    AreaOfEffect { radius: f32, max_targets: u32 },
+    Buff { duration: f32, attack_power: f32, defense: f32, move_speed: f32 },
+    Debuff { duration: f32, debuff_type: EditingDebuffType },
+    Mobility { distance: f32, dash_speed: f32 },
+    Heal { amount: f32, is_percent: bool },
+}
+
+impl Default for EditingAbilityEffect {
+    fn default() -> Self {
+        Self::DirectDamage { multiplier: 1.0 }
+    }
+}
+
+/// Debuff types for the editor
+#[derive(Debug, Clone, Default)]
+pub enum EditingDebuffType {
+    #[default]
+    Stun,
+    Root,
+    Slow { move_speed_reduction: f32 },
+    Weaken { attack_reduction: f32 },
+}
+
+/// Unlock requirement for abilities
+#[derive(Debug, Clone, Default)]
+pub enum EditingUnlockRequirement {
+    #[default]
+    None,
+    Level(u32),
+    Quest(u32),
+    WeaponProficiency { weapon: String, level: u32 },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -511,7 +668,13 @@ pub struct AbilityListItem {
     pub id: u32,
     pub name: String,
     #[serde(default)]
-    pub ability_type: String,
+    pub description: String,
+    #[serde(default)]
+    pub damage_multiplier: f32,
+    #[serde(default)]
+    pub cooldown: f32,
+    #[serde(default)]
+    pub mana_cost: f32,
 }
 
 /// Loot tables editor state

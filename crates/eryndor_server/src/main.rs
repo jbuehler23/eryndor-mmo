@@ -280,8 +280,9 @@ fn main() {
         .add_systems(Startup, (
             setup_server,
             database::setup_database,
-            world::spawn_world,
         ))
+        // Spawn world AFTER content is loaded from JSON files
+        .add_systems(Startup, world::spawn_world.after(assets::setup_content_loading))
         .add_systems(Update, (
             // Connection tracking (must run first to capture IPs)
             auth::track_client_connections,

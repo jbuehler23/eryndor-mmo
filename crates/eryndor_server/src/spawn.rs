@@ -11,6 +11,15 @@ pub struct SpawnPoint {
     pub respawn_delay: f32, // seconds
 }
 
+/// Server-only event triggered when an entity should respawn
+/// Contains all data needed to respawn the entity (no querying needed)
+#[derive(Event, Clone, Debug)]
+pub struct RespawnEvent {
+    pub spawn_position: Vec2,
+    pub respawn_delay: f32,
+    pub template: EntityTemplate,
+}
+
 /// Timer tracking when an entity should respawn
 #[derive(Component)]
 pub struct RespawnTimer {
@@ -40,6 +49,8 @@ pub struct EnemyTemplate {
     pub color: [f32; 4],
     pub size: f32,
     pub loot_table: LootTable,
+    pub aggro_range: f32,
+    pub leash_range: f32,
 }
 
 impl EntityTemplate {
@@ -51,7 +62,8 @@ impl EntityTemplate {
         move_speed: &MoveSpeed,
         stats: &CombatStats,
         visual: &VisualShape,
-        loot_table: &LootTable,
+        loot_table: LootTable,
+        aggro: &AggroRange,
     ) -> Self {
         EntityTemplate::Enemy(EnemyTemplate {
             enemy_type_id: enemy_type.0,
@@ -64,7 +76,9 @@ impl EntityTemplate {
             visual_shape: visual.shape_type,
             color: visual.color,
             size: visual.size,
-            loot_table: loot_table.clone(),
+            loot_table,
+            aggro_range: aggro.aggro,
+            leash_range: aggro.leash,
         })
     }
 
@@ -100,6 +114,10 @@ impl EntityTemplate {
                     },
                     AbilityCooldowns::default(),
                     template.loot_table.clone(),
+                    AggroRange {
+                        aggro: template.aggro_range,
+                        leash: template.leash_range,
+                    },
                 ));
 
                 // Add AI activation delay in third batch to stay within bundle size limits
@@ -150,44 +168,22 @@ impl SpawnRegistry {
     }
 }
 
-/// When an entity with a SpawnPoint component dies, create a respawn timer
+/// When RespawnEvent is triggered, create a respawn timer
+/// All data is contained in the event, so no entity querying is needed
 pub fn schedule_respawn(
-    trigger: On<DeathEvent>,
-    query: Query<(
-        &SpawnPoint,
-        Option<&EnemyType>,
-        Option<&EnemyName>,
-        Option<&Health>,
-        Option<&MoveSpeed>,
-        Option<&CombatStats>,
-        Option<&VisualShape>,
-        Option<&LootTable>,
-    )>,
+    trigger: On<RespawnEvent>,
     mut commands: Commands,
 ) {
     let event = trigger.event();
 
-    // Check if the dead entity had a spawn point
-    if let Ok((spawn_point, enemy_type, enemy_name, health, move_speed, stats, visual, loot_table)) = query.get(event.entity) {
-        // Create template based on entity components
-        let template = if let (Some(enemy_type), Some(enemy_name), Some(health), Some(move_speed), Some(stats), Some(visual), Some(loot_table)) =
-            (enemy_type, enemy_name, health, move_speed, stats, visual, loot_table)
-        {
-            EntityTemplate::from_enemy_components(enemy_type, enemy_name, health, move_speed, stats, visual, loot_table)
-        } else {
-            warn!("Entity {:?} has SpawnPoint but missing required components for respawn", event.entity);
-            return;
-        };
+    info!("Scheduling respawn in {:.1}s at {:?}", event.respawn_delay, event.spawn_position);
 
-        info!("Scheduling respawn in {:.1}s at {:?}", spawn_point.respawn_delay, spawn_point.position);
-
-        // Create respawn timer entity
-        commands.spawn(RespawnTimer {
-            timer: Timer::from_seconds(spawn_point.respawn_delay, TimerMode::Once),
-            template,
-            spawn_position: spawn_point.position,
-        });
-    }
+    // Create respawn timer entity
+    commands.spawn(RespawnTimer {
+        timer: Timer::from_seconds(event.respawn_delay, TimerMode::Once),
+        template: event.template.clone(),
+        spawn_position: event.spawn_position,
+    });
 }
 
 /// System to handle respawning entities after their timer expires

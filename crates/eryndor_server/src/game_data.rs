@@ -416,6 +416,11 @@ impl Default for EnemyDatabase {
             attack_power: 5.0,
             defense: 2.0,
             move_speed: 80.0,
+            aggro_range: 150.0,
+            leash_range: 300.0,
+            respawn_delay: 10.0,
+            loot_table: LootTable { gold_min: 3, gold_max: 8, items: vec![] },
+            visual: VisualData { shape: "Circle".to_string(), color: [0.2, 0.8, 0.2, 1.0], size: 16.0 },
         });
 
         // Level 2: Goblin - Weak humanoid
@@ -426,6 +431,11 @@ impl Default for EnemyDatabase {
             attack_power: 8.0,
             defense: 3.0,
             move_speed: 90.0,
+            aggro_range: 180.0,
+            leash_range: 350.0,
+            respawn_delay: 10.0,
+            loot_table: LootTable { gold_min: 8, gold_max: 15, items: vec![] },
+            visual: VisualData { shape: "Square".to_string(), color: [0.4, 0.6, 0.2, 1.0], size: 16.0 },
         });
 
         // Level 3: Wolf - Fast predator
@@ -436,6 +446,11 @@ impl Default for EnemyDatabase {
             attack_power: 12.0,
             defense: 4.0,
             move_speed: 120.0,
+            aggro_range: 200.0,
+            leash_range: 400.0,
+            respawn_delay: 10.0,
+            loot_table: LootTable { gold_min: 12, gold_max: 20, items: vec![] },
+            visual: VisualData { shape: "Circle".to_string(), color: [0.6, 0.5, 0.3, 1.0], size: 16.0 },
         });
 
         // Level 4: Skeleton - Undead warrior
@@ -446,6 +461,11 @@ impl Default for EnemyDatabase {
             attack_power: 15.0,
             defense: 5.0,
             move_speed: 85.0,
+            aggro_range: 160.0,
+            leash_range: 320.0,
+            respawn_delay: 10.0,
+            loot_table: LootTable { gold_min: 15, gold_max: 25, items: vec![] },
+            visual: VisualData { shape: "Square".to_string(), color: [0.9, 0.9, 0.8, 1.0], size: 16.0 },
         });
 
         // Level 5: Orc - Strong bruiser
@@ -456,6 +476,11 @@ impl Default for EnemyDatabase {
             attack_power: 18.0,
             defense: 6.0,
             move_speed: 75.0,
+            aggro_range: 200.0,
+            leash_range: 400.0,
+            respawn_delay: 10.0,
+            loot_table: LootTable { gold_min: 20, gold_max: 35, items: vec![] },
+            visual: VisualData { shape: "Square".to_string(), color: [0.3, 0.5, 0.3, 1.0], size: 16.0 },
         });
 
         // Level 3: Spider - Fast but fragile
@@ -466,6 +491,11 @@ impl Default for EnemyDatabase {
             attack_power: 10.0,
             defense: 3.0,
             move_speed: 110.0,
+            aggro_range: 120.0,
+            leash_range: 250.0,
+            respawn_delay: 10.0,
+            loot_table: LootTable { gold_min: 10, gold_max: 18, items: vec![] },
+            visual: VisualData { shape: "Circle".to_string(), color: [0.3, 0.1, 0.3, 1.0], size: 16.0 },
         });
 
         Self { enemies }
@@ -480,7 +510,21 @@ pub struct EnemyDefinition {
     pub attack_power: f32,
     pub defense: f32,
     pub move_speed: f32,
+    #[serde(default = "default_aggro_range")]
+    pub aggro_range: f32,
+    #[serde(default = "default_leash_range")]
+    pub leash_range: f32,
+    #[serde(default = "default_respawn_delay")]
+    pub respawn_delay: f32,
+    #[serde(default)]
+    pub loot_table: LootTable,
+    #[serde(default)]
+    pub visual: VisualData,
 }
+
+fn default_aggro_range() -> f32 { 150.0 }
+fn default_leash_range() -> f32 { 300.0 }
+fn default_respawn_delay() -> f32 { 10.0 }
 
 // ============================================================================
 // ZONE & SPAWN DEFINITIONS
@@ -504,9 +548,6 @@ pub struct EnemySpawnRegion {
     pub region_id: String,
     pub enemy_type: u32,
     pub spawn_points: Vec<Vec2Data>,
-    pub respawn_delay: f32,
-    pub loot_table: LootTable,
-    pub visual: VisualData,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -532,14 +573,9 @@ impl From<Vec2Data> for Vec2 {
     }
 }
 
-#[derive(Component, Serialize, Deserialize, Clone)]
-pub struct LootTable {
-    pub gold_min: u32,
-    pub gold_max: u32,
-    pub items: Vec<u32>,
-}
+// LootItem and LootTable are imported from eryndor_shared
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct VisualData {
     pub shape: String,  // "Circle", "Rectangle", etc.
     pub color: [f32; 4],  // RGBA

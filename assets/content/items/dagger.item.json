@@ -4,7 +4,7 @@
   "item_type": "Weapon",
   "grants_ability": 300,
   "stat_bonuses": {
-    "attack_power": 300.0,
+    "attack_power": 8.0,
     "defense": 0.0,
     "max_health": 0.0,
     "max_mana": 0.0,

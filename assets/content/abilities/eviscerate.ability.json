@@ -1,0 +1,19 @@
+{
+  "id": 305,
+  "name": "Eviscerate",
+  "description": "A devastating finishing move that deals massive damage.",
+  "damage_multiplier": 3.0,
+  "cooldown": 15.0,
+  "range": 1.5,
+  "mana_cost": 40.0,
+  "ability_types": [
+    {
+      "DirectDamage": {
+        "multiplier": 3.0
+      }
+    }
+  ],
+  "unlock_requirement": {
+    "Level": 12
+  }
+}
