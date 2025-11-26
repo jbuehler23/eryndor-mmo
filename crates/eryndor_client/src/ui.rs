@@ -377,6 +377,7 @@ pub fn game_ui(
     mut commands: Commands,
     player_query: Query<(Entity, &Health, &Mana, &CurrentTarget, &Hotbar, &Inventory, &Equipment, &CombatStats, &LearnedAbilities, &QuestLog, &Character, &Gold, &Position), With<Player>>,
     progression_query: Query<(&Experience, &WeaponProficiency, &WeaponProficiencyExp, &ArmorProficiency)>,
+    buffs_query: Query<Option<&ActiveBuffs>>,
     target_query: Query<(&Health, Option<&Character>, Option<&NpcName>)>,
     loot_query: Query<(Entity, &Position), With<LootContainer>>,
     item_db: Res<crate::item_cache::ClientItemDatabase>,
@@ -416,6 +417,39 @@ pub fn game_ui(
                 ui.colored_label(egui::Color32::GOLD, format!("{}", gold.0));
             });
         });
+
+    // Active buffs display (below Player Status)
+    if let Ok(Some(active_buffs)) = buffs_query.get(player_entity) {
+        if !active_buffs.buffs.is_empty() {
+            egui::Window::new("Buffs")
+                .fixed_pos([10.0, 115.0])
+                .fixed_size([200.0, 60.0])
+                .title_bar(false)
+                .show(ctx, |ui| {
+                    ui.horizontal_wrapped(|ui| {
+                        for buff in &active_buffs.buffs {
+                            let ability_name = ability_db.get_ability_name(buff.ability_id);
+                            // Show buff stat bonuses as tooltip
+                            let response = ui.colored_label(egui::Color32::from_rgb(100, 200, 255), &ability_name);
+                            response.on_hover_ui(|ui| {
+                                ui.label(&ability_name);
+                                ui.separator();
+                                if buff.stat_bonuses.attack_power > 0.0 {
+                                    ui.label(format!("+{:.0} Attack", buff.stat_bonuses.attack_power));
+                                }
+                                if buff.stat_bonuses.defense > 0.0 {
+                                    ui.label(format!("+{:.0} Defense", buff.stat_bonuses.defense));
+                                }
+                                if buff.stat_bonuses.move_speed > 0.0 {
+                                    ui.label(format!("+{:.0}% Speed", buff.stat_bonuses.move_speed * 100.0));
+                                }
+                            });
+                            ui.add_space(5.0);
+                        }
+                    });
+                });
+        }
+    }
 
     // Target frame (top center)
     if let Some(target_entity) = current_target.0 {
@@ -467,6 +501,7 @@ pub fn game_ui(
                         if let Some(HotbarSlot::Ability(ability_id)) = slot {
                             commands.client_trigger(UseAbilityRequest {
                                 ability_id: *ability_id,
+                                target_position: None, // UI clicks don't have cursor world position
                             });
                         }
                     }

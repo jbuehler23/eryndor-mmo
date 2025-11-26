@@ -117,6 +117,7 @@ fn spawn_zone_enemies(
                         defense: def.defense,
                         crit_chance: 0.0,
                     },
+                    BaseStats::new(def.attack_power, def.defense, def.move_speed),
                     CurrentTarget::default(),
                 )).id();
 
@@ -236,6 +237,7 @@ fn spawn_hardcoded_world(commands: &mut Commands, enemy_db: &EnemyDatabase) {
                     defense: def.defense,
                     crit_chance: 0.0,
                 },
+                BaseStats::new(def.attack_power, def.defense, def.move_speed),
                 CurrentTarget::default(),
             )).id();
 

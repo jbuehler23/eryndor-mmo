@@ -100,6 +100,16 @@ pub fn get_class_visual(class: CharacterClass) -> VisualShape {
     }
 }
 
+/// Get class-specific base stats (for buff/debuff calculations)
+pub fn get_class_base_stats(class: CharacterClass) -> BaseStats {
+    let combat_stats = get_class_stats(class);
+    BaseStats::new(
+        combat_stats.attack_power,
+        combat_stats.defense,
+        200.0, // Default move speed
+    )
+}
+
 /// Spawn a character entity with all required components
 /// Returns the character entity ID
 pub fn spawn_character_components(
@@ -118,6 +128,7 @@ pub fn spawn_character_components(
 
     // Get class-specific stats
     let combat_stats = get_class_stats(class);
+    let base_stats = get_class_base_stats(class);
     let visual = get_class_visual(class);
     let (health_regen, mana_regen) = get_class_regen(class);
 
@@ -163,6 +174,7 @@ pub fn spawn_character_components(
         health_regen,
         mana_regen,
         combat_stats,
+        base_stats,
         CurrentTarget::default(),
         InCombat(false),
     )).id();

@@ -557,8 +557,8 @@ pub fn handle_select_character(
     let result = runtime.block_on(database::load_character(pool, request.character_id));
 
     match result {
-        Ok((character, position, health, mana)) => {
-            info!("Spawning character: {}", character.name);
+        Ok((character, position, health, mana, gold)) => {
+            info!("Spawning character: {} with {} gold", character.name, gold.0);
 
             // Load equipment, inventory, and quest log from database
             let equipment = runtime.block_on(database::load_equipment(pool, request.character_id))
@@ -632,6 +632,7 @@ pub fn handle_select_character(
                 unlocked_passives,
                 hotbar,
                 learned_abilities,
+                gold,
             ));
 
             // Link client to character
@@ -675,6 +676,7 @@ pub fn handle_client_disconnect(
         &Equipment,
         &Inventory,
         &QuestLog,
+        &Gold,
     )>,
     progression: Query<(
         &Experience,
@@ -698,7 +700,7 @@ pub fn handle_client_disconnect(
 
         // Find and despawn their character using OwnedBy component
         let mut found_character = false;
-        for (entity, owned_by, character, position, health, mana, db_id, equipment, inventory, quest_log) in characters.iter() {
+        for (entity, owned_by, character, position, health, mana, db_id, equipment, inventory, quest_log, gold) in characters.iter() {
             if owned_by.0 == client_entity {
                 // Get progression components
                 let Ok((experience, weapon_prof, weapon_exp, armor_prof, armor_exp, unlocked_passives)) =
@@ -707,8 +709,8 @@ pub fn handle_client_disconnect(
                     continue;
                 };
                 found_character = true;
-                info!("Saving character '{}' (DB ID: {}) at position ({:.1}, {:.1})",
-                    character.name, db_id.0, position.0.x, position.0.y);
+                info!("Saving character '{}' (DB ID: {}) at position ({:.1}, {:.1}) with {} gold",
+                    character.name, db_id.0, position.0.x, position.0.y, gold.0);
 
                 // Save all character data to database
                 let runtime = tokio::runtime::Runtime::new().unwrap();
@@ -720,6 +722,7 @@ pub fn handle_client_disconnect(
                     position,
                     health,
                     mana,
+                    gold,
                 )) {
                     Ok(_) => info!("Character '{}' basic data saved", character.name),
                     Err(e) => error!("Failed to save character '{}': {}", character.name, e),
@@ -787,6 +790,7 @@ pub fn handle_disconnect_character(
         &Equipment,
         &Inventory,
         &QuestLog,
+        &Gold,
     )>,
     progression: Query<(
         &Experience,
@@ -811,7 +815,7 @@ pub fn handle_disconnect_character(
     info!("Client {:?} (Account ID: {}) requested disconnect from character", client_entity, auth.account_id);
 
     // Find and save/despawn their character
-    for (entity, owned_by, character, position, health, mana, db_id, equipment, inventory, quest_log) in characters.iter() {
+    for (entity, owned_by, character, position, health, mana, db_id, equipment, inventory, quest_log, gold) in characters.iter() {
         if owned_by.0 == client_entity {
             // Get progression components
             let Ok((experience, weapon_prof, weapon_exp, armor_prof, armor_exp, unlocked_passives)) =
@@ -833,8 +837,9 @@ pub fn handle_disconnect_character(
                 position,
                 health,
                 mana,
+                gold,
             )) {
-                Ok(_) => info!("Character '{}' basic data saved", character.name),
+                Ok(_) => info!("Character '{}' basic data saved with {} gold", character.name, gold.0),
                 Err(e) => error!("Failed to save character '{}': {}", character.name, e),
             }
 

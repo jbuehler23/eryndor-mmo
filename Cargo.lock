@@ -2993,6 +2993,7 @@ dependencies = [
  "log",
  "reqwest",
  "serde",
+ "serde_json",
  "tracing",
  "url",
  "wasm-bindgen",

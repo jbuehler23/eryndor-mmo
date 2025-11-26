@@ -107,6 +107,12 @@ pub const ABILITY_AIMED_SHOT: u32 = 600;
 // Berserker abilities (Axe) - IDs 700-799
 pub const ABILITY_RENDING_STRIKE: u32 = 700;
 
+// Test abilities - IDs 900-999
+pub const ABILITY_TEST_AOE: u32 = 900;
+pub const ABILITY_TEST_HEAL: u32 = 901;
+pub const ABILITY_TEST_MOBILITY: u32 = 902;
+pub const ABILITY_TEST_BUFF: u32 = 903;
+
 // ============================================================================
 // ITEM IDS
 // ============================================================================

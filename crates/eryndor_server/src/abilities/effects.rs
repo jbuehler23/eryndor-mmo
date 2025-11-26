@@ -2,35 +2,73 @@ use bevy::prelude::*;
 use eryndor_shared::*;
 
 // ============================================================================
-// BUFF SYSTEM
+// BUFF/DEBUFF SYSTEM (Combined to avoid query conflicts)
 // ============================================================================
 
-/// Process active buffs - apply stat bonuses and remove expired buffs
-pub fn process_buffs(
-    mut query: Query<(&mut ActiveBuffs, &mut CombatStats, &mut MoveSpeed)>,
+/// Process active buffs and debuffs - apply stat bonuses/penalties and remove expired effects
+pub fn process_buffs_and_debuffs(
+    mut query: Query<(
+        Option<&mut ActiveBuffs>,
+        Option<&mut ActiveDebuffs>,
+        &BaseStats,
+        &mut CombatStats,
+        &mut MoveSpeed,
+    )>,
     time: Res<Time>,
 ) {
     let current_time = time.elapsed().as_secs_f32();
 
-    for (mut active_buffs, mut stats, mut move_speed) in &mut query {
-        // Remove expired buffs
-        active_buffs.buffs.retain(|buff| buff.expires_at > current_time);
+    for (active_buffs, active_debuffs, base_stats, mut stats, mut move_speed) in &mut query {
+        // Start with base stats
+        let mut final_attack = base_stats.attack_power;
+        let mut final_defense = base_stats.defense;
+        let mut final_move_speed = base_stats.move_speed;
 
-        // Calculate total bonuses from all active buffs
-        let mut total_attack = 0.0;
-        let mut total_defense = 0.0;
-        let mut total_move_speed = 0.0;
+        // Process buffs first (additive bonuses)
+        if let Some(mut buffs) = active_buffs {
+            // Remove expired buffs
+            buffs.buffs.retain(|buff| buff.expires_at > current_time);
 
-        for buff in &active_buffs.buffs {
-            total_attack += buff.stat_bonuses.attack_power;
-            total_defense += buff.stat_bonuses.defense;
-            total_move_speed += buff.stat_bonuses.move_speed;
+            // Calculate total bonuses from all active buffs
+            for buff in &buffs.buffs {
+                final_attack += buff.stat_bonuses.attack_power;
+                final_defense += buff.stat_bonuses.defense;
+                final_move_speed += buff.stat_bonuses.move_speed;
+            }
         }
 
-        // Apply bonuses (these are additive)
-        // Note: Base stats should be stored separately for proper calculation
-        // For now, we're directly modifying the stats
-        // TODO: Implement base stats system for proper buff/debuff handling
+        // Process debuffs second (multiplicative penalties)
+        let mut is_rooted = false;
+        if let Some(mut debuffs) = active_debuffs {
+            // Remove expired debuffs
+            debuffs.debuffs.retain(|debuff| debuff.expires_at > current_time);
+
+            let mut speed_multiplier = 1.0;
+            let mut attack_multiplier = 1.0;
+
+            for debuff in &debuffs.debuffs {
+                match &debuff.effect {
+                    DebuffType::Slow { move_speed_reduction } => {
+                        speed_multiplier *= 1.0 - move_speed_reduction;
+                    },
+                    DebuffType::Weaken { attack_reduction } => {
+                        attack_multiplier *= 1.0 - attack_reduction;
+                    },
+                    DebuffType::Stun | DebuffType::Root => {
+                        is_rooted = true;
+                    },
+                }
+            }
+
+            // Apply debuff multipliers
+            final_attack *= attack_multiplier;
+            final_move_speed *= speed_multiplier;
+        }
+
+        // Apply final values
+        stats.attack_power = final_attack;
+        stats.defense = final_defense;
+        move_speed.0 = if is_rooted { 0.0 } else { final_move_speed };
     }
 }
 
@@ -57,43 +95,6 @@ pub fn add_buff(
             buffs: vec![buff],
         });
         info!("Created ActiveBuffs and added buff from ability {} to entity {:?}", ability_id, entity.id());
-    }
-}
-
-// ============================================================================
-// DEBUFF SYSTEM
-// ============================================================================
-
-/// Process active debuffs - apply effects and remove expired debuffs
-pub fn process_debuffs(
-    mut query: Query<(&mut ActiveDebuffs, &mut MoveSpeed)>,
-    time: Res<Time>,
-) {
-    let current_time = time.elapsed().as_secs_f32();
-
-    for (mut active_debuffs, mut move_speed) in &mut query {
-        // Remove expired debuffs
-        active_debuffs.debuffs.retain(|debuff| debuff.expires_at > current_time);
-
-        // Apply debuff effects
-        // Note: This is a simplified implementation
-        // TODO: Implement proper base stats system
-        for debuff in &active_debuffs.debuffs {
-            match &debuff.effect {
-                DebuffType::Slow { move_speed_reduction } => {
-                    // Reduce move speed by percentage
-                    // TODO: Apply properly using base speed
-                },
-                DebuffType::Weaken { attack_reduction } => {
-                    // Reduce attack by percentage
-                    // TODO: Apply to CombatStats
-                },
-                DebuffType::Stun | DebuffType::Root => {
-                    // Prevent movement
-                    // TODO: Implement movement prevention
-                },
-            }
-        }
     }
 }
 

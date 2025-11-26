@@ -4,7 +4,7 @@ use eryndor_shared::*;
 use crate::auth::ActiveCharacterEntity;
 use crate::abilities::AbilityDatabase;
 use crate::spawn::{SpawnPoint, RespawnEvent, EntityTemplate};
-use avian2d::prelude::LinearVelocity;
+use avian2d::prelude::{LinearVelocity, Position as PhysicsPosition};
 use rand::Rng;
 
 pub fn handle_set_target(
@@ -237,11 +237,12 @@ pub fn handle_use_ability(
         &CurrentTarget,
         &CombatStats,
         &mut Mana,
+        &mut Health,
         &mut AbilityCooldowns,
         &LearnedAbilities,
         &Equipment,
-    )>,
-    mut targets: Query<(&Position, &mut Health, &CombatStats), (With<Enemy>, Without<AiActivationDelay>)>,
+    ), Without<Enemy>>,
+    mut targets: Query<(Entity, &Position, &mut Health, &CombatStats), (With<Enemy>, Without<AiActivationDelay>)>,
     ability_db: Res<AbilityDatabase>,
     item_db: Res<crate::game_data::ItemDatabase>,
     time: Res<Time>,
@@ -266,12 +267,15 @@ pub fn handle_use_ability(
     info!("Found ability: {} ({})", ability.name, ability.id);
 
     // Get attacker data
-    let Ok((attacker_entity, attacker_pos, current_target, stats, mut mana, mut cooldowns, learned, equipment)) =
+    let Ok((attacker_entity, attacker_pos, current_target, stats, mut mana, mut attacker_health, mut cooldowns, learned, equipment)) =
         attackers.get_mut(char_entity) else {
             warn!("Could not get attacker components for {:?}", char_entity);
             return
         };
     info!("Got attacker components");
+
+    // Store attacker position for later use (after mutable borrow ends)
+    let attacker_position = attacker_pos.0;
 
     // Check if ability is learned
     if !learned.knows(ability.id) {
@@ -303,29 +307,44 @@ pub fn handle_use_ability(
     }
     info!("Mana check passed");
 
-    // Check target
-    let Some(target_entity) = current_target.0 else {
-        warn!("No target selected");
-        return;
-    };
-    info!("Has target: {:?}", target_entity);
+    // Check target (some abilities like self-heals might not need a target)
+    let target_entity_opt = current_target.0;
 
-    // Get target data
-    let Ok((target_pos, mut target_health, target_stats)) = targets.get_mut(target_entity) else {
-        warn!("Could not get target components for {:?}", target_entity);
-        return;
-    };
-    info!("Got target components");
+    // Check if this ability requires a target
+    let requires_target = ability.ability_types.iter().any(|t| matches!(t,
+        AbilityType::DirectDamage { .. } |
+        AbilityType::DamageOverTime { .. } |
+        AbilityType::AreaOfEffect { .. } |
+        AbilityType::Debuff { .. }
+    ));
 
-    // Check range (convert ability range from meters to pixels: 1 meter = 20 pixels)
-    const PIXELS_PER_METER: f32 = 20.0;
-    let distance = attacker_pos.0.distance(target_pos.0);
-    let ability_range_pixels = ability.range * PIXELS_PER_METER;
-    if distance > ability_range_pixels {
-        warn!("Target out of range: {:.1} > {:.1}", distance, ability_range_pixels);
-        return;
-    }
-    info!("Range check passed: {:.1} <= {:.1}", distance, ability_range_pixels);
+    // Validate target if required
+    let primary_target_data = if requires_target {
+        let Some(target_entity) = target_entity_opt else {
+            warn!("No target selected for ability that requires target");
+            return;
+        };
+        info!("Has target: {:?}", target_entity);
+
+        let Ok((_, target_pos, target_health, target_stats)) = targets.get(target_entity) else {
+            warn!("Could not get target components for {:?}", target_entity);
+            return;
+        };
+
+        // Check range (convert ability range from meters to pixels: 1 meter = 20 pixels)
+        const PIXELS_PER_METER: f32 = 20.0;
+        let distance = attacker_position.distance(target_pos.0);
+        let ability_range_pixels = ability.range * PIXELS_PER_METER;
+        if distance > ability_range_pixels {
+            warn!("Target out of range: {:.1} > {:.1}", distance, ability_range_pixels);
+            return;
+        }
+        info!("Range check passed: {:.1} <= {:.1}", distance, ability_range_pixels);
+
+        Some((target_entity, target_pos.0, target_stats.clone()))
+    } else {
+        None
+    };
 
     // Calculate equipment bonuses
     let equipment_bonuses = item_db.calculate_equipment_bonuses(equipment);
@@ -334,42 +353,103 @@ pub fn handle_use_ability(
     let total_attack = stats.attack_power + equipment_bonuses.attack_power;
     let total_crit = stats.crit_chance + equipment_bonuses.crit_chance;
 
-    // Process each ability effect
+    // Process ability effects
+    let current_time = time.elapsed().as_secs_f32();
+    const PIXELS_PER_METER: f32 = 20.0;
+
+    // First, determine if this is an AoE ability and collect targets
+    let mut aoe_params: Option<(f32, u32)> = None;
+    for ability_type in &ability.ability_types {
+        if let AbilityType::AreaOfEffect { radius, max_targets } = ability_type {
+            aoe_params = Some((*radius * PIXELS_PER_METER, *max_targets));
+            break;
+        }
+    }
+
+    // Collect targets for damage/effects
+    let affected_targets: Vec<(Entity, Vec2, CombatStats)> = if let Some((radius, max_targets)) = aoe_params {
+        // AoE: Find all enemies within radius of the primary target
+        let (_, target_pos, _) = primary_target_data.as_ref()
+            .expect("AoE ability should have a target");
+
+        let mut nearby_enemies: Vec<(Entity, Vec2, CombatStats, f32)> = Vec::new();
+        for (enemy_entity, enemy_pos, _, enemy_stats) in targets.iter() {
+            let dist = target_pos.distance(enemy_pos.0);
+            if dist <= radius {
+                nearby_enemies.push((enemy_entity, enemy_pos.0, enemy_stats.clone(), dist));
+            }
+        }
+
+        // Sort by distance and take up to max_targets
+        nearby_enemies.sort_by(|a, b| a.3.partial_cmp(&b.3).unwrap());
+        nearby_enemies.truncate(max_targets as usize);
+
+        info!("AoE ability hit {} targets within {} radius", nearby_enemies.len(), radius);
+
+        nearby_enemies.into_iter().map(|(e, p, s, _)| (e, p, s)).collect()
+    } else if let Some((target_entity, target_pos, target_stats)) = primary_target_data {
+        // Single target
+        vec![(target_entity, target_pos, target_stats)]
+    } else {
+        vec![]
+    };
+
+    // Track total damage for combat events
     let mut total_damage = 0.0;
     let mut is_crit = false;
-    let current_time = time.elapsed().as_secs_f32();
+    let mut primary_target_pos = attacker_position;
 
+    // Process each ability effect
     for ability_type in &ability.ability_types {
         match ability_type {
             AbilityType::DirectDamage { multiplier } => {
-                // Calculate damage
-                let base_damage = total_attack * multiplier;
-                let mitigation = target_stats.defense / (target_stats.defense + 100.0);
-                let mut damage = base_damage * (1.0 - mitigation);
+                // Apply damage to all affected targets
+                for (target_entity, target_pos, target_stats) in &affected_targets {
+                    let base_damage = total_attack * multiplier;
+                    let mitigation = target_stats.defense / (target_stats.defense + 100.0);
+                    let mut damage = base_damage * (1.0 - mitigation);
 
-                // Critical hit check
-                let crit_roll = rand::random::<f32>() < total_crit;
-                if crit_roll {
-                    damage *= 1.5;
-                    is_crit = true;
+                    // Critical hit check (roll once per target)
+                    let crit_roll = rand::random::<f32>() < total_crit;
+                    if crit_roll {
+                        damage *= 1.5;
+                        is_crit = true;
+                    }
+
+                    // Apply damage
+                    if let Ok((_, _, mut target_health, _)) = targets.get_mut(*target_entity) {
+                        target_health.current = (target_health.current - damage).max(0.0);
+                    }
+
+                    // Make enemy aggro on attacker
+                    if let Ok(mut enemy) = commands.get_entity(*target_entity) {
+                        enemy.insert(AiState::Chasing(attacker_entity));
+                        enemy.insert(CurrentTarget(Some(attacker_entity)));
+                    }
+
+                    total_damage += damage;
+                    primary_target_pos = *target_pos;
+
+                    info!("DirectDamage: {:?} took {:.1} damage (crit: {})", target_entity, damage, crit_roll);
                 }
-
-                total_damage += damage;
             }
             AbilityType::DamageOverTime { duration: _, ticks, damage_per_tick } => {
-                // Add DoT effect to target
-                let dot = ActiveDoT {
-                    ability_id: ability.id,
-                    caster: char_entity,
-                    damage_per_tick: *damage_per_tick,
-                    ticks_remaining: *ticks,
-                    next_tick_at: current_time + 1.0,
-                };
+                // Apply DoT to all affected targets
+                for (target_entity, _, _) in &affected_targets {
+                    let dot = ActiveDoT {
+                        ability_id: ability.id,
+                        caster: char_entity,
+                        damage_per_tick: *damage_per_tick,
+                        ticks_remaining: *ticks,
+                        next_tick_at: current_time + 1.0,
+                    };
 
-                if let Ok(mut target) = commands.get_entity(target_entity) {
-                    target.insert(ActiveDoTs {
-                        dots: vec![dot],
-                    });
+                    if let Ok(mut target) = commands.get_entity(*target_entity) {
+                        target.insert(ActiveDoTs {
+                            dots: vec![dot],
+                        });
+                        info!("Applied DoT to {:?}", target_entity);
+                    }
                 }
             }
             AbilityType::Buff { duration, stat_bonuses } => {
@@ -384,49 +464,86 @@ pub fn handle_use_ability(
                     caster.insert(ActiveBuffs {
                         buffs: vec![buff],
                     });
+                    info!("Applied buff from ability {} to caster", ability.id);
                 }
             }
             AbilityType::Debuff { duration, effect } => {
-                // Add debuff to target
-                let debuff = ActiveDebuff {
-                    ability_id: ability.id,
-                    effect: effect.clone(),
-                    expires_at: current_time + duration,
-                };
+                // Apply debuff to all affected targets
+                for (target_entity, _, _) in &affected_targets {
+                    let debuff = ActiveDebuff {
+                        ability_id: ability.id,
+                        effect: effect.clone(),
+                        expires_at: current_time + duration,
+                    };
 
-                if let Ok(mut target) = commands.get_entity(target_entity) {
-                    target.insert(ActiveDebuffs {
-                        debuffs: vec![debuff],
-                    });
+                    if let Ok(mut target) = commands.get_entity(*target_entity) {
+                        target.insert(ActiveDebuffs {
+                            debuffs: vec![debuff],
+                        });
+                        info!("Applied debuff to {:?}", target_entity);
+                    }
                 }
             }
-            AbilityType::AreaOfEffect { radius: _, max_targets: _ } => {
-                // TODO: Implement AoE - find multiple targets within radius
-                warn!("AoE abilities not yet implemented");
+            AbilityType::AreaOfEffect { .. } => {
+                // AoE is handled by target collection above, no additional action needed
             }
-            AbilityType::Mobility { distance: _, dash_speed: _ } => {
-                // TODO: Implement mobility - dash/teleport
-                warn!("Mobility abilities not yet implemented");
+            AbilityType::Mobility { distance, dash_speed: _ } => {
+                // Determine dash direction - prefer target entity, fall back to cursor position
+                let dash_target: Option<Vec2> = if let Some((_, target_pos, _)) = &primary_target_data {
+                    // Dash towards targeted entity
+                    Some(*target_pos)
+                } else if let Some(cursor_pos) = request.target_position {
+                    // Dash towards cursor position
+                    Some(cursor_pos)
+                } else {
+                    None
+                };
+
+                if let Some(target_pos) = dash_target {
+                    let direction = (target_pos - attacker_position).normalize_or_zero();
+                    let move_distance = distance * PIXELS_PER_METER;
+                    let new_position = attacker_position + direction * move_distance;
+
+                    // Update caster's position using commands to avoid query conflicts
+                    if let Ok(mut entity_cmd) = commands.get_entity(char_entity) {
+                        entity_cmd.insert(Position(new_position));
+                        entity_cmd.insert(PhysicsPosition(new_position));
+                        info!("Mobility: Moved caster {:.1} units towards target (new pos: {:?})", move_distance, new_position);
+                    } else {
+                        warn!("Mobility: Could not get entity commands for {:?}", char_entity);
+                    }
+                } else {
+                    warn!("Mobility ability used without target or cursor position - no movement");
+                }
             }
-            AbilityType::Heal { amount: _, is_percent: _ } => {
-                // TODO: Implement healing
-                // Currently causes borrow checker issues if we try to heal the caster
-                // while we already have a mutable borrow on the target
-                warn!("Heal abilities not yet implemented");
+            AbilityType::Heal { amount, is_percent } => {
+                // Heal the caster
+                let heal_amount = if *is_percent {
+                    attacker_health.max * (*amount / 100.0)
+                } else {
+                    *amount
+                };
+
+                let old_health = attacker_health.current;
+                attacker_health.current = (attacker_health.current + heal_amount).min(attacker_health.max);
+                let actual_heal = attacker_health.current - old_health;
+
+                info!("Heal: Restored {:.1} HP to caster (was {:.1}, now {:.1})",
+                    actual_heal, old_health, attacker_health.current);
+
+                // Send heal event to clients
+                commands.server_trigger(ToClients {
+                    mode: SendMode::Broadcast,
+                    message: CombatEvent {
+                        attacker_position,
+                        target_position: attacker_position, // Healing self
+                        damage: -actual_heal, // Negative damage = heal
+                        ability_id: ability.id,
+                        is_crit: false,
+                    },
+                });
             }
         }
-    }
-
-    // Apply total damage from all DirectDamage effects
-    if total_damage > 0.0 {
-        target_health.current = (target_health.current - total_damage).max(0.0);
-    }
-
-    // Make enemy aggro on the attacker when ability is used
-    if let Ok(mut enemy) = commands.get_entity(target_entity) {
-        enemy.insert(AiState::Chasing(attacker_entity));
-        enemy.insert(CurrentTarget(Some(attacker_entity)));
-        info!("Enemy {:?} aggroed on ability user {:?}", target_entity, attacker_entity);
     }
 
     // Consume mana
@@ -439,21 +556,23 @@ pub fn handle_use_ability(
     );
 
     info!(
-        "Player {:?} used ability {} on {:?} for {:.1} damage (crit: {})",
-        char_entity, ability.name, target_entity, total_damage, is_crit
+        "Player {:?} used ability {} for {:.1} total damage (crit: {}, targets: {})",
+        char_entity, ability.name, total_damage, is_crit, affected_targets.len()
     );
 
-    // Send combat event to all clients for VFX (using positions to avoid entity mapping issues)
-    commands.server_trigger(ToClients {
-        mode: SendMode::Broadcast,
-        message: CombatEvent {
-            attacker_position: attacker_pos.0,
-            target_position: target_pos.0,
-            damage: total_damage,
-            ability_id: ability.id,
-            is_crit,
-        },
-    });
+    // Send combat event to all clients for VFX (only if there was damage dealt)
+    if total_damage > 0.0 {
+        commands.server_trigger(ToClients {
+            mode: SendMode::Broadcast,
+            message: CombatEvent {
+                attacker_position,
+                target_position: primary_target_pos,
+                damage: total_damage,
+                ability_id: ability.id,
+                is_crit,
+            },
+        });
+    }
 }
 
 pub fn update_ability_cooldowns(
@@ -622,8 +741,10 @@ pub fn check_deaths(
                     info!("Scheduled respawn for {} at {:?} in {:.1}s", en.0, sp.position, sp.respawn_delay);
                 }
 
-                // Despawn enemy
-                commands.entity(entity).despawn();
+                // Despawn enemy (use get_entity to check existence before despawning)
+                if let Ok(mut entity_commands) = commands.get_entity(entity) {
+                    entity_commands.despawn();
+                }
             }
 
             if is_player.is_some() {

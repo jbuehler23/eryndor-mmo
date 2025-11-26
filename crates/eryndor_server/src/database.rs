@@ -155,6 +155,10 @@ pub fn setup_database(mut db_res: ResMut<DatabaseConnection>) {
             }
         }
 
+        // Migration: Add gold column to characters table
+        let _ = sqlx::query("ALTER TABLE characters ADD COLUMN gold INTEGER NOT NULL DEFAULT 0").execute(&pool).await;
+        // Ignore errors if column already exists
+
         // Migration: Add progression columns to characters table
         let _ = sqlx::query("ALTER TABLE characters ADD COLUMN current_xp INTEGER NOT NULL DEFAULT 0").execute(&pool).await;
         let _ = sqlx::query("ALTER TABLE characters ADD COLUMN weapon_prof_sword INTEGER NOT NULL DEFAULT 0").execute(&pool).await;
@@ -526,9 +530,9 @@ pub async fn create_character(
     }
 }
 
-pub async fn load_character(pool: &SqlitePool, character_id: i64) -> Result<(Character, Position, Health, Mana), String> {
+pub async fn load_character(pool: &SqlitePool, character_id: i64) -> Result<(Character, Position, Health, Mana, Gold), String> {
     let result = sqlx::query(
-        "SELECT name, class, level, position_x, position_y, health, mana
+        "SELECT name, class, level, position_x, position_y, health, mana, gold
          FROM characters WHERE id = ?1"
     )
     .bind(character_id)
@@ -560,8 +564,9 @@ pub async fn load_character(pool: &SqlitePool, character_id: i64) -> Result<(Cha
                 current: row.get(6),
                 max: 100.0,
             };
+            let gold = Gold(row.try_get::<i32, _>(7).unwrap_or(0) as u32);
 
-            Ok((character, position, health, mana))
+            Ok((character, position, health, mana, gold))
         }
         Ok(None) => Err("Character not found".to_string()),
         Err(e) => Err(format!("Failed to load character: {}", e)),
@@ -726,15 +731,17 @@ pub async fn save_character(
     position: &Position,
     health: &Health,
     mana: &Mana,
+    gold: &Gold,
 ) -> Result<(), String> {
     let result = sqlx::query(
-        "UPDATE characters SET position_x = ?1, position_y = ?2, health = ?3, mana = ?4
-         WHERE id = ?5"
+        "UPDATE characters SET position_x = ?1, position_y = ?2, health = ?3, mana = ?4, gold = ?5
+         WHERE id = ?6"
     )
     .bind(position.0.x)
     .bind(position.0.y)
     .bind(health.current)
     .bind(mana.current)
+    .bind(gold.0 as i32)
     .bind(character_id)
     .execute(pool)
     .await;

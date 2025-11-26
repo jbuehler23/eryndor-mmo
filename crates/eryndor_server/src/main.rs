@@ -300,8 +300,7 @@ fn main() {
             combat::check_weapon_proficiency_level_ups,
             combat::enemy_ai,
             // Ability effects
-            abilities::process_buffs,
-            abilities::process_debuffs,
+            abilities::process_buffs_and_debuffs,
             abilities::process_dots,
             // Quests
             quest::update_quest_progress,

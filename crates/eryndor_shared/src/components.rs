@@ -213,6 +213,34 @@ impl Default for CombatStats {
     }
 }
 
+/// Base combat statistics (used for calculating modified stats with buffs/debuffs)
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug)]
+pub struct BaseStats {
+    pub attack_power: f32,
+    pub defense: f32,
+    pub move_speed: f32,
+}
+
+impl Default for BaseStats {
+    fn default() -> Self {
+        Self {
+            attack_power: 10.0,
+            defense: 5.0,
+            move_speed: 200.0,
+        }
+    }
+}
+
+impl BaseStats {
+    pub fn new(attack_power: f32, defense: f32, move_speed: f32) -> Self {
+        Self {
+            attack_power,
+            defense,
+            move_speed,
+        }
+    }
+}
+
 /// Current combat target
 #[derive(Component, Serialize, Deserialize, Clone, Copy, Debug, Default)]
 #[component(map_entities)]

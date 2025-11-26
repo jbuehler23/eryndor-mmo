@@ -127,6 +127,8 @@ pub fn handle_ability_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     client_state: Res<MyClientState>,
     player_query: Query<&Hotbar>,
+    windows: Query<&Window>,
+    camera_query: Query<(&Camera, &GlobalTransform)>,
     mut commands: Commands,
 ) {
     let Some(player_entity) = client_state.player_entity else { return };
@@ -143,15 +145,30 @@ pub fn handle_ability_input(
             if let Some(slot) = &hotbar.slots[i] {
                 match slot {
                     HotbarSlot::Ability(ability_id) => {
+                        // Get cursor position in world coordinates for ground-targeted abilities
+                        let target_position = get_cursor_world_position(&windows, &camera_query);
+
                         commands.client_trigger(UseAbilityRequest {
                             ability_id: *ability_id,
+                            target_position,
                         });
-                        info!("Used ability from slot {}", i + 1);
+                        info!("Used ability from slot {} (target_pos: {:?})", i + 1, target_position);
                     }
                 }
             }
         }
     }
+}
+
+/// Helper function to get cursor position in world coordinates
+fn get_cursor_world_position(
+    windows: &Query<&Window>,
+    camera_query: &Query<(&Camera, &GlobalTransform)>,
+) -> Option<Vec2> {
+    let Ok(window) = windows.single() else { return None };
+    let cursor_pos = window.cursor_position()?;
+    let Ok((camera, camera_transform)) = camera_query.single() else { return None };
+    camera.viewport_to_world_2d(camera_transform, cursor_pos).ok()
 }
 
 // Auto-attack toggle removed - now automatically enabled when targeting enemies

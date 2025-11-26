@@ -67,6 +67,8 @@ impl MapEntities for SetTargetRequest {
 #[derive(Event, Message, Serialize, Deserialize, Clone, Debug)]
 pub struct UseAbilityRequest {
     pub ability_id: u32,
+    /// Optional target position for ground-targeted abilities (dash, teleport, etc.)
+    pub target_position: Option<Vec2>,
 }
 
 /// Pick up a world item

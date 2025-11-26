@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use std::collections::HashMap;
+use eryndor_shared::{AbilityDefinition, AbilityType, AbilityUnlockRequirement, DebuffType};
 
 #[derive(Resource)]
 pub struct ClientAbilityDatabase {
@@ -19,9 +20,152 @@ pub struct ClientAbilityInfo {
     pub unlock_level: Option<u32>,
 }
 
+impl ClientAbilityInfo {
+    /// Create a ClientAbilityInfo from an AbilityDefinition
+    pub fn from_definition(def: &AbilityDefinition) -> Self {
+        let unlock_level = match &def.unlock_requirement {
+            AbilityUnlockRequirement::Level(level) => Some(*level),
+            AbilityUnlockRequirement::None => None,
+            AbilityUnlockRequirement::Quest(_) => None,
+            AbilityUnlockRequirement::WeaponProficiency { .. } => None,
+        };
+
+        Self {
+            id: def.id,
+            name: def.name.clone(),
+            description: def.description.clone(),
+            damage_multiplier: def.damage_multiplier,
+            cooldown: def.cooldown,
+            range: def.range,
+            mana_cost: def.mana_cost,
+            effect_summary: generate_effect_summary(&def.ability_types),
+            unlock_level,
+        }
+    }
+}
+
+/// Generate a human-readable summary of ability effects
+fn generate_effect_summary(ability_types: &[AbilityType]) -> String {
+    let mut parts = Vec::new();
+
+    for ability_type in ability_types {
+        match ability_type {
+            AbilityType::DirectDamage { multiplier } => {
+                if *multiplier > 0.0 {
+                    parts.push("Direct Damage".to_string());
+                }
+            }
+            AbilityType::AreaOfEffect { radius, max_targets } => {
+                parts.push(format!("AoE ({:.1} radius, {} targets)", radius, max_targets));
+            }
+            AbilityType::DamageOverTime { duration: _, ticks, damage_per_tick } => {
+                parts.push(format!("DoT ({} ticks, {:.1} per tick)", ticks, damage_per_tick));
+            }
+            AbilityType::Heal { amount, is_percent } => {
+                if *is_percent {
+                    parts.push(format!("Heal ({:.0}% max HP)", amount * 100.0));
+                } else {
+                    parts.push(format!("Heal ({:.0} HP)", amount));
+                }
+            }
+            AbilityType::Buff { duration, stat_bonuses } => {
+                let mut buff_parts = Vec::new();
+                if stat_bonuses.attack_power > 0.0 {
+                    buff_parts.push(format!("+{:.1} Attack", stat_bonuses.attack_power));
+                }
+                if stat_bonuses.defense > 0.0 {
+                    buff_parts.push(format!("+{:.1} Defense", stat_bonuses.defense));
+                }
+                if stat_bonuses.move_speed > 0.0 {
+                    buff_parts.push(format!("+{:.0}% Speed", stat_bonuses.move_speed * 100.0));
+                }
+                if !buff_parts.is_empty() {
+                    parts.push(format!("Buff ({:.1}s, {})", duration, buff_parts.join(", ")));
+                } else {
+                    parts.push(format!("Buff ({:.1}s)", duration));
+                }
+            }
+            AbilityType::Debuff { duration, effect } => {
+                match effect {
+                    DebuffType::Slow { move_speed_reduction } => {
+                        parts.push(format!("Slow ({:.1}s, -{:.0}%)", duration, move_speed_reduction * 100.0));
+                    }
+                    DebuffType::Weaken { attack_reduction } => {
+                        parts.push(format!("Weaken ({:.1}s, -{:.0}% attack)", duration, attack_reduction * 100.0));
+                    }
+                    DebuffType::Stun => {
+                        parts.push(format!("Stun ({:.1}s)", duration));
+                    }
+                    DebuffType::Root => {
+                        parts.push(format!("Root ({:.1}s)", duration));
+                    }
+                }
+            }
+            AbilityType::Mobility { distance, .. } => {
+                parts.push(format!("Dash ({:.1} distance)", distance));
+            }
+        }
+    }
+
+    if parts.is_empty() {
+        "No special effects".to_string()
+    } else {
+        parts.join(" + ")
+    }
+}
+
+/// Load all abilities from individual JSON files in assets/content/abilities/
+/// Works on native builds only - WASM uses fallback hardcoded abilities
+#[cfg(not(target_family = "wasm"))]
+fn load_abilities_from_content() -> HashMap<u32, ClientAbilityInfo> {
+    use std::path::Path;
+
+    let content_path = Path::new("assets/content/abilities");
+    let mut abilities = HashMap::new();
+
+    if let Ok(entries) = std::fs::read_dir(content_path) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().map(|e| e == "json").unwrap_or(false) {
+                if let Ok(content) = std::fs::read_to_string(&path) {
+                    match serde_json::from_str::<AbilityDefinition>(&content) {
+                        Ok(ability) => {
+                            info!("Client loaded ability: {} (id: {})", ability.name, ability.id);
+                            abilities.insert(ability.id, ClientAbilityInfo::from_definition(&ability));
+                        }
+                        Err(e) => {
+                            warn!("Client failed to parse ability file {:?}: {}", path, e);
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        warn!("Abilities content directory not found: {:?}", content_path);
+    }
+
+    abilities
+}
+
+#[cfg(target_family = "wasm")]
+fn load_abilities_from_content() -> HashMap<u32, ClientAbilityInfo> {
+    // WASM cannot directly read from filesystem - return empty and use fallback
+    HashMap::new()
+}
+
 impl Default for ClientAbilityDatabase {
     fn default() -> Self {
-        let mut abilities = HashMap::new();
+        // First try to load from JSON files (works on native builds)
+        let mut abilities = load_abilities_from_content();
+
+        // If JSON loading found abilities, we're done
+        if !abilities.is_empty() {
+            info!("ClientAbilityDatabase initialized from JSON with {} abilities", abilities.len());
+            return Self { abilities };
+        }
+
+        // Fall back to hardcoded abilities for WASM or if JSON files not found
+        info!("Using hardcoded ability definitions");
 
         // ============================================================================
         // KNIGHT ABILITIES (100-199)
@@ -251,6 +395,7 @@ impl Default for ClientAbilityDatabase {
             unlock_level: Some(12),
         });
 
+        info!("ClientAbilityDatabase initialized with {} hardcoded abilities", abilities.len());
         ClientAbilityDatabase { abilities }
     }
 }

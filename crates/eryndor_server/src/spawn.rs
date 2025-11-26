@@ -100,6 +100,7 @@ impl EntityTemplate {
                         defense: template.defense,
                         crit_chance: template.crit_chance,
                     },
+                    BaseStats::new(template.attack_power, template.defense, template.move_speed),
                     CurrentTarget::default(),
                 )).id();
 
