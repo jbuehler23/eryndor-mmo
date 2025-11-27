@@ -231,6 +231,71 @@ pub struct EnemyData {
     pub defense: f32,
     #[serde(default)]
     pub move_speed: f32,
+    #[serde(default = "default_aggro_range")]
+    pub aggro_range: f32,
+    #[serde(default = "default_leash_range")]
+    pub leash_range: f32,
+    #[serde(default = "default_respawn_delay")]
+    pub respawn_delay: f32,
+    #[serde(default)]
+    pub loot_table: EnemyLootTable,
+    #[serde(default)]
+    pub visual: EnemyVisual,
+}
+
+fn default_aggro_range() -> f32 { 150.0 }
+fn default_leash_range() -> f32 { 300.0 }
+fn default_respawn_delay() -> f32 { 10.0 }
+
+/// Enemy loot table data
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct EnemyLootTable {
+    #[serde(default)]
+    pub gold_min: u32,
+    #[serde(default)]
+    pub gold_max: u32,
+    #[serde(default)]
+    pub items: Vec<EnemyLootItem>,
+}
+
+/// Enemy loot item data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnemyLootItem {
+    pub item_id: u32,
+    #[serde(default = "default_drop_chance")]
+    pub drop_chance: f32,
+    #[serde(default = "default_quantity")]
+    pub quantity_min: u32,
+    #[serde(default = "default_quantity")]
+    pub quantity_max: u32,
+}
+
+fn default_drop_chance() -> f32 { 1.0 }
+fn default_quantity() -> u32 { 1 }
+
+/// Enemy visual data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnemyVisual {
+    #[serde(default = "default_shape")]
+    pub shape: String,
+    #[serde(default = "default_color")]
+    pub color: [f32; 4],
+    #[serde(default = "default_size")]
+    pub size: f32,
+}
+
+fn default_shape() -> String { "Circle".to_string() }
+fn default_color() -> [f32; 4] { [0.5, 0.5, 0.5, 1.0] }
+fn default_size() -> f32 { 16.0 }
+
+impl Default for EnemyVisual {
+    fn default() -> Self {
+        Self {
+            shape: default_shape(),
+            color: default_color(),
+            size: default_size(),
+        }
+    }
 }
 
 /// Message to request loading the enemy list

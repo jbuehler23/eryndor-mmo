@@ -14,262 +14,12 @@ pub struct ItemDatabase {
 
 impl Default for ItemDatabase {
     fn default() -> Self {
-        let mut items = HashMap::new();
-
-        // Dagger - High crit, moderate attack
-        items.insert(ITEM_DAGGER, ItemDefinition {
-            id: ITEM_DAGGER,
-            name: "Dagger".to_string(),
-            item_type: ItemType::Weapon,
-            grants_ability: Some(crate::abilities::ABILITY_QUICK_STRIKE),
-            stat_bonuses: ItemStatBonuses {
-                attack_power: 8.0,
-                crit_chance: 0.10,
-                ..Default::default()
-            },
-        });
-
-        // Wand - High attack, mana bonus
-        items.insert(ITEM_WAND, ItemDefinition {
-            id: ITEM_WAND,
-            name: "Wand".to_string(),
-            item_type: ItemType::Weapon,
-            grants_ability: Some(crate::abilities::ABILITY_FIREBALL),
-            stat_bonuses: ItemStatBonuses {
-                attack_power: 12.0,
-                max_mana: 20.0,
-                ..Default::default()
-            },
-        });
-
-        // Sword - Balanced attack and defense
-        items.insert(ITEM_SWORD, ItemDefinition {
-            id: ITEM_SWORD,
-            name: "Sword".to_string(),
-            item_type: ItemType::Weapon,
-            grants_ability: Some(crate::abilities::ABILITY_HEAVY_SLASH),
-            stat_bonuses: ItemStatBonuses {
-                attack_power: 10.0,
-                defense: 2.0,
-                ..Default::default()
-            },
-        });
-
-        // Staff - Highest magic attack, large mana pool
-        items.insert(ITEM_STAFF, ItemDefinition {
-            id: ITEM_STAFF,
-            name: "Staff".to_string(),
-            item_type: ItemType::Weapon,
-            grants_ability: Some(crate::abilities::ABILITY_ARCANE_BLAST),
-            stat_bonuses: ItemStatBonuses {
-                attack_power: 14.0,
-                max_mana: 30.0,
-                ..Default::default()
-            },
-        });
-
-        // Mace - Moderate attack, good defense
-        items.insert(ITEM_MACE, ItemDefinition {
-            id: ITEM_MACE,
-            name: "Mace".to_string(),
-            item_type: ItemType::Weapon,
-            grants_ability: Some(crate::abilities::ABILITY_SMITE),
-            stat_bonuses: ItemStatBonuses {
-                attack_power: 11.0,
-                defense: 3.0,
-                max_health: 15.0,
-                ..Default::default()
-            },
-        });
-
-        // Bow - Moderate attack, high crit
-        items.insert(ITEM_BOW, ItemDefinition {
-            id: ITEM_BOW,
-            name: "Bow".to_string(),
-            item_type: ItemType::Weapon,
-            grants_ability: Some(crate::abilities::ABILITY_AIMED_SHOT),
-            stat_bonuses: ItemStatBonuses {
-                attack_power: 9.0,
-                crit_chance: 0.15,
-                ..Default::default()
-            },
-        });
-
-        // Axe - High attack, low crit
-        items.insert(ITEM_AXE, ItemDefinition {
-            id: ITEM_AXE,
-            name: "Axe".to_string(),
-            item_type: ItemType::Weapon,
-            grants_ability: Some(crate::abilities::ABILITY_RENDING_STRIKE),
-            stat_bonuses: ItemStatBonuses {
-                attack_power: 13.0,
-                crit_chance: 0.05,
-                max_health: 10.0,
-                ..Default::default()
-            },
-        });
-
-        // ========== ARMOR - HELMETS ==========
-
-        items.insert(ITEM_LEATHER_CAP, ItemDefinition {
-            id: ITEM_LEATHER_CAP,
-            name: "Leather Cap".to_string(),
-            item_type: ItemType::Helmet,
-            grants_ability: None,
-            stat_bonuses: ItemStatBonuses {
-                defense: 2.0,
-                max_health: 5.0,
-                ..Default::default()
-            },
-        });
-
-        items.insert(ITEM_CLOTH_HAT, ItemDefinition {
-            id: ITEM_CLOTH_HAT,
-            name: "Cloth Hat".to_string(),
-            item_type: ItemType::Helmet,
-            grants_ability: None,
-            stat_bonuses: ItemStatBonuses {
-                defense: 1.0,
-                max_mana: 10.0,
-                attack_power: 2.0,
-                ..Default::default()
-            },
-        });
-
-        items.insert(ITEM_IRON_HELM, ItemDefinition {
-            id: ITEM_IRON_HELM,
-            name: "Iron Helm".to_string(),
-            item_type: ItemType::Helmet,
-            grants_ability: None,
-            stat_bonuses: ItemStatBonuses {
-                defense: 4.0,
-                max_health: 10.0,
-                ..Default::default()
-            },
-        });
-
-        // ========== ARMOR - CHEST ==========
-
-        items.insert(ITEM_LEATHER_TUNIC, ItemDefinition {
-            id: ITEM_LEATHER_TUNIC,
-            name: "Leather Tunic".to_string(),
-            item_type: ItemType::Chest,
-            grants_ability: None,
-            stat_bonuses: ItemStatBonuses {
-                defense: 4.0,
-                max_health: 10.0,
-                ..Default::default()
-            },
-        });
-
-        items.insert(ITEM_CLOTH_ROBE, ItemDefinition {
-            id: ITEM_CLOTH_ROBE,
-            name: "Cloth Robe".to_string(),
-            item_type: ItemType::Chest,
-            grants_ability: None,
-            stat_bonuses: ItemStatBonuses {
-                defense: 2.0,
-                max_mana: 20.0,
-                attack_power: 4.0,
-                ..Default::default()
-            },
-        });
-
-        items.insert(ITEM_IRON_CHESTPLATE, ItemDefinition {
-            id: ITEM_IRON_CHESTPLATE,
-            name: "Iron Chestplate".to_string(),
-            item_type: ItemType::Chest,
-            grants_ability: None,
-            stat_bonuses: ItemStatBonuses {
-                defense: 8.0,
-                max_health: 20.0,
-                ..Default::default()
-            },
-        });
-
-        // ========== ARMOR - LEGS ==========
-
-        items.insert(ITEM_LEATHER_PANTS, ItemDefinition {
-            id: ITEM_LEATHER_PANTS,
-            name: "Leather Pants".to_string(),
-            item_type: ItemType::Legs,
-            grants_ability: None,
-            stat_bonuses: ItemStatBonuses {
-                defense: 3.0,
-                max_health: 8.0,
-                ..Default::default()
-            },
-        });
-
-        items.insert(ITEM_CLOTH_PANTS, ItemDefinition {
-            id: ITEM_CLOTH_PANTS,
-            name: "Cloth Pants".to_string(),
-            item_type: ItemType::Legs,
-            grants_ability: None,
-            stat_bonuses: ItemStatBonuses {
-                defense: 1.5,
-                max_mana: 15.0,
-                attack_power: 3.0,
-                ..Default::default()
-            },
-        });
-
-        items.insert(ITEM_IRON_GREAVES, ItemDefinition {
-            id: ITEM_IRON_GREAVES,
-            name: "Iron Greaves".to_string(),
-            item_type: ItemType::Legs,
-            grants_ability: None,
-            stat_bonuses: ItemStatBonuses {
-                defense: 6.0,
-                max_health: 15.0,
-                ..Default::default()
-            },
-        });
-
-        // ========== ARMOR - BOOTS ==========
-
-        items.insert(ITEM_LEATHER_BOOTS, ItemDefinition {
-            id: ITEM_LEATHER_BOOTS,
-            name: "Leather Boots".to_string(),
-            item_type: ItemType::Boots,
-            grants_ability: None,
-            stat_bonuses: ItemStatBonuses {
-                defense: 1.5,
-                max_health: 5.0,
-                ..Default::default()
-            },
-        });
-
-        items.insert(ITEM_CLOTH_SHOES, ItemDefinition {
-            id: ITEM_CLOTH_SHOES,
-            name: "Cloth Shoes".to_string(),
-            item_type: ItemType::Boots,
-            grants_ability: None,
-            stat_bonuses: ItemStatBonuses {
-                defense: 0.5,
-                max_mana: 10.0,
-                attack_power: 1.0,
-                ..Default::default()
-            },
-        });
-
-        items.insert(ITEM_IRON_BOOTS, ItemDefinition {
-            id: ITEM_IRON_BOOTS,
-            name: "Iron Boots".to_string(),
-            item_type: ItemType::Boots,
-            grants_ability: None,
-            stat_bonuses: ItemStatBonuses {
-                defense: 3.0,
-                max_health: 10.0,
-                ..Default::default()
-            },
-        });
-
-        Self { items }
+        // Start with empty database - items will be loaded from JSON files
+        Self { items: HashMap::new() }
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ItemDefinition {
     pub id: u32,
     pub name: String,
@@ -279,7 +29,7 @@ pub struct ItemDefinition {
 }
 
 /// Stat bonuses provided by an item when equipped
-#[derive(Serialize, Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct ItemStatBonuses {
     pub attack_power: f32,
     pub defense: f32,
@@ -335,7 +85,7 @@ impl ItemDatabase {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub enum ItemType {
     Weapon,
     Helmet,
@@ -376,7 +126,7 @@ impl Default for QuestDatabase {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct QuestDefinition {
     pub id: u32,
     pub name: String,
@@ -388,6 +138,7 @@ pub struct QuestDefinition {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[derive(Debug)]
 #[serde(tag = "type")]
 pub enum QuestObjective {
     ObtainItem { item_id: u32, count: u32 },
@@ -406,103 +157,12 @@ pub struct EnemyDatabase {
 
 impl Default for EnemyDatabase {
     fn default() -> Self {
-        let mut enemies = HashMap::new();
-
-        // Level 1: Slime - Weak starter enemy
-        enemies.insert(ENEMY_TYPE_SLIME, EnemyDefinition {
-            id: ENEMY_TYPE_SLIME,
-            name: "Slime".to_string(),
-            max_health: 50.0,
-            attack_power: 5.0,
-            defense: 2.0,
-            move_speed: 80.0,
-            aggro_range: 150.0,
-            leash_range: 300.0,
-            respawn_delay: 10.0,
-            loot_table: LootTable { gold_min: 3, gold_max: 8, items: vec![] },
-            visual: VisualData { shape: "Circle".to_string(), color: [0.2, 0.8, 0.2, 1.0], size: 16.0 },
-        });
-
-        // Level 2: Goblin - Weak humanoid
-        enemies.insert(ENEMY_TYPE_GOBLIN, EnemyDefinition {
-            id: ENEMY_TYPE_GOBLIN,
-            name: "Goblin".to_string(),
-            max_health: 80.0,
-            attack_power: 8.0,
-            defense: 3.0,
-            move_speed: 90.0,
-            aggro_range: 180.0,
-            leash_range: 350.0,
-            respawn_delay: 10.0,
-            loot_table: LootTable { gold_min: 8, gold_max: 15, items: vec![] },
-            visual: VisualData { shape: "Square".to_string(), color: [0.4, 0.6, 0.2, 1.0], size: 16.0 },
-        });
-
-        // Level 3: Wolf - Fast predator
-        enemies.insert(ENEMY_TYPE_WOLF, EnemyDefinition {
-            id: ENEMY_TYPE_WOLF,
-            name: "Wolf".to_string(),
-            max_health: 100.0,
-            attack_power: 12.0,
-            defense: 4.0,
-            move_speed: 120.0,
-            aggro_range: 200.0,
-            leash_range: 400.0,
-            respawn_delay: 10.0,
-            loot_table: LootTable { gold_min: 12, gold_max: 20, items: vec![] },
-            visual: VisualData { shape: "Circle".to_string(), color: [0.6, 0.5, 0.3, 1.0], size: 16.0 },
-        });
-
-        // Level 4: Skeleton - Undead warrior
-        enemies.insert(ENEMY_TYPE_SKELETON, EnemyDefinition {
-            id: ENEMY_TYPE_SKELETON,
-            name: "Skeleton".to_string(),
-            max_health: 120.0,
-            attack_power: 15.0,
-            defense: 5.0,
-            move_speed: 85.0,
-            aggro_range: 160.0,
-            leash_range: 320.0,
-            respawn_delay: 10.0,
-            loot_table: LootTable { gold_min: 15, gold_max: 25, items: vec![] },
-            visual: VisualData { shape: "Square".to_string(), color: [0.9, 0.9, 0.8, 1.0], size: 16.0 },
-        });
-
-        // Level 5: Orc - Strong bruiser
-        enemies.insert(ENEMY_TYPE_ORC, EnemyDefinition {
-            id: ENEMY_TYPE_ORC,
-            name: "Orc".to_string(),
-            max_health: 150.0,
-            attack_power: 18.0,
-            defense: 6.0,
-            move_speed: 75.0,
-            aggro_range: 200.0,
-            leash_range: 400.0,
-            respawn_delay: 10.0,
-            loot_table: LootTable { gold_min: 20, gold_max: 35, items: vec![] },
-            visual: VisualData { shape: "Square".to_string(), color: [0.3, 0.5, 0.3, 1.0], size: 16.0 },
-        });
-
-        // Level 3: Spider - Fast but fragile
-        enemies.insert(ENEMY_TYPE_SPIDER, EnemyDefinition {
-            id: ENEMY_TYPE_SPIDER,
-            name: "Spider".to_string(),
-            max_health: 90.0,
-            attack_power: 10.0,
-            defense: 3.0,
-            move_speed: 110.0,
-            aggro_range: 120.0,
-            leash_range: 250.0,
-            respawn_delay: 10.0,
-            loot_table: LootTable { gold_min: 10, gold_max: 18, items: vec![] },
-            visual: VisualData { shape: "Circle".to_string(), color: [0.3, 0.1, 0.3, 1.0], size: 16.0 },
-        });
-
-        Self { enemies }
+        // Start with empty database - enemies will be loaded from JSON files
+        Self { enemies: HashMap::new() }
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EnemyDefinition {
     pub id: u32,
     pub name: String,
@@ -535,7 +195,7 @@ pub struct ZoneDatabase {
     pub zones: HashMap<String, ZoneDefinition>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ZoneDefinition {
     pub zone_id: String,
     pub zone_name: String,
@@ -543,14 +203,14 @@ pub struct ZoneDefinition {
     pub npc_spawns: Vec<NpcSpawnDef>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EnemySpawnRegion {
     pub region_id: String,
     pub enemy_type: u32,
     pub spawn_points: Vec<Vec2Data>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct NpcSpawnDef {
     pub npc_id: u32,
     pub name: String,
@@ -561,7 +221,7 @@ pub struct NpcSpawnDef {
     pub visual: VisualData,
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct Vec2Data {
     pub x: f32,
     pub y: f32,
@@ -575,14 +235,14 @@ impl From<Vec2Data> for Vec2 {
 
 // LootItem and LootTable are imported from eryndor_shared
 
-#[derive(Serialize, Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct VisualData {
     pub shape: String,  // "Circle", "Rectangle", etc.
     pub color: [f32; 4],  // RGBA
     pub size: f32,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TrainerItem {
     pub item_id: u32,
     pub cost: u32,

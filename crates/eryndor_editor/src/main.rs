@@ -249,6 +249,19 @@ fn process_enemy_actions(
             attack_power: 10.0,
             defense: 5.0,
             move_speed: 100.0,
+            aggro_range: 150.0,
+            leash_range: 300.0,
+            respawn_delay: 10.0,
+            loot_table: api_events::EnemyLootTable {
+                gold_min: 5,
+                gold_max: 15,
+                items: Vec::new(),
+            },
+            visual: api_events::EnemyVisual {
+                shape: "Circle".to_string(),
+                color: [0.8, 0.2, 0.2, 1.0],
+                size: 16.0,
+            },
         };
 
         editor_state.status_message = format!("Creating enemy: {}...", enemy_data.name);
@@ -262,6 +275,18 @@ fn process_enemy_actions(
         editor_state.action_save_enemy = false;
 
         if let Some(ref editing_enemy) = editor_state.enemies.editing_enemy {
+            // Convert loot items from editing format to API format
+            let loot_items: Vec<api_events::EnemyLootItem> = editing_enemy
+                .loot_items
+                .iter()
+                .map(|item| api_events::EnemyLootItem {
+                    item_id: item.item_id,
+                    drop_chance: item.drop_chance,
+                    quantity_min: item.quantity_min,
+                    quantity_max: item.quantity_max,
+                })
+                .collect();
+
             let enemy_data = api_events::EnemyData {
                 id: editing_enemy.id,
                 name: editing_enemy.name.clone(),
@@ -269,6 +294,19 @@ fn process_enemy_actions(
                 attack_power: editing_enemy.attack_power,
                 defense: editing_enemy.defense,
                 move_speed: editing_enemy.move_speed,
+                aggro_range: editing_enemy.aggro_range,
+                leash_range: editing_enemy.leash_range,
+                respawn_delay: editing_enemy.respawn_delay,
+                loot_table: api_events::EnemyLootTable {
+                    gold_min: editing_enemy.gold_min,
+                    gold_max: editing_enemy.gold_max,
+                    items: loot_items,
+                },
+                visual: api_events::EnemyVisual {
+                    shape: editing_enemy.visual_shape.clone(),
+                    color: editing_enemy.visual_color,
+                    size: editing_enemy.visual_size,
+                },
             };
 
             editor_state.status_message = format!("Saving enemy: {}...", enemy_data.name);

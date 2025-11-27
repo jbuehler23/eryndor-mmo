@@ -6,24 +6,133 @@ use crate::{PhysicsPosition, PhysicsVelocity};
 use crate::game_data::{EnemyDatabase, ZoneDatabase};
 use crate::spawn::SpawnPoint;
 
+/// Marker resource indicating the world has been spawned
+#[derive(Resource, Default)]
+pub struct WorldSpawned;
+
+/// Run condition: returns true when zone data is loaded and world hasn't been spawned
+pub fn zone_data_loaded(
+    zone_db: Res<ZoneDatabase>,
+    world_spawned: Option<Res<WorldSpawned>>,
+) -> bool {
+    // Only spawn if zone data exists and world hasn't been spawned yet
+    world_spawned.is_none() && zone_db.zones.contains_key("starter_zone")
+}
+
+/// System to spawn world boundaries at startup (doesn't depend on JSON data)
+pub fn spawn_world_boundaries(mut commands: Commands) {
+    info!("Spawning world boundaries...");
+
+    let wall_thickness = 20.0;
+    let half_width = WORLD_WIDTH / 2.0;
+    let half_height = WORLD_HEIGHT / 2.0;
+    let segment_size = 50.0;
+    let collider_offset = (segment_size / 2.0) - (wall_thickness / 2.0);
+
+    // North wall (top)
+    commands.spawn((
+        PhysicsPosition(Vec2::new(0.0, half_height - collider_offset)),
+        RigidBody::Static,
+        Collider::rectangle(WORLD_WIDTH, wall_thickness),
+        CollisionLayers::new(GameLayer::Environment, [GameLayer::Player, GameLayer::Enemy]),
+    ));
+    let num_segments = (WORLD_WIDTH / segment_size).ceil() as i32;
+    for i in 0..num_segments {
+        let x = -half_width + (i as f32 * segment_size) + (segment_size / 2.0);
+        commands.spawn((
+            Replicated,
+            Position(Vec2::new(x, half_height)),
+            VisualShape {
+                shape_type: ShapeType::Square,
+                color: [1.0, 0.0, 0.0, 1.0],
+                size: segment_size,
+            },
+        ));
+    }
+
+    // South wall (bottom)
+    commands.spawn((
+        PhysicsPosition(Vec2::new(0.0, -half_height + collider_offset)),
+        RigidBody::Static,
+        Collider::rectangle(WORLD_WIDTH, wall_thickness),
+        CollisionLayers::new(GameLayer::Environment, [GameLayer::Player, GameLayer::Enemy]),
+    ));
+    for i in 0..num_segments {
+        let x = -half_width + (i as f32 * segment_size) + (segment_size / 2.0);
+        commands.spawn((
+            Replicated,
+            Position(Vec2::new(x, -half_height)),
+            VisualShape {
+                shape_type: ShapeType::Square,
+                color: [1.0, 0.0, 0.0, 1.0],
+                size: segment_size,
+            },
+        ));
+    }
+
+    // East wall (right)
+    commands.spawn((
+        PhysicsPosition(Vec2::new(half_width - collider_offset, 0.0)),
+        RigidBody::Static,
+        Collider::rectangle(wall_thickness, WORLD_HEIGHT),
+        CollisionLayers::new(GameLayer::Environment, [GameLayer::Player, GameLayer::Enemy]),
+    ));
+    let num_segments_vertical = (WORLD_HEIGHT / segment_size).ceil() as i32;
+    for i in 0..num_segments_vertical {
+        let y = -half_height + (i as f32 * segment_size) + (segment_size / 2.0);
+        commands.spawn((
+            Replicated,
+            Position(Vec2::new(half_width, y)),
+            VisualShape {
+                shape_type: ShapeType::Square,
+                color: [1.0, 0.0, 0.0, 1.0],
+                size: segment_size,
+            },
+        ));
+    }
+
+    // West wall (left)
+    commands.spawn((
+        PhysicsPosition(Vec2::new(-half_width + collider_offset, 0.0)),
+        RigidBody::Static,
+        Collider::rectangle(wall_thickness, WORLD_HEIGHT),
+        CollisionLayers::new(GameLayer::Environment, [GameLayer::Player, GameLayer::Enemy]),
+    ));
+    for i in 0..num_segments_vertical {
+        let y = -half_height + (i as f32 * segment_size) + (segment_size / 2.0);
+        commands.spawn((
+            Replicated,
+            Position(Vec2::new(-half_width, y)),
+            VisualShape {
+                shape_type: ShapeType::Square,
+                color: [1.0, 0.0, 0.0, 1.0],
+                size: segment_size,
+            },
+        ));
+    }
+
+    info!("World boundaries spawned");
+}
+
+/// System to spawn world entities from zone data (runs when zone data is loaded)
 pub fn spawn_world(
     mut commands: Commands,
     enemy_db: Res<EnemyDatabase>,
     zone_db: Res<ZoneDatabase>,
 ) {
-    info!("Spawning world entities...");
+    info!("Zone data loaded, spawning world entities...");
 
-    // Try to spawn from zone data first
+    // Mark world as spawned
+    commands.insert_resource(WorldSpawned);
+
+    // Spawn from zone data
     if let Some(zone) = zone_db.zones.get("starter_zone") {
         info!("Spawning world from zone: {}", zone.zone_name);
         spawn_zone_npcs(&mut commands, zone);
         spawn_zone_enemies(&mut commands, zone, &enemy_db);
-        return;
     }
 
-    // Fallback to hardcoded spawns if zone data not loaded yet
-    warn!("Zone data not loaded, using hardcoded spawns");
-    spawn_hardcoded_world(&mut commands, &enemy_db);
+    info!("World initialization complete!");
 }
 
 /// Spawn NPCs from zone definition
@@ -158,326 +267,4 @@ fn spawn_zone_enemies(
                 region.enemy_type, region.region_id);
         }
     }
-}
-
-/// Hardcoded fallback spawn function (legacy)
-fn spawn_hardcoded_world(commands: &mut Commands, enemy_db: &EnemyDatabase) {
-    // Spawn NPC Quest Giver
-    commands.spawn((
-        Replicated,
-        Npc,
-        NpcName("Elder".to_string()),
-        QuestGiver {
-            available_quests: vec![QUEST_FIRST_WEAPON],
-        },
-        Position(NPC_POSITION),
-        Interactable::npc(),
-        VisualShape {
-            shape_type: ShapeType::Circle,
-            color: COLOR_NPC,
-            size: NPC_SIZE,
-        },
-        // Physics components - static NPC
-        PhysicsPosition(NPC_POSITION),
-        RigidBody::Static,
-        Collider::circle(NPC_SIZE / 2.0),
-        CollisionLayers::new(GameLayer::Npc, [GameLayer::Player, GameLayer::Enemy]),
-    ));
-
-    info!("Spawned NPC: Elder");
-
-    // Spawn Weapon Master Trainer
-    commands.spawn((
-        Replicated,
-        Npc,
-        NpcName("Weapon Master".to_string()),
-        Trainer {
-            items_for_sale: vec![
-                TrainerItem { item_id: ITEM_DAGGER, cost: 50 },
-                TrainerItem { item_id: ITEM_SWORD, cost: 75 },
-                TrainerItem { item_id: ITEM_WAND, cost: 100 },
-                TrainerItem { item_id: ITEM_STAFF, cost: 150 },
-                TrainerItem { item_id: ITEM_MACE, cost: 125 },
-                TrainerItem { item_id: ITEM_BOW, cost: 100 },
-                TrainerItem { item_id: ITEM_AXE, cost: 125 },
-            ],
-        },
-        Position(Vec2::new(60.0, -20.0)), // To the right of the Elder
-        Interactable::npc(),
-        VisualShape {
-            shape_type: ShapeType::Circle,
-            color: [0.8, 0.6, 0.2, 1.0], // Orange/bronze color for trainer
-            size: NPC_SIZE,
-        },
-        // Physics components - static NPC
-        PhysicsPosition(Vec2::new(60.0, -20.0)),
-        RigidBody::Static,
-        Collider::circle(NPC_SIZE / 2.0),
-        CollisionLayers::new(GameLayer::Npc, [GameLayer::Player, GameLayer::Enemy]),
-    ));
-
-    info!("Spawned NPC: Weapon Master");
-
-    // Note: Weapons are now given as quest rewards, not spawned in the world
-
-    // Helper function to spawn enemies using the database
-    let spawn_enemy = |commands: &mut Commands, enemy_type_id: u32, position: Vec2, shape: ShapeType, color: [f32; 4], loot_table: LootTable| {
-        if let Some(def) = enemy_db.enemies.get(&enemy_type_id) {
-            let enemy_entity = commands.spawn((
-                Replicated,
-                Enemy,
-                EnemyType(enemy_type_id),
-                EnemyName(def.name.clone()),
-                Position(position),
-                Velocity::default(),
-                MoveSpeed(def.move_speed),
-                Health::new(def.max_health),
-                CombatStats {
-                    attack_power: def.attack_power,
-                    defense: def.defense,
-                    crit_chance: 0.0,
-                },
-                BaseStats::new(def.attack_power, def.defense, def.move_speed),
-                CurrentTarget::default(),
-            )).id();
-
-            commands.entity(enemy_entity).insert((
-                AiState::default(),
-                Interactable::enemy(),
-                VisualShape {
-                    shape_type: shape,
-                    color,
-                    size: ENEMY_SIZE,
-                },
-                AbilityCooldowns::default(),
-                crate::spawn::SpawnPoint {
-                    position,
-                    respawn_delay: 10.0, // 10 seconds
-                },
-                loot_table,
-                AiActivationDelay::default(),
-                AggroRange {
-                    aggro: def.aggro_range,
-                    leash: def.leash_range,
-                },
-            ));
-
-            // Physics components
-            commands.entity(enemy_entity).insert((
-                PhysicsPosition(position),
-                PhysicsVelocity::default(),
-                RigidBody::Dynamic,
-                Collider::circle(ENEMY_SIZE / 2.0),
-                CollisionLayers::new(GameLayer::Enemy, [GameLayer::Player, GameLayer::Npc, GameLayer::Enemy, GameLayer::Environment]),
-            ));
-
-            info!("Spawned {} at {:?}", def.name, position);
-        }
-    };
-
-    info!("Spawning enemies throughout the world...");
-    let mut total_enemies = 0;
-
-    // ========== STARTER AREA - Slimes (Level 1) ==========
-    // Northeast starter area - 4 slimes
-    let slime_positions = vec![
-        Vec2::new(150.0, 150.0),
-        Vec2::new(200.0, 180.0),
-        Vec2::new(180.0, 120.0),
-        Vec2::new(220.0, 150.0),
-    ];
-    for pos in slime_positions {
-        spawn_enemy(commands, ENEMY_TYPE_SLIME, pos, ShapeType::Circle, [0.2, 0.8, 0.2, 1.0], LootTable {
-            gold_min: 3,
-            gold_max: 8,
-            items: vec![],
-        });
-        total_enemies += 1;
-    }
-
-    // ========== GOBLIN CAMP - Goblins (Level 2) ==========
-    // Northwest area - 5 goblins
-    let goblin_positions = vec![
-        Vec2::new(-200.0, 200.0),
-        Vec2::new(-250.0, 220.0),
-        Vec2::new(-180.0, 180.0),
-        Vec2::new(-220.0, 250.0),
-        Vec2::new(-200.0, 150.0),
-    ];
-    for pos in goblin_positions {
-        spawn_enemy(commands, ENEMY_TYPE_GOBLIN, pos, ShapeType::Square, [0.4, 0.6, 0.2, 1.0], LootTable {
-            gold_min: 8,
-            gold_max: 15,
-            items: vec![],
-        });
-        total_enemies += 1;
-    }
-
-    // ========== WOLF PACK - Wolves (Level 3) ==========
-    // East forest area - 4 wolves
-    let wolf_positions = vec![
-        Vec2::new(400.0, 50.0),
-        Vec2::new(450.0, 80.0),
-        Vec2::new(420.0, -20.0),
-        Vec2::new(480.0, 40.0),
-    ];
-    for pos in wolf_positions {
-        spawn_enemy(commands, ENEMY_TYPE_WOLF, pos, ShapeType::Circle, [0.6, 0.5, 0.3, 1.0], LootTable {
-            gold_min: 12,
-            gold_max: 20,
-            items: vec![],
-        });
-        total_enemies += 1;
-    }
-
-    // ========== SPIDER DEN - Spiders (Level 3) ==========
-    // Southwest corner - 5 spiders
-    let spider_positions = vec![
-        Vec2::new(-400.0, -300.0),
-        Vec2::new(-450.0, -280.0),
-        Vec2::new(-380.0, -350.0),
-        Vec2::new(-420.0, -320.0),
-        Vec2::new(-460.0, -340.0),
-    ];
-    for pos in spider_positions {
-        spawn_enemy(commands, ENEMY_TYPE_SPIDER, pos, ShapeType::Circle, [0.3, 0.1, 0.3, 1.0], LootTable {
-            gold_min: 10,
-            gold_max: 18,
-            items: vec![],
-        });
-        total_enemies += 1;
-    }
-
-    // ========== GRAVEYARD - Skeletons (Level 4) ==========
-    // South central area - 4 skeletons
-    let skeleton_positions = vec![
-        Vec2::new(0.0, -400.0),
-        Vec2::new(50.0, -420.0),
-        Vec2::new(-50.0, -380.0),
-        Vec2::new(20.0, -450.0),
-    ];
-    for pos in skeleton_positions {
-        spawn_enemy(commands, ENEMY_TYPE_SKELETON, pos, ShapeType::Square, [0.9, 0.9, 0.8, 1.0], LootTable {
-            gold_min: 15,
-            gold_max: 25,
-            items: vec![],
-        });
-        total_enemies += 1;
-    }
-
-    // ========== ORC STRONGHOLD - Orcs (Level 5) ==========
-    // Far north area - 3 orcs (stronger enemies, fewer spawns)
-    let orc_positions = vec![
-        Vec2::new(0.0, 500.0),
-        Vec2::new(-80.0, 520.0),
-        Vec2::new(80.0, 480.0),
-    ];
-    for pos in orc_positions {
-        spawn_enemy(commands, ENEMY_TYPE_ORC, pos, ShapeType::Square, [0.3, 0.5, 0.3, 1.0], LootTable {
-            gold_min: 20,
-            gold_max: 35,
-            items: vec![],
-        });
-        total_enemies += 1;
-    }
-
-    info!("Finished spawning {} enemies across the world", total_enemies);
-
-    // Spawn world boundaries - visible red walls
-    let wall_thickness = 20.0;
-    let half_width = WORLD_WIDTH / 2.0;
-    let half_height = WORLD_HEIGHT / 2.0;
-    let segment_size = 50.0; // Size of each visual segment
-
-    // Offset colliders so they align with the inner edge of visual squares
-    // Visual squares are centered at boundary, extending segment_size/2 inward and outward
-    // We want collider at the inner edge, so offset by (segment_size/2 - wall_thickness/2)
-    let collider_offset = (segment_size / 2.0) - (wall_thickness / 2.0);
-
-    // North wall (top) - horizontal wall
-    // Place collider at inner edge of visual boundary
-    commands.spawn((
-        PhysicsPosition(Vec2::new(0.0, half_height - collider_offset)),
-        RigidBody::Static,
-        Collider::rectangle(WORLD_WIDTH, wall_thickness),
-        CollisionLayers::new(GameLayer::Environment, [GameLayer::Player, GameLayer::Enemy]),
-    ));
-    // Spawn visual segments along the wall
-    let num_segments = (WORLD_WIDTH / segment_size).ceil() as i32;
-    for i in 0..num_segments {
-        let x = -half_width + (i as f32 * segment_size) + (segment_size / 2.0);
-        commands.spawn((
-            Replicated,
-            Position(Vec2::new(x, half_height)),
-            VisualShape {
-                shape_type: ShapeType::Square,
-                color: [1.0, 0.0, 0.0, 1.0],
-                size: segment_size,
-            },
-        ));
-    }
-
-    // South wall (bottom) - horizontal wall
-    commands.spawn((
-        PhysicsPosition(Vec2::new(0.0, -half_height + collider_offset)),
-        RigidBody::Static,
-        Collider::rectangle(WORLD_WIDTH, wall_thickness),
-        CollisionLayers::new(GameLayer::Environment, [GameLayer::Player, GameLayer::Enemy]),
-    ));
-    for i in 0..num_segments {
-        let x = -half_width + (i as f32 * segment_size) + (segment_size / 2.0);
-        commands.spawn((
-            Replicated,
-            Position(Vec2::new(x, -half_height)),
-            VisualShape {
-                shape_type: ShapeType::Square,
-                color: [1.0, 0.0, 0.0, 1.0],
-                size: segment_size,
-            },
-        ));
-    }
-
-    // East wall (right) - vertical wall
-    commands.spawn((
-        PhysicsPosition(Vec2::new(half_width - collider_offset, 0.0)),
-        RigidBody::Static,
-        Collider::rectangle(wall_thickness, WORLD_HEIGHT),
-        CollisionLayers::new(GameLayer::Environment, [GameLayer::Player, GameLayer::Enemy]),
-    ));
-    let num_segments_vertical = (WORLD_HEIGHT / segment_size).ceil() as i32;
-    for i in 0..num_segments_vertical {
-        let y = -half_height + (i as f32 * segment_size) + (segment_size / 2.0);
-        commands.spawn((
-            Replicated,
-            Position(Vec2::new(half_width, y)),
-            VisualShape {
-                shape_type: ShapeType::Square,
-                color: [1.0, 0.0, 0.0, 1.0],
-                size: segment_size,
-            },
-        ));
-    }
-
-    // West wall (left) - vertical wall
-    commands.spawn((
-        PhysicsPosition(Vec2::new(-half_width + collider_offset, 0.0)),
-        RigidBody::Static,
-        Collider::rectangle(wall_thickness, WORLD_HEIGHT),
-        CollisionLayers::new(GameLayer::Environment, [GameLayer::Player, GameLayer::Enemy]),
-    ));
-    for i in 0..num_segments_vertical {
-        let y = -half_height + (i as f32 * segment_size) + (segment_size / 2.0);
-        commands.spawn((
-            Replicated,
-            Position(Vec2::new(-half_width, y)),
-            VisualShape {
-                shape_type: ShapeType::Square,
-                color: [1.0, 0.0, 0.0, 1.0],
-                size: segment_size,
-            },
-        ));
-    }
-
-    info!("Spawned world boundaries");
-    info!("World initialization complete!");
 }
