@@ -1,0 +1,14 @@
+{
+  "id": 1005,
+  "name": "Fan of Knives",
+  "description": "Throw knives in all directions, striking nearby enemies.",
+  "damage_multiplier": 0.8,
+  "cooldown": 10.0,
+  "range": 2.0,
+  "mana_cost": 25.0,
+  "ability_types": [
+    { "DirectDamage": { "multiplier": 0.8 } },
+    { "AreaOfEffect": { "radius": 100.0, "max_targets": 8 } }
+  ],
+  "unlock_requirement": { "WeaponProficiency": { "weapon": "Dagger", "level": 10 } }
+}

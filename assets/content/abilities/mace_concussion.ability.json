@@ -1,0 +1,14 @@
+{
+  "id": 1017,
+  "name": "Concussion",
+  "description": "A blow to the head that stuns your target.",
+  "damage_multiplier": 0.8,
+  "cooldown": 18.0,
+  "range": 1.5,
+  "mana_cost": 25.0,
+  "ability_types": [
+    { "DirectDamage": { "multiplier": 0.8 } },
+    { "Debuff": { "duration": 2.5, "effect": "Stun" } }
+  ],
+  "unlock_requirement": { "WeaponProficiency": { "weapon": "Mace", "level": 10 } }
+}

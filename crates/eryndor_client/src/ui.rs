@@ -136,6 +136,16 @@ pub struct QuestDialogueData {
 pub struct TrainerWindowData {
     pub npc_name: String,
     pub items_for_sale: Vec<TrainerItem>,
+    pub trainer_type: Option<TrainerType>,
+    pub teaching_quests: Vec<TrainerQuestInfo>,
+    pub active_tab: TrainerTab,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum TrainerTab {
+    #[default]
+    Shop,
+    Training,
 }
 
 pub fn login_ui(
@@ -891,84 +901,175 @@ pub fn game_ui(
             });
     }
 
-    // Trainer Shop Window
-    if let Some(trainer_data) = ui_state.trainer_window.clone() {
-        egui::Window::new(format!("{} - Weapon Shop", trainer_data.npc_name))
+    // Trainer Window (with Shop and Training tabs)
+    if let Some(mut trainer_data) = ui_state.trainer_window.clone() {
+        let window_title = match &trainer_data.trainer_type {
+            Some(TrainerType::Weapon(weapon)) => format!("{} - {:?} Trainer", trainer_data.npc_name, weapon),
+            Some(TrainerType::Armor(armor)) => format!("{} - {:?} Trainer", trainer_data.npc_name, armor),
+            Some(TrainerType::Class(class)) => format!("{} - {:?} Trainer", trainer_data.npc_name, class),
+            None => format!("{} - Shop", trainer_data.npc_name),
+        };
+
+        egui::Window::new(window_title)
             .collapsible(false)
             .resizable(false)
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-            .fixed_size([400.0, 500.0])
+            .fixed_size([450.0, 550.0])
             .show(ctx, |ui| {
-                ui.vertical_centered(|ui| {
-                    ui.add_space(10.0);
-                    ui.heading("Weapons for Sale");
-                    ui.add_space(5.0);
-                });
+                // Tab buttons
+                let has_shop = !trainer_data.items_for_sale.is_empty();
+                let has_training = !trainer_data.teaching_quests.is_empty();
 
-                ui.separator();
-                ui.add_space(10.0);
+                if has_shop || has_training {
+                    ui.horizontal(|ui| {
+                        if has_shop {
+                            if ui.selectable_label(trainer_data.active_tab == TrainerTab::Shop, "Shop").clicked() {
+                                trainer_data.active_tab = TrainerTab::Shop;
+                                ui_state.trainer_window = Some(trainer_data.clone());
+                            }
+                        }
+                        if has_training {
+                            if ui.selectable_label(trainer_data.active_tab == TrainerTab::Training, "Training").clicked() {
+                                trainer_data.active_tab = TrainerTab::Training;
+                                ui_state.trainer_window = Some(trainer_data.clone());
+                            }
+                        }
+                    });
+                    ui.separator();
+                }
+
+                ui.add_space(5.0);
 
                 // Show player's current gold
                 ui.horizontal(|ui| {
                     ui.label("Your Gold:");
                     ui.colored_label(egui::Color32::GOLD, format!("{}", gold.0));
                 });
-
-                ui.add_space(10.0);
+                ui.add_space(5.0);
                 ui.separator();
-                ui.add_space(10.0);
 
-                // Display each item for sale
-                egui::ScrollArea::vertical()
-                    .max_height(300.0)
-                    .show(ui, |ui| {
-                        for trainer_item in &trainer_data.items_for_sale {
-                            if let Some(item_def) = item_db.items.get(&trainer_item.item_id) {
-                                ui.group(|ui| {
-                                    ui.horizontal(|ui| {
-                                        ui.vertical(|ui| {
-                                            ui.label(egui::RichText::new(&item_def.name).strong().size(16.0));
+                // Tab content
+                match trainer_data.active_tab {
+                    TrainerTab::Shop => {
+                        if trainer_data.items_for_sale.is_empty() {
+                            ui.centered_and_justified(|ui| {
+                                ui.label("No items for sale.");
+                            });
+                        } else {
+                            egui::ScrollArea::vertical()
+                                .max_height(350.0)
+                                .show(ui, |ui| {
+                                    for trainer_item in &trainer_data.items_for_sale {
+                                        if let Some(item_def) = item_db.items.get(&trainer_item.item_id) {
+                                            ui.group(|ui| {
+                                                ui.horizontal(|ui| {
+                                                    ui.vertical(|ui| {
+                                                        ui.label(egui::RichText::new(&item_def.name).strong().size(16.0));
+                                                        let bonuses = &item_def.stat_bonuses;
+                                                        if bonuses.attack_power > 0.0 {
+                                                            ui.label(format!("Attack: +{:.1}", bonuses.attack_power));
+                                                        }
+                                                        if bonuses.crit_chance > 0.0 {
+                                                            ui.label(format!("Crit: +{:.1}%", bonuses.crit_chance * 100.0));
+                                                        }
+                                                        if bonuses.max_mana > 0.0 {
+                                                            ui.label(format!("Mana: +{:.0}", bonuses.max_mana));
+                                                        }
+                                                        if bonuses.max_health > 0.0 {
+                                                            ui.label(format!("Health: +{:.0}", bonuses.max_health));
+                                                        }
+                                                        if bonuses.defense > 0.0 {
+                                                            ui.label(format!("Defense: +{:.1}", bonuses.defense));
+                                                        }
+                                                    });
 
-                                            // Show item stats
-                                            let bonuses = &item_def.stat_bonuses;
-                                            if bonuses.attack_power > 0.0 {
-                                                ui.label(format!("Attack: +{:.1}", bonuses.attack_power));
-                                            }
-                                            if bonuses.crit_chance > 0.0 {
-                                                ui.label(format!("Crit: +{:.1}%", bonuses.crit_chance * 100.0));
-                                            }
-                                            if bonuses.max_mana > 0.0 {
-                                                ui.label(format!("Mana: +{:.0}", bonuses.max_mana));
-                                            }
-                                            if bonuses.max_health > 0.0 {
-                                                ui.label(format!("Health: +{:.0}", bonuses.max_health));
-                                            }
-                                            if bonuses.defense > 0.0 {
-                                                ui.label(format!("Defense: +{:.1}", bonuses.defense));
-                                            }
-                                        });
-
-                                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                            let can_afford = gold.0 >= trainer_item.cost;
-                                            let button = egui::Button::new(format!("Buy\n{} gold", trainer_item.cost));
-
-                                            if ui.add_enabled(can_afford, button).clicked() {
-                                                commands.client_trigger(PurchaseFromTrainerRequest {
-                                                    trainer_entity: Entity::PLACEHOLDER, // Server finds nearest trainer
-                                                    item_id: trainer_item.item_id,
+                                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                                        let can_afford = gold.0 >= trainer_item.cost;
+                                                        let button = egui::Button::new(format!("Buy\n{} gold", trainer_item.cost));
+                                                        if ui.add_enabled(can_afford, button).clicked() {
+                                                            commands.client_trigger(PurchaseFromTrainerRequest {
+                                                                trainer_entity: Entity::PLACEHOLDER,
+                                                                item_id: trainer_item.item_id,
+                                                            });
+                                                        }
+                                                        if !can_afford {
+                                                            ui.colored_label(egui::Color32::RED, "Not enough gold");
+                                                        }
+                                                    });
                                                 });
-                                            }
-
-                                            if !can_afford {
-                                                ui.colored_label(egui::Color32::RED, "Not enough gold");
-                                            }
-                                        });
-                                    });
+                                            });
+                                            ui.add_space(5.0);
+                                        }
+                                    }
                                 });
-                                ui.add_space(5.0);
-                            }
                         }
-                    });
+                    }
+                    TrainerTab::Training => {
+                        if trainer_data.teaching_quests.is_empty() {
+                            ui.centered_and_justified(|ui| {
+                                ui.label("No training available.");
+                            });
+                        } else {
+                            egui::ScrollArea::vertical()
+                                .max_height(350.0)
+                                .show(ui, |ui| {
+                                    for quest_info in &trainer_data.teaching_quests {
+                                        ui.group(|ui| {
+                                            ui.vertical(|ui| {
+                                                // Quest/Ability name with status indicator
+                                                let status_color = if quest_info.is_completed {
+                                                    egui::Color32::GREEN
+                                                } else if quest_info.is_available {
+                                                    egui::Color32::WHITE
+                                                } else {
+                                                    egui::Color32::GRAY
+                                                };
+
+                                                ui.horizontal(|ui| {
+                                                    ui.label(egui::RichText::new(&quest_info.ability_reward_name)
+                                                        .strong()
+                                                        .size(16.0)
+                                                        .color(status_color));
+
+                                                    if quest_info.is_completed {
+                                                        ui.colored_label(egui::Color32::GREEN, "(Learned)");
+                                                    }
+                                                });
+
+                                                // Description
+                                                ui.label(egui::RichText::new(&quest_info.description).weak());
+
+                                                // Requirements
+                                                if quest_info.required_proficiency_level > 0 {
+                                                    ui.label(format!("Requires: Proficiency Level {}",
+                                                        quest_info.required_proficiency_level));
+                                                }
+
+                                                // Learn button
+                                                ui.add_space(5.0);
+                                                ui.horizontal(|ui| {
+                                                    if quest_info.is_completed {
+                                                        ui.add_enabled(false, egui::Button::new("Already Learned"));
+                                                    } else if quest_info.is_available {
+                                                        if ui.button("Begin Training").clicked() {
+                                                            commands.client_trigger(AcceptQuestRequest {
+                                                                quest_id: quest_info.quest_id,
+                                                            });
+                                                            // Close window after accepting
+                                                            ui_state.trainer_window = None;
+                                                        }
+                                                    } else {
+                                                        ui.add_enabled(false, egui::Button::new("Requirements Not Met"));
+                                                    }
+                                                });
+                                            });
+                                        });
+                                        ui.add_space(5.0);
+                                    }
+                                });
+                        }
+                    }
+                }
 
                 ui.add_space(10.0);
                 ui.separator();
@@ -1627,12 +1728,26 @@ pub fn handle_trainer_dialogue(
     mut ui_state: ResMut<UiState>,
 ) {
     let event = trigger.event();
-    info!("[TRAINER DIALOGUE] Received event from NPC: {}", event.npc_name);
+    info!("[TRAINER DIALOGUE] Received event from NPC: {} with {} items and {} training quests",
+        event.npc_name, event.items_for_sale.len(), event.teaching_quests.len());
+
+    // Default to Training tab if there are quests but no items, otherwise Shop
+    let default_tab = if event.teaching_quests.is_empty() && !event.items_for_sale.is_empty() {
+        TrainerTab::Shop
+    } else if !event.teaching_quests.is_empty() {
+        TrainerTab::Training
+    } else {
+        TrainerTab::Shop
+    };
+
     ui_state.trainer_window = Some(TrainerWindowData {
         npc_name: event.npc_name.clone(),
         items_for_sale: event.items_for_sale.clone(),
+        trainer_type: event.trainer_type.clone(),
+        teaching_quests: event.teaching_quests.clone(),
+        active_tab: default_tab,
     });
-    info!("[TRAINER DIALOGUE] Trainer shop window opened: {}", event.npc_name);
+    info!("[TRAINER DIALOGUE] Trainer window opened: {}", event.npc_name);
 }
 
 // Check for OAuth callback tokens in URL (WASM only)

@@ -1,0 +1,13 @@
+{
+  "id": 1203,
+  "name": "Avatar of War",
+  "description": "Transform into an avatar of destruction, greatly enhancing all combat abilities.",
+  "damage_multiplier": 0.0,
+  "cooldown": 120.0,
+  "range": 0.0,
+  "mana_cost": 50.0,
+  "ability_types": [
+    { "Buff": { "duration": 15.0, "stat_bonuses": { "attack_power": 30.0, "defense": 20.0, "move_speed": 30.0 } } }
+  ],
+  "unlock_requirement": "None"
+}

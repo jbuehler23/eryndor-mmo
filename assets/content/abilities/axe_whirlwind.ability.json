@@ -1,0 +1,14 @@
+{
+  "id": 1025,
+  "name": "Whirlwind",
+  "description": "Spin in a deadly circle, striking all nearby enemies.",
+  "damage_multiplier": 1.0,
+  "cooldown": 12.0,
+  "range": 2.0,
+  "mana_cost": 30.0,
+  "ability_types": [
+    { "DirectDamage": { "multiplier": 1.0 } },
+    { "AreaOfEffect": { "radius": 100.0, "max_targets": 8 } }
+  ],
+  "unlock_requirement": { "WeaponProficiency": { "weapon": "Axe", "level": 10 } }
+}

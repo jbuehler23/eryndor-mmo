@@ -1,0 +1,13 @@
+{
+  "id": 1103,
+  "name": "Transcendence",
+  "description": "Become one with the arcane, dramatically increasing all stats.",
+  "damage_multiplier": 0.0,
+  "cooldown": 90.0,
+  "range": 0.0,
+  "mana_cost": 50.0,
+  "ability_types": [
+    { "Buff": { "duration": 10.0, "stat_bonuses": { "attack_power": 25.0, "defense": 25.0, "move_speed": 30.0 } } }
+  ],
+  "unlock_requirement": "None"
+}

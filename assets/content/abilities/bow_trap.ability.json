@@ -1,0 +1,14 @@
+{
+  "id": 1022,
+  "name": "Entangling Shot",
+  "description": "Fire an arrow that roots your target in place.",
+  "damage_multiplier": 0.6,
+  "cooldown": 18.0,
+  "range": 150.0,
+  "mana_cost": 30.0,
+  "ability_types": [
+    { "DirectDamage": { "multiplier": 0.6 } },
+    { "Debuff": { "duration": 4.0, "effect": "Root" } }
+  ],
+  "unlock_requirement": { "WeaponProficiency": { "weapon": "Bow", "level": 15 } }
+}

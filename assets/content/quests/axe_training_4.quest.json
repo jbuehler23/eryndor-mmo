@@ -1,0 +1,9 @@
+{
+  "id": 127,
+  "name": "Axe Training: Decapitate",
+  "description": "Master the ultimate execution technique.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 16 }],
+  "reward_exp": 150,
+  "proficiency_requirements": [["Axe", 20]],
+  "reward_abilities": [1027]
+}

@@ -8,12 +8,25 @@ pub struct StatBonuses {
     pub move_speed: f32,
 }
 
-/// Types of weapons for unlock requirements
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+/// Types of weapons for unlock requirements and trainer specialization
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum WeaponType {
     Sword,
     Dagger,
+    Staff,
     Wand,
+    Mace,
+    Bow,
+    Axe,
+}
+
+/// Types of armor for trainer specialization
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ArmorType {
+    Cloth,
+    Leather,
+    Chain,
+    Plate,
 }
 
 /// Represents different types of ability effects that can be applied

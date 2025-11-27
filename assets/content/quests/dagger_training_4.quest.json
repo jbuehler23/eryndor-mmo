@@ -1,0 +1,9 @@
+{
+  "id": 107,
+  "name": "Dagger Training: Assassination",
+  "description": "Master the ultimate assassination technique.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 11 }],
+  "reward_exp": 150,
+  "proficiency_requirements": [["Dagger", 20]],
+  "reward_abilities": [1007]
+}

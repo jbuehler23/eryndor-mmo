@@ -1,0 +1,9 @@
+{
+  "id": 121,
+  "name": "Bow Training: Multi-Shot",
+  "description": "Master firing multiple arrows simultaneously.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 15 }],
+  "reward_exp": 75,
+  "proficiency_requirements": [["Bow", 10]],
+  "reward_abilities": [1021]
+}

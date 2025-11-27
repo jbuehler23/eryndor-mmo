@@ -77,6 +77,10 @@ impl WeaponType {
             ITEM_SWORD => Some(WeaponType::Sword),
             ITEM_DAGGER => Some(WeaponType::Dagger),
             ITEM_WAND => Some(WeaponType::Wand),
+            ITEM_STAFF => Some(WeaponType::Staff),
+            ITEM_MACE => Some(WeaponType::Mace),
+            ITEM_BOW => Some(WeaponType::Bow),
+            ITEM_AXE => Some(WeaponType::Axe),
             _ => None,
         }
     }

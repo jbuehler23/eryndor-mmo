@@ -1,0 +1,9 @@
+{
+  "id": 311,
+  "name": "Rogue Training: Death From Above",
+  "description": "Master the ultimate assassination technique.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 32 }],
+  "reward_exp": 150,
+  "proficiency_requirements": [],
+  "reward_abilities": [1211]
+}

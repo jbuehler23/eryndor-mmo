@@ -35,6 +35,201 @@
         "color": [0.8, 0.6, 0.2, 1.0],
         "size": 24.0
       }
+    },
+    {
+      "npc_id": 10,
+      "name": "Blade Master Kira",
+      "npc_type": "Trainer",
+      "position": { "x": -100.0, "y": 80.0 },
+      "quests": [],
+      "trainer_items": [],
+      "trainer_type": { "Weapon": "Sword" },
+      "teaching_quests": [100, 101, 102, 103],
+      "visual": {
+        "shape": "Circle",
+        "color": [0.9, 0.3, 0.3, 1.0],
+        "size": 24.0
+      }
+    },
+    {
+      "npc_id": 11,
+      "name": "Shadow Jin",
+      "npc_type": "Trainer",
+      "position": { "x": -60.0, "y": 80.0 },
+      "quests": [],
+      "trainer_items": [],
+      "trainer_type": { "Weapon": "Dagger" },
+      "teaching_quests": [104, 105, 106, 107],
+      "visual": {
+        "shape": "Circle",
+        "color": [0.5, 0.3, 0.6, 1.0],
+        "size": 24.0
+      }
+    },
+    {
+      "npc_id": 12,
+      "name": "Archmage Theron",
+      "npc_type": "Trainer",
+      "position": { "x": -20.0, "y": 80.0 },
+      "quests": [],
+      "trainer_items": [],
+      "trainer_type": { "Weapon": "Staff" },
+      "teaching_quests": [108, 109, 110, 111],
+      "visual": {
+        "shape": "Circle",
+        "color": [0.4, 0.4, 0.9, 1.0],
+        "size": 24.0
+      }
+    },
+    {
+      "npc_id": 13,
+      "name": "Enchanter Lyra",
+      "npc_type": "Trainer",
+      "position": { "x": 20.0, "y": 80.0 },
+      "quests": [],
+      "trainer_items": [],
+      "trainer_type": { "Weapon": "Wand" },
+      "teaching_quests": [112, 113, 114, 115],
+      "visual": {
+        "shape": "Circle",
+        "color": [0.8, 0.5, 0.9, 1.0],
+        "size": 24.0
+      }
+    },
+    {
+      "npc_id": 14,
+      "name": "Templar Marcus",
+      "npc_type": "Trainer",
+      "position": { "x": 60.0, "y": 80.0 },
+      "quests": [],
+      "trainer_items": [],
+      "trainer_type": { "Weapon": "Mace" },
+      "teaching_quests": [116, 117, 118, 119],
+      "visual": {
+        "shape": "Circle",
+        "color": [0.9, 0.9, 0.5, 1.0],
+        "size": 24.0
+      }
+    },
+    {
+      "npc_id": 15,
+      "name": "Ranger Elena",
+      "npc_type": "Trainer",
+      "position": { "x": 100.0, "y": 80.0 },
+      "quests": [],
+      "trainer_items": [],
+      "trainer_type": { "Weapon": "Bow" },
+      "teaching_quests": [120, 121, 122, 123],
+      "visual": {
+        "shape": "Circle",
+        "color": [0.3, 0.7, 0.3, 1.0],
+        "size": 24.0
+      }
+    },
+    {
+      "npc_id": 16,
+      "name": "Berserker Grom",
+      "npc_type": "Trainer",
+      "position": { "x": 140.0, "y": 80.0 },
+      "quests": [],
+      "trainer_items": [],
+      "trainer_type": { "Weapon": "Axe" },
+      "teaching_quests": [124, 125, 126, 127],
+      "visual": {
+        "shape": "Circle",
+        "color": [0.7, 0.2, 0.2, 1.0],
+        "size": 24.0
+      }
+    },
+    {
+      "npc_id": 20,
+      "name": "Weaver Silvia",
+      "npc_type": "Trainer",
+      "position": { "x": -80.0, "y": 140.0 },
+      "quests": [],
+      "trainer_items": [],
+      "trainer_type": { "Armor": "Cloth" },
+      "teaching_quests": [200, 201, 202, 203],
+      "visual": {
+        "shape": "Circle",
+        "color": [0.6, 0.6, 0.9, 1.0],
+        "size": 24.0
+      }
+    },
+    {
+      "npc_id": 21,
+      "name": "Tanner Bron",
+      "npc_type": "Trainer",
+      "position": { "x": 0.0, "y": 140.0 },
+      "quests": [],
+      "trainer_items": [],
+      "trainer_type": { "Armor": "Leather" },
+      "teaching_quests": [204, 205, 206, 207],
+      "visual": {
+        "shape": "Circle",
+        "color": [0.6, 0.4, 0.2, 1.0],
+        "size": 24.0
+      }
+    },
+    {
+      "npc_id": 22,
+      "name": "Smith Ironforge",
+      "npc_type": "Trainer",
+      "position": { "x": 80.0, "y": 140.0 },
+      "quests": [],
+      "trainer_items": [],
+      "trainer_type": { "Armor": "Plate" },
+      "teaching_quests": [208, 209, 210, 211],
+      "visual": {
+        "shape": "Circle",
+        "color": [0.5, 0.5, 0.5, 1.0],
+        "size": 24.0
+      }
+    },
+    {
+      "npc_id": 30,
+      "name": "Warlord Valkor",
+      "npc_type": "Trainer",
+      "position": { "x": -60.0, "y": 200.0 },
+      "quests": [],
+      "trainer_items": [],
+      "trainer_type": { "Class": "Knight" },
+      "teaching_quests": [300, 301, 302, 303],
+      "visual": {
+        "shape": "Circle",
+        "color": [0.9, 0.4, 0.2, 1.0],
+        "size": 24.0
+      }
+    },
+    {
+      "npc_id": 31,
+      "name": "High Magus Aurelia",
+      "npc_type": "Trainer",
+      "position": { "x": 0.0, "y": 200.0 },
+      "quests": [],
+      "trainer_items": [],
+      "trainer_type": { "Class": "Mage" },
+      "teaching_quests": [304, 305, 306, 307],
+      "visual": {
+        "shape": "Circle",
+        "color": [0.3, 0.3, 0.9, 1.0],
+        "size": 24.0
+      }
+    },
+    {
+      "npc_id": 32,
+      "name": "Shadowblade Vex",
+      "npc_type": "Trainer",
+      "position": { "x": 60.0, "y": 200.0 },
+      "quests": [],
+      "trainer_items": [],
+      "trainer_type": { "Class": "Rogue" },
+      "teaching_quests": [308, 309, 310, 311],
+      "visual": {
+        "shape": "Circle",
+        "color": [0.2, 0.2, 0.3, 1.0],
+        "size": 24.0
+      }
     }
   ],
   "enemy_spawns": [

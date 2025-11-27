@@ -1,0 +1,13 @@
+{
+  "id": 1015,
+  "name": "Disintegrate",
+  "description": "A devastating beam of energy that tears through your target.",
+  "damage_multiplier": 2.8,
+  "cooldown": 20.0,
+  "range": 100.0,
+  "mana_cost": 45.0,
+  "ability_types": [
+    { "DirectDamage": { "multiplier": 2.8 } }
+  ],
+  "unlock_requirement": { "WeaponProficiency": { "weapon": "Wand", "level": 20 } }
+}

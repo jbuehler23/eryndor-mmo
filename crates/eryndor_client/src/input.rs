@@ -45,8 +45,8 @@ pub fn handle_targeting_input(
     mouse_button: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
-    targetable_query: Query<(Entity, &Position, &VisualShape), With<Interactable>>,
-    _npc_query: Query<Entity, With<Npc>>,
+    targetable_query: Query<(Entity, &Position, &VisualShape, &Interactable), With<Interactable>>,
+    npc_query: Query<Entity, With<Npc>>,
     enemy_query: Query<Entity, With<Enemy>>,
     loot_query: Query<Entity, With<LootContainer>>,
     mut input_state: ResMut<InputState>,
@@ -60,6 +60,13 @@ pub fn handle_targeting_input(
     if !left_click && !right_click {
         return;
     }
+
+    // Debug: Log how many targetable entities exist
+    let targetable_count = targetable_query.iter().count();
+    let npc_count = npc_query.iter().count();
+    let enemy_count = enemy_query.iter().count();
+    debug!("Targeting click - Interactables: {}, NPCs: {}, Enemies: {}",
+           targetable_count, npc_count, enemy_count);
 
     let Ok(window) = windows.single() else { return };
     let Some(cursor_pos) = window.cursor_position() else { return };
@@ -76,7 +83,7 @@ pub fn handle_targeting_input(
     let mut closest_entity = None;
     let mut closest_distance = f32::MAX;
 
-    for (entity, position, visual) in &targetable_query {
+    for (entity, position, visual, interactable) in &targetable_query {
         let distance = position.0.distance(world_pos);
 
         // Use visual size as the "clickable" radius for targeting
@@ -86,6 +93,8 @@ pub fn handle_targeting_input(
         if distance < click_radius && distance < closest_distance {
             closest_distance = distance;
             closest_entity = Some(entity);
+            debug!("Found targetable entity {:?} at distance {:.2}, type: {:?}",
+                   entity, distance, interactable.interaction_type);
         }
     }
 

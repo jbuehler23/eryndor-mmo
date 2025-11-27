@@ -345,6 +345,20 @@ pub struct QuestDialogueEvent {
 pub struct TrainerDialogueEvent {
     pub npc_name: String,
     pub items_for_sale: Vec<TrainerItem>,
+    pub trainer_type: Option<TrainerType>,
+    pub teaching_quests: Vec<TrainerQuestInfo>,
+}
+
+/// Quest info for trainer dialogue (what the client needs to display)
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct TrainerQuestInfo {
+    pub quest_id: u32,
+    pub quest_name: String,
+    pub description: String,
+    pub required_proficiency_level: u32,
+    pub ability_reward_name: String,
+    pub is_available: bool,  // Does player meet requirements?
+    pub is_completed: bool,  // Has player already completed this quest?
 }
 
 /// Level up event - notifies client of level up

@@ -1,0 +1,9 @@
+{
+  "id": 310,
+  "name": "Rogue Training: Cloak of Shadows",
+  "description": "Learn to wrap yourself in protective shadows.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 32 }],
+  "reward_exp": 100,
+  "proficiency_requirements": [],
+  "reward_abilities": [1210]
+}

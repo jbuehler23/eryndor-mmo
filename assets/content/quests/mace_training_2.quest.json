@@ -1,0 +1,9 @@
+{
+  "id": 117,
+  "name": "Mace Training: Concussion",
+  "description": "Master stunning blows that disorient your foes.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 14 }],
+  "reward_exp": 75,
+  "proficiency_requirements": [["Mace", 10]],
+  "reward_abilities": [1017]
+}

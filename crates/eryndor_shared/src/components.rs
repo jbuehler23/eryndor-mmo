@@ -455,10 +455,22 @@ pub struct QuestGiver {
 #[derive(Component, Serialize, Deserialize, Clone, Debug)]
 pub struct NpcName(pub String);
 
-/// NPC that sells items (weapon trainer, merchant, etc.)
+/// NPC that sells items and/or teaches abilities
 #[derive(Component, Serialize, Deserialize, Clone, Debug)]
 pub struct Trainer {
     pub items_for_sale: Vec<TrainerItem>,
+    #[serde(default)]
+    pub trainer_type: Option<TrainerType>,
+    #[serde(default)]
+    pub teaching_quests: Vec<u32>,  // Quest IDs that teach abilities when completed
+}
+
+/// What type of trainer this NPC is
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TrainerType {
+    Weapon(crate::WeaponType),
+    Armor(crate::ArmorType),
+    Class(CharacterClass),
 }
 
 /// An item available for purchase from a trainer
@@ -497,8 +509,11 @@ pub enum AiState {
 /// Loot table for enemies - defines what they drop on death
 #[derive(Component, Serialize, Deserialize, Clone, Debug, Default)]
 pub struct LootTable {
+    #[serde(default)]
     pub gold_min: u32,
+    #[serde(default)]
     pub gold_max: u32,
+    #[serde(default)]
     pub items: Vec<LootItem>,
 }
 

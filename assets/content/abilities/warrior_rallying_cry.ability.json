@@ -1,0 +1,14 @@
+{
+  "id": 1202,
+  "name": "Rallying Cry",
+  "description": "Inspire yourself with a rallying cry, healing and boosting stats.",
+  "damage_multiplier": 0.0,
+  "cooldown": 60.0,
+  "range": 0.0,
+  "mana_cost": 35.0,
+  "ability_types": [
+    { "Heal": { "amount": 30.0, "is_percent": false } },
+    { "Buff": { "duration": 15.0, "stat_bonuses": { "attack_power": 10.0, "defense": 10.0, "move_speed": 20.0 } } }
+  ],
+  "unlock_requirement": "None"
+}

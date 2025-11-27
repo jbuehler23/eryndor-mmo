@@ -1,0 +1,13 @@
+{
+  "id": 1102,
+  "name": "Arcane Surge",
+  "description": "Channel arcane energy to greatly boost your attack power.",
+  "damage_multiplier": 0.0,
+  "cooldown": 45.0,
+  "range": 0.0,
+  "mana_cost": 35.0,
+  "ability_types": [
+    { "Buff": { "duration": 15.0, "stat_bonuses": { "attack_power": 15.0, "defense": 0.0, "move_speed": 0.0 } } }
+  ],
+  "unlock_requirement": "None"
+}

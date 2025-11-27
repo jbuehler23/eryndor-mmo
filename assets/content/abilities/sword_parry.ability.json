@@ -1,0 +1,27 @@
+{
+  "id": 1001,
+  "name": "Parry",
+  "description": "Enter a defensive stance, increasing your defense for a short time.",
+  "damage_multiplier": 0.0,
+  "cooldown": 15.0,
+  "range": 0.0,
+  "mana_cost": 20.0,
+  "ability_types": [
+    {
+      "Buff": {
+        "duration": 8.0,
+        "stat_bonuses": {
+          "attack_power": 0.0,
+          "defense": 15.0,
+          "move_speed": 0.0
+        }
+      }
+    }
+  ],
+  "unlock_requirement": {
+    "WeaponProficiency": {
+      "weapon": "Sword",
+      "level": 10
+    }
+  }
+}

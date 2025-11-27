@@ -1,0 +1,9 @@
+{
+  "id": 300,
+  "name": "Warrior Training: Battle Shout",
+  "description": "Learn to inspire yourself with a mighty war cry.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 30 }],
+  "reward_exp": 50,
+  "proficiency_requirements": [],
+  "reward_abilities": [1200]
+}

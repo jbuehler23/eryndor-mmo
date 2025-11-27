@@ -1,0 +1,9 @@
+{
+  "id": 111,
+  "name": "Staff Training: Grand Slam",
+  "description": "Master the devastating ground-shaking attack.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 12 }],
+  "reward_exp": 150,
+  "proficiency_requirements": [["Staff", 20]],
+  "reward_abilities": [1011]
+}

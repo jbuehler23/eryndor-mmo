@@ -1,0 +1,9 @@
+{
+  "id": 125,
+  "name": "Axe Training: Whirlwind",
+  "description": "Master the devastating spinning attack.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 16 }],
+  "reward_exp": 75,
+  "proficiency_requirements": [["Axe", 10]],
+  "reward_abilities": [1025]
+}

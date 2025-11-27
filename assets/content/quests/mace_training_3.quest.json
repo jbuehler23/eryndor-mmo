@@ -1,0 +1,9 @@
+{
+  "id": 118,
+  "name": "Mace Training: Consecration",
+  "description": "Learn to sanctify the ground with holy power.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 14 }],
+  "reward_exp": 100,
+  "proficiency_requirements": [["Mace", 15]],
+  "reward_abilities": [1018]
+}

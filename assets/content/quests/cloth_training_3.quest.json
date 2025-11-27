@@ -1,0 +1,9 @@
+{
+  "id": 202,
+  "name": "Cloth Training: Arcane Surge",
+  "description": "Master the technique of channeling arcane power.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 20 }],
+  "reward_exp": 100,
+  "proficiency_requirements": [],
+  "reward_abilities": [1102]
+}

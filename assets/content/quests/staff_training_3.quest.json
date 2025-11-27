@@ -1,0 +1,9 @@
+{
+  "id": 110,
+  "name": "Staff Training: Meditation",
+  "description": "Learn to focus your mind for enhanced magical power.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 12 }],
+  "reward_exp": 100,
+  "proficiency_requirements": [["Staff", 15]],
+  "reward_abilities": [1010]
+}

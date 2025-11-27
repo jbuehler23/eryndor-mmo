@@ -1,0 +1,9 @@
+{
+  "id": 303,
+  "name": "Warrior Training: Avatar of War",
+  "description": "Transform into the ultimate warrior.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 30 }],
+  "reward_exp": 150,
+  "proficiency_requirements": [],
+  "reward_abilities": [1203]
+}

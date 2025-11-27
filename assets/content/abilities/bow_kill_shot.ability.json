@@ -1,0 +1,13 @@
+{
+  "id": 1023,
+  "name": "Kill Shot",
+  "description": "A deadly aimed shot that deals massive damage.",
+  "damage_multiplier": 3.0,
+  "cooldown": 25.0,
+  "range": 150.0,
+  "mana_cost": 45.0,
+  "ability_types": [
+    { "DirectDamage": { "multiplier": 3.0 } }
+  ],
+  "unlock_requirement": { "WeaponProficiency": { "weapon": "Bow", "level": 20 } }
+}

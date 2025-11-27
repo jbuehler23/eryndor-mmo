@@ -3,14 +3,16 @@ use bevy_replicon::prelude::*;
 use eryndor_shared::*;
 use crate::auth::ActiveCharacterEntity;
 use crate::game_data::QuestDatabase;
+use crate::abilities::AbilityDatabase;
 
 pub fn handle_interact_npc(
     trigger: On<FromClient<InteractNpcRequest>>,
     mut commands: Commands,
     clients: Query<&ActiveCharacterEntity>,
-    players: Query<(&Position, &QuestLog, &WeaponProficiency)>,
+    players: Query<(&Position, &QuestLog, &WeaponProficiency, &ArmorProficiency)>,
     npcs: Query<(Entity, &Position, Option<&QuestGiver>, Option<&Trainer>, &NpcName), With<Npc>>,
     quest_db: Res<QuestDatabase>,
+    ability_db: Res<AbilityDatabase>,
 ) {
     info!("=== INTERACT NPC HANDLER CALLED ===");
     let Some(client_entity) = trigger.client_id.entity() else {
@@ -33,7 +35,7 @@ pub fn handle_interact_npc(
     info!("Client sent NPC entity: {:?} (this is a client-side replicated entity)", request.npc_entity);
 
     // Get player position first
-    let Ok((player_pos, quest_log, weapon_prof)) = players.get(char_entity) else {
+    let Ok((player_pos, quest_log, weapon_prof, armor_prof)) = players.get(char_entity) else {
         info!("Failed to get player data for character {:?}", char_entity);
         return;
     };
@@ -73,13 +75,55 @@ pub fn handle_interact_npc(
 
     // Check if NPC is a trainer
     if let Some(trainer_comp) = trainer {
-        info!("NPC is a trainer with {} items for sale", trainer_comp.items_for_sale.len());
+        info!("NPC is a trainer with {} items for sale, {} teaching quests",
+            trainer_comp.items_for_sale.len(), trainer_comp.teaching_quests.len());
+
+        // Build teaching quest info list
+        let teaching_quests: Vec<TrainerQuestInfo> = trainer_comp.teaching_quests.iter()
+            .filter_map(|quest_id| {
+                let quest_def = quest_db.quests.get(quest_id)?;
+
+                // Check if already completed
+                let is_completed = quest_log.completed_quests.contains(quest_id);
+
+                // Check proficiency requirements
+                let mut is_available = !is_completed && !quest_log.active_quests.iter().any(|q| q.quest_id == *quest_id);
+                let mut required_proficiency_level = 0u32;
+
+                for (weapon_type, required_level) in &quest_def.proficiency_requirements {
+                    required_proficiency_level = *required_level;
+                    let current_level = crate::weapon::get_proficiency_level(weapon_prof, weapon_type);
+                    if current_level < *required_level {
+                        is_available = false;
+                    }
+                }
+
+                // Get ability reward name (first reward ability)
+                let ability_reward_name = quest_def.reward_abilities.first()
+                    .and_then(|ability_id| ability_db.get(*ability_id))
+                    .map(|def| def.name.clone())
+                    .unwrap_or_else(|| "Unknown Ability".to_string());
+
+                Some(TrainerQuestInfo {
+                    quest_id: *quest_id,
+                    quest_name: quest_def.name.clone(),
+                    description: quest_def.description.clone(),
+                    required_proficiency_level,
+                    ability_reward_name,
+                    is_available,
+                    is_completed,
+                })
+            })
+            .collect();
+
         // Send trainer dialogue event to open the shop window
         commands.server_trigger(ToClients {
             mode: SendMode::Direct(ClientId::Client(client_entity)),
             message: TrainerDialogueEvent {
                 npc_name: npc_name.0.clone(),
                 items_for_sale: trainer_comp.items_for_sale.clone(),
+                trainer_type: trainer_comp.trainer_type.clone(),
+                teaching_quests,
             },
         });
         return;

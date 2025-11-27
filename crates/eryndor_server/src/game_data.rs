@@ -216,8 +216,14 @@ pub struct NpcSpawnDef {
     pub name: String,
     pub npc_type: String,  // "QuestGiver" or "Trainer"
     pub position: Vec2Data,
+    #[serde(default)]
     pub quests: Vec<u32>,
+    #[serde(default)]
     pub trainer_items: Vec<TrainerItem>,
+    #[serde(default)]
+    pub trainer_type: Option<TrainerType>,
+    #[serde(default)]
+    pub teaching_quests: Vec<u32>,
     pub visual: VisualData,
 }
 

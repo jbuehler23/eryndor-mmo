@@ -1,0 +1,9 @@
+{
+  "id": 113,
+  "name": "Wand Training: Hex",
+  "description": "Learn to curse your enemies, slowing their movements.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 13 }],
+  "reward_exp": 75,
+  "proficiency_requirements": [["Wand", 10]],
+  "reward_abilities": [1013]
+}

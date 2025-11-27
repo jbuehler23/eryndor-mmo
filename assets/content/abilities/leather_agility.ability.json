@@ -1,0 +1,13 @@
+{
+  "id": 1106,
+  "name": "Heightened Agility",
+  "description": "Push your reflexes to the limit, boosting attack and movement.",
+  "damage_multiplier": 0.0,
+  "cooldown": 45.0,
+  "range": 0.0,
+  "mana_cost": 30.0,
+  "ability_types": [
+    { "Buff": { "duration": 15.0, "stat_bonuses": { "attack_power": 10.0, "defense": 5.0, "move_speed": 40.0 } } }
+  ],
+  "unlock_requirement": "None"
+}
