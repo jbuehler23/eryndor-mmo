@@ -188,12 +188,13 @@ fn render_spritesheet_grid(
 
                 painter.rect_filled(tile_rect, 0.0, color);
 
-                // Draw tile index in center
+                // Draw tile index in center (guard against zero font size)
+                let font_size = (10.0 * zoom.min(2.0)).max(1.0);
                 painter.text(
                     tile_rect.center(),
                     egui::Align2::CENTER_CENTER,
                     format!("{}", tile_index),
-                    egui::FontId::proportional(10.0 * zoom.min(2.0)),
+                    egui::FontId::proportional(font_size),
                     egui::Color32::from_rgb(120, 120, 140),
                 );
             }

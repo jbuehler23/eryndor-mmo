@@ -190,7 +190,7 @@ impl Default for EditorState {
             abilities: AbilitiesEditorState::default(),
             loot: LootEditorState::default(),
             assets: AssetsEditorState::default(),
-            tilesets: TilesetsEditorState::default(),
+            tilesets: TilesetsEditorState::new(),
             action_load_zones: true, // Load zones on startup
             action_create_zone: false,
             action_load_items: false,
