@@ -279,17 +279,48 @@ pub struct WorldEditorState {
     /// Tile brush size (1 = single tile, 2 = 2x2, etc.)
     pub brush_size: u32,
 
-    /// Show ground tiles layer
+    /// Show ground tiles layer (legacy - use layer visibility)
     pub show_ground_layer: bool,
 
-    /// Show decoration layer
+    /// Show decoration layer (legacy - use layer visibility)
     pub show_decoration_layer: bool,
 
-    /// Show tilemap collision layer
+    /// Show tilemap collision layer (legacy - use layer visibility)
     pub show_tile_collision_layer: bool,
 
-    /// Current zone's tilemap data for editing
+    /// Current zone's tilemap data for editing (legacy format)
     pub editing_tilemap: Option<eryndor_shared::ZoneTilemap>,
+
+    // === New Tiled-Compatible Layer System ===
+
+    /// Current zone's tilemap in new Tiled-compatible format
+    pub editing_tilemap_new: Option<eryndor_shared::TilemapMap>,
+
+    /// Currently selected layer ID for painting/editing
+    pub selected_layer_id: Option<u32>,
+
+    /// Whether to use the new layer system (false = use legacy system)
+    pub use_new_layer_system: bool,
+
+    /// Chunk size for the tilemap (default 16)
+    pub chunk_size: u32,
+
+    /// Show layer panel in the UI
+    pub show_layer_panel: bool,
+
+    /// Layer panel width
+    pub layer_panel_width: f32,
+
+    /// Currently renaming layer ID (for inline rename UI)
+    pub renaming_layer: Option<u32>,
+
+    /// Rename text buffer
+    pub rename_buffer: String,
+
+    /// Show add layer menu
+    pub show_add_layer_menu: bool,
+
+    // === End New Layer System ===
 
     /// Currently selected entity in the world editor
     pub selected_entity: SelectedEntity,
@@ -329,10 +360,107 @@ impl WorldEditorState {
             show_decoration_layer: true,
             show_tile_collision_layer: false,
             editing_tilemap: None,
+            // New Tiled-compatible layer system
+            editing_tilemap_new: None,
+            selected_layer_id: None,
+            use_new_layer_system: true, // Enable new system by default
+            chunk_size: 16,
+            show_layer_panel: true,
+            layer_panel_width: 200.0,
+            renaming_layer: None,
+            rename_buffer: String::new(),
+            show_add_layer_menu: false,
+            // Other state
             selected_entity: SelectedEntity::None,
             undo_history: UndoHistory::default(),
             terrain_sets: TerrainSetState::default(),
             tile_palette_height: 120.0,
+        }
+    }
+
+    /// Get the currently selected layer (if any)
+    pub fn get_selected_layer(&self) -> Option<&eryndor_shared::MapLayer> {
+        let tilemap = self.editing_tilemap_new.as_ref()?;
+        let layer_id = self.selected_layer_id?;
+        tilemap.get_layer(layer_id)
+    }
+
+    /// Get the currently selected layer mutably (if any)
+    pub fn get_selected_layer_mut(&mut self) -> Option<&mut eryndor_shared::MapLayer> {
+        let layer_id = self.selected_layer_id?;
+        self.editing_tilemap_new.as_mut()?.get_layer_mut(layer_id)
+    }
+
+    /// Create a new empty tilemap for the zone
+    pub fn create_new_tilemap(&mut self, tile_size: u32) {
+        let mut tilemap = eryndor_shared::TilemapMap::new(tile_size, tile_size);
+
+        // Add default layers (like Tiled's default setup)
+        let ground_id = tilemap.add_tile_layer("Ground");
+        tilemap.add_tile_layer("Decorations");
+        tilemap.add_tile_layer("Collision");
+
+        // Select the ground layer by default
+        self.selected_layer_id = Some(ground_id);
+        self.editing_tilemap_new = Some(tilemap);
+    }
+
+    /// Add a new tile layer to the current tilemap
+    pub fn add_tile_layer(&mut self, name: &str) -> Option<u32> {
+        let tilemap = self.editing_tilemap_new.as_mut()?;
+        let id = tilemap.add_tile_layer(name);
+        self.selected_layer_id = Some(id);
+        Some(id)
+    }
+
+    /// Add a new object layer to the current tilemap
+    pub fn add_object_layer(&mut self, name: &str) -> Option<u32> {
+        let tilemap = self.editing_tilemap_new.as_mut()?;
+        let id = tilemap.add_object_layer(name);
+        self.selected_layer_id = Some(id);
+        Some(id)
+    }
+
+    /// Delete the currently selected layer
+    pub fn delete_selected_layer(&mut self) -> bool {
+        if let (Some(tilemap), Some(layer_id)) = (&mut self.editing_tilemap_new, self.selected_layer_id) {
+            if tilemap.layers.len() > 1 {
+                tilemap.remove_layer(layer_id);
+                // Select the first remaining layer
+                self.selected_layer_id = tilemap.layers.first().map(|l| l.id);
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Move the selected layer up (toward front/top)
+    pub fn move_selected_layer_up(&mut self) -> bool {
+        if let (Some(tilemap), Some(layer_id)) = (&mut self.editing_tilemap_new, self.selected_layer_id) {
+            return tilemap.move_layer_up(layer_id);
+        }
+        false
+    }
+
+    /// Move the selected layer down (toward back/bottom)
+    pub fn move_selected_layer_down(&mut self) -> bool {
+        if let (Some(tilemap), Some(layer_id)) = (&mut self.editing_tilemap_new, self.selected_layer_id) {
+            return tilemap.move_layer_down(layer_id);
+        }
+        false
+    }
+
+    /// Toggle visibility of the selected layer
+    pub fn toggle_selected_layer_visibility(&mut self) {
+        if let Some(layer) = self.get_selected_layer_mut() {
+            layer.visible = !layer.visible;
+        }
+    }
+
+    /// Toggle lock of the selected layer
+    pub fn toggle_selected_layer_lock(&mut self) {
+        if let Some(layer) = self.get_selected_layer_mut() {
+            layer.locked = !layer.locked;
         }
     }
 }
@@ -1038,16 +1166,84 @@ pub enum WorldTool {
     PlaceEntity,
     DrawCollision,
     DrawSpawnRegion,
-    /// Paint ground tiles
+    // === Legacy Layer-specific Tools (for backward compatibility) ===
+    /// Paint ground tiles (legacy - use PaintTile with layer selection)
     PaintGround,
-    /// Paint decoration tiles
+    /// Paint decoration tiles (legacy - use PaintTile with layer selection)
     PaintDecoration,
-    /// Paint collision layer (tilemap-based)
+    /// Paint collision layer (legacy - use PaintTile with layer selection)
     PaintTileCollision,
-    /// Erase tiles/decorations/collision
+    // === New Generic Layer Tools ===
+    /// Paint tiles to the currently selected layer
+    PaintTile,
+    /// Place/edit objects on the currently selected object layer
+    PlaceObject,
+    /// Erase tiles/decorations/collision from selected layer
     Erase,
     /// Fill tool (bucket fill) - floods connected area with selected tile
     Fill,
+    /// Rectangle select/fill tool
+    RectangleTool,
+}
+
+impl WorldTool {
+    /// Get the display name for this tool
+    pub fn label(&self) -> &'static str {
+        match self {
+            WorldTool::Select => "Select",
+            WorldTool::Pan => "Pan",
+            WorldTool::PlaceEntity => "Place Entity",
+            WorldTool::DrawCollision => "Draw Collision",
+            WorldTool::DrawSpawnRegion => "Draw Spawn",
+            WorldTool::PaintGround => "Paint Ground",
+            WorldTool::PaintDecoration => "Paint Decor",
+            WorldTool::PaintTileCollision => "Paint Collision",
+            WorldTool::PaintTile => "Paint Tile",
+            WorldTool::PlaceObject => "Place Object",
+            WorldTool::Erase => "Erase",
+            WorldTool::Fill => "Fill",
+            WorldTool::RectangleTool => "Rectangle",
+        }
+    }
+
+    /// Get all available tools for the new layer system
+    pub fn layer_tools() -> &'static [WorldTool] {
+        &[
+            WorldTool::Select,
+            WorldTool::Pan,
+            WorldTool::PaintTile,
+            WorldTool::PlaceObject,
+            WorldTool::Erase,
+            WorldTool::Fill,
+            WorldTool::RectangleTool,
+        ]
+    }
+
+    /// Get all available tools for the legacy system
+    pub fn legacy_tools() -> &'static [WorldTool] {
+        &[
+            WorldTool::Select,
+            WorldTool::Pan,
+            WorldTool::PaintGround,
+            WorldTool::PaintDecoration,
+            WorldTool::PaintTileCollision,
+            WorldTool::Erase,
+            WorldTool::Fill,
+        ]
+    }
+
+    /// Check if this tool can paint/edit the given layer type
+    pub fn can_edit_layer(&self, layer_type: &str) -> bool {
+        match self {
+            WorldTool::PaintTile | WorldTool::Fill | WorldTool::RectangleTool => {
+                layer_type == "tilelayer"
+            }
+            WorldTool::PlaceObject => layer_type == "objectgroup",
+            WorldTool::Erase => layer_type == "tilelayer" || layer_type == "objectgroup",
+            WorldTool::Select => true,
+            _ => false,
+        }
+    }
 }
 
 // === Undo/Redo System ===

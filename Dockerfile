@@ -80,6 +80,9 @@ COPY --from=builder /build/target/release/server /opt/eryndor/server
 COPY config.example.toml /opt/eryndor/config.toml
 COPY config.example.toml /opt/eryndor/config.example.toml
 
+# Copy game assets (zone data, enemies, items, quests, etc.)
+COPY assets /opt/eryndor/assets
+
 # Fix ownership of all copied files
 RUN chown -R eryndor:eryndor /opt/eryndor
 

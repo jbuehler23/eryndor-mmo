@@ -8,6 +8,12 @@ use crate::editor_state::{EditorState, WorldTool, TileCategory, SelectedEntity, 
 pub fn render(ui: &mut egui::Ui, editor_state: &mut EditorState) {
     // Render side panels first so they claim their space
     render_left_sidebar(ui, editor_state);
+
+    // Layer panel (new Tiled-compatible system) - renders on right before properties
+    if editor_state.world.use_new_layer_system && editor_state.world.show_layer_panel {
+        render_layer_panel(ui, editor_state);
+    }
+
     render_properties_panel(ui, editor_state);
     // Note: Bottom palette panel is rendered at context level via render_bottom_panel()
     // Central panel fills remaining space
@@ -79,20 +85,37 @@ fn render_left_sidebar(ui: &mut egui::Ui, editor_state: &mut EditorState) {
 
             ui.add_space(4.0);
 
-            // Tile painting tools
+            // Tile painting tools - show different tools based on layer system
             ui.label("Tile Painting:");
-            let tile_tools = [
-                (WorldTool::PaintGround, "Ground", "Paint ground tiles"),
-                (WorldTool::PaintDecoration, "Decor", "Paint decoration tiles"),
-                (WorldTool::PaintTileCollision, "Collision", "Paint tile collision"),
-                (WorldTool::Erase, "Erase", "Erase tiles"),
-                (WorldTool::Fill, "Fill", "Bucket fill (flood fill connected area)"),
-            ];
 
-            for (tool, label, tooltip) in tile_tools {
-                let is_selected = editor_state.world.active_tool == tool;
-                if ui.selectable_label(is_selected, label).on_hover_text(tooltip).clicked() {
-                    editor_state.world.active_tool = tool;
+            if editor_state.world.use_new_layer_system {
+                // New layer system tools
+                let layer_tools = [
+                    (WorldTool::PaintTile, "Paint", "Paint tiles to selected layer"),
+                    (WorldTool::Erase, "Erase", "Erase tiles from selected layer"),
+                ];
+
+                for (tool, label, tooltip) in layer_tools {
+                    let is_selected = editor_state.world.active_tool == tool;
+                    if ui.selectable_label(is_selected, label).on_hover_text(tooltip).clicked() {
+                        editor_state.world.active_tool = tool;
+                    }
+                }
+            } else {
+                // Legacy layer system tools
+                let tile_tools = [
+                    (WorldTool::PaintGround, "Ground", "Paint ground tiles"),
+                    (WorldTool::PaintDecoration, "Decor", "Paint decoration tiles"),
+                    (WorldTool::PaintTileCollision, "Collision", "Paint tile collision"),
+                    (WorldTool::Erase, "Erase", "Erase tiles"),
+                    (WorldTool::Fill, "Fill", "Bucket fill (flood fill connected area)"),
+                ];
+
+                for (tool, label, tooltip) in tile_tools {
+                    let is_selected = editor_state.world.active_tool == tool;
+                    if ui.selectable_label(is_selected, label).on_hover_text(tooltip).clicked() {
+                        editor_state.world.active_tool = tool;
+                    }
                 }
             }
 
@@ -117,7 +140,7 @@ fn render_left_sidebar(ui: &mut egui::Ui, editor_state: &mut EditorState) {
             // Brush settings (shown when tile tools are active)
             let is_tile_tool = matches!(
                 editor_state.world.active_tool,
-                WorldTool::PaintGround | WorldTool::PaintDecoration | WorldTool::PaintTileCollision | WorldTool::Erase
+                WorldTool::PaintGround | WorldTool::PaintDecoration | WorldTool::PaintTileCollision | WorldTool::Erase | WorldTool::PaintTile
             );
 
             if is_tile_tool {
@@ -168,33 +191,76 @@ fn render_canvas(ui: &mut egui::Ui, editor_state: &mut EditorState) {
 
             ui.separator();
 
-            // Initialize tilemap button
-            if editor_state.world.editing_tilemap.is_none() {
-                if ui.button("New Tilemap").clicked() {
-                    editor_state.world.editing_tilemap = Some(eryndor_shared::ZoneTilemap::new());
-                    editor_state.status_message = "Created new tilemap".to_string();
+            // Layer system toggle
+            let system_label = if editor_state.world.use_new_layer_system { "Layers" } else { "Legacy" };
+            if ui.selectable_label(editor_state.world.use_new_layer_system, system_label)
+                .on_hover_text("Toggle between new layer system and legacy mode")
+                .clicked()
+            {
+                editor_state.world.use_new_layer_system = !editor_state.world.use_new_layer_system;
+            }
+
+            // New layer system controls
+            if editor_state.world.use_new_layer_system {
+                if editor_state.world.editing_tilemap_new.is_none() {
+                    if ui.button("New Map").on_hover_text("Create a new layered tilemap").clicked() {
+                        editor_state.world.create_new_tilemap(16); // 16x16 pixel tiles
+                        editor_state.status_message = "Created new layered tilemap".to_string();
+                    }
+                } else {
+                    // Show unsaved indicator
+                    let label = if editor_state.has_unsaved_changes { "Map [*]" } else { "Map" };
+                    ui.label(label);
+
+                    // Layer panel toggle
+                    if ui.selectable_label(editor_state.world.show_layer_panel, "📑")
+                        .on_hover_text("Toggle layer panel")
+                        .clicked()
+                    {
+                        editor_state.world.show_layer_panel = !editor_state.world.show_layer_panel;
+                    }
+
+                    // Save button
+                    let save_enabled = editor_state.world.current_zone.is_some();
+                    let save_label = if editor_state.has_unsaved_changes { "Save*" } else { "Save" };
+                    if ui.add_enabled(save_enabled, egui::Button::new(save_label)).clicked() {
+                        editor_state.action_save_tilemap = true;
+                    }
+
+                    if ui.button("Clear").clicked() {
+                        editor_state.world.create_new_tilemap(16);
+                        editor_state.status_message = "Cleared tilemap".to_string();
+                        editor_state.has_unsaved_changes = true;
+                    }
                 }
             } else {
-                // Show unsaved indicator
-                let label = if editor_state.has_unsaved_changes {
-                    "Tilemap [*]"
+                // Legacy tilemap controls
+                if editor_state.world.editing_tilemap.is_none() {
+                    if ui.button("New Tilemap").clicked() {
+                        editor_state.world.editing_tilemap = Some(eryndor_shared::ZoneTilemap::new());
+                        editor_state.status_message = "Created new tilemap".to_string();
+                    }
                 } else {
-                    "Tilemap"
-                };
-                ui.label(label);
+                    // Show unsaved indicator
+                    let label = if editor_state.has_unsaved_changes {
+                        "Tilemap [*]"
+                    } else {
+                        "Tilemap"
+                    };
+                    ui.label(label);
 
-                // Save button - enabled when we have a zone selected
-                // (allows saving even if no changes, as a "force save")
-                let save_enabled = editor_state.world.current_zone.is_some();
-                let save_label = if editor_state.has_unsaved_changes { "Save*" } else { "Save" };
-                if ui.add_enabled(save_enabled, egui::Button::new(save_label)).clicked() {
-                    editor_state.action_save_tilemap = true;
-                }
+                    // Save button - enabled when we have a zone selected
+                    let save_enabled = editor_state.world.current_zone.is_some();
+                    let save_label = if editor_state.has_unsaved_changes { "Save*" } else { "Save" };
+                    if ui.add_enabled(save_enabled, egui::Button::new(save_label)).clicked() {
+                        editor_state.action_save_tilemap = true;
+                    }
 
-                if ui.button("Clear").clicked() {
-                    editor_state.world.editing_tilemap = Some(eryndor_shared::ZoneTilemap::new());
-                    editor_state.status_message = "Cleared tilemap".to_string();
-                    editor_state.has_unsaved_changes = true;
+                    if ui.button("Clear").clicked() {
+                        editor_state.world.editing_tilemap = Some(eryndor_shared::ZoneTilemap::new());
+                        editor_state.status_message = "Cleared tilemap".to_string();
+                        editor_state.has_unsaved_changes = true;
+                    }
                 }
             }
         });
@@ -254,9 +320,15 @@ fn render_canvas(ui: &mut egui::Ui, editor_state: &mut EditorState) {
         let zoom = editor_state.world.zoom;
         let camera_pos = editor_state.world.camera_pos;
 
-        // Draw tilemap layers
-        if let Some(tilemap) = &editor_state.world.editing_tilemap {
-            draw_tilemap(&painter, &canvas_rect, tilemap, editor_state);
+        // Draw tilemap layers (choose based on layer system)
+        if editor_state.world.use_new_layer_system {
+            if let Some(ref tilemap) = editor_state.world.editing_tilemap_new {
+                draw_tilemap_layers(&painter, &canvas_rect, tilemap, editor_state);
+            }
+        } else {
+            if let Some(tilemap) = &editor_state.world.editing_tilemap {
+                draw_tilemap(&painter, &canvas_rect, tilemap, editor_state);
+            }
         }
 
         // Draw grid
@@ -271,7 +343,7 @@ fn render_canvas(ui: &mut egui::Ui, editor_state: &mut EditorState) {
         // Show hover tile indicator when using tile tools
         let is_tile_tool = matches!(
             editor_state.world.active_tool,
-            WorldTool::PaintGround | WorldTool::PaintDecoration | WorldTool::PaintTileCollision | WorldTool::Erase
+            WorldTool::PaintGround | WorldTool::PaintDecoration | WorldTool::PaintTileCollision | WorldTool::Erase | WorldTool::PaintTile
         );
 
         if is_tile_tool {
@@ -513,6 +585,57 @@ fn render_canvas(ui: &mut egui::Ui, editor_state: &mut EditorState) {
                         // End batch on drag release or click (single click = start + immediate end)
                         if response.drag_stopped() || (response.clicked() && !response.dragged()) {
                             editor_state.world.undo_history.end_batch();
+                        }
+                    }
+                    WorldTool::PaintTile => {
+                        // Generic paint tool for new layer system
+                        if editor_state.world.use_new_layer_system {
+                            if response.drag_started() {
+                                editor_state.world.undo_history.begin_batch();
+                            }
+
+                            // Get selected layer and tile
+                            let selected_layer_id = editor_state.world.selected_layer_id;
+                            let selected_tile = editor_state.world.selected_tile;
+                            let chunk_size = editor_state.world.chunk_size;
+
+                            if let (Some(layer_id), Some(tile_gid)) = (selected_layer_id, selected_tile) {
+                                if let Some(ref mut tilemap) = editor_state.world.editing_tilemap_new {
+                                    // Check if the layer exists and is a tile layer
+                                    if let Some(layer) = tilemap.get_layer_mut(layer_id) {
+                                        if layer.is_tile_layer() && !layer.locked {
+                                            let (tile_x, tile_y) = world_to_tile(world_x, world_y, tile_size);
+                                            let brush_size = editor_state.world.brush_size as i32;
+
+                                            for dy in 0..brush_size {
+                                                for dx in 0..brush_size {
+                                                    let tx = tile_x + dx;
+                                                    let ty = tile_y + dy;
+
+                                                    // Get old value for undo
+                                                    let old_value = layer.get_tile(tx, ty, chunk_size).unwrap_or(0);
+                                                    if old_value != tile_gid {
+                                                        layer.set_tile(tx, ty, tile_gid, chunk_size);
+                                                        // Record for undo (use layer ID as layer type marker)
+                                                        editor_state.world.undo_history.record(TileOperation {
+                                                            tile_x: tx,
+                                                            tile_y: ty,
+                                                            layer: TileLayer::Ground, // TODO: Create TileLayer::Custom(u32)
+                                                            old_value,
+                                                            new_value: tile_gid,
+                                                        });
+                                                    }
+                                                }
+                                            }
+                                            editor_state.has_unsaved_changes = true;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if response.drag_stopped() || (response.clicked() && !response.dragged()) {
+                                editor_state.world.undo_history.end_batch();
+                            }
                         }
                     }
                     WorldTool::Fill => {
@@ -767,6 +890,190 @@ fn draw_tilemap(painter: &egui::Painter, canvas_rect: &egui::Rect, tilemap: &ery
                         egui::Stroke::new(1.0, egui::Color32::RED),
                         egui::StrokeKind::Outside,
                     );
+                }
+            }
+        }
+    }
+}
+
+/// Draw the new layer-based tilemap (TilemapMap)
+fn draw_tilemap_layers(
+    painter: &egui::Painter,
+    canvas_rect: &egui::Rect,
+    tilemap: &eryndor_shared::TilemapMap,
+    editor_state: &EditorState,
+) {
+    let tile_size = editor_state.world.grid_size;
+    let zoom = editor_state.world.zoom;
+    let camera_pos = editor_state.world.camera_pos;
+    let _chunk_size = editor_state.world.chunk_size; // Will be used for chunk queries
+
+    // Calculate visible area in world coordinates
+    let (min_world_x, max_world_y) = screen_to_world(canvas_rect.min, canvas_rect, camera_pos, zoom);
+    let (max_world_x, min_world_y) = screen_to_world(canvas_rect.max, canvas_rect, camera_pos, zoom);
+
+    // Calculate visible tile range
+    let min_tile_x = (min_world_x / tile_size).floor() as i32;
+    let max_tile_x = (max_world_x / tile_size).ceil() as i32;
+    let min_tile_y = (min_world_y / tile_size).floor() as i32;
+    let max_tile_y = (max_world_y / tile_size).ceil() as i32;
+
+    // Draw layers from bottom to top
+    for layer in &tilemap.layers {
+        // Skip invisible layers
+        if !layer.visible {
+            continue;
+        }
+
+        // Calculate opacity color multiplier
+        let alpha = (layer.opacity * 255.0) as u8;
+
+        match layer.layer_type.as_str() {
+            "tilelayer" => {
+                // Draw tile layer
+                if let Some(ref chunks) = layer.chunks {
+                    for chunk in chunks {
+                        // Check if chunk is in visible range
+                        let chunk_min_x = chunk.x;
+                        let chunk_max_x = chunk.x + chunk.width as i32;
+                        let chunk_min_y = chunk.y;
+                        let chunk_max_y = chunk.y + chunk.height as i32;
+
+                        // Skip chunks outside visible range
+                        if chunk_max_x < min_tile_x || chunk_min_x > max_tile_x
+                            || chunk_max_y < min_tile_y || chunk_min_y > max_tile_y
+                        {
+                            continue;
+                        }
+
+                        // Draw tiles in this chunk
+                        for y in 0..chunk.height as usize {
+                            for x in 0..chunk.width as usize {
+                                let index = y * chunk.width as usize + x;
+                                let gid = chunk.data.get(index).copied().unwrap_or(0);
+
+                                if gid == 0 {
+                                    continue;
+                                }
+
+                                let tile_x = chunk.x + x as i32;
+                                let tile_y = chunk.y + y as i32;
+
+                                // Skip tiles outside visible range
+                                if tile_x < min_tile_x || tile_x > max_tile_x
+                                    || tile_y < min_tile_y || tile_y > max_tile_y
+                                {
+                                    continue;
+                                }
+
+                                let world_x = tile_x as f32 * tile_size;
+                                let world_y = tile_y as f32 * tile_size;
+
+                                let screen_min = world_to_screen(world_x, world_y + tile_size, canvas_rect, camera_pos, zoom);
+                                let screen_max = world_to_screen(world_x + tile_size, world_y, canvas_rect, camera_pos, zoom);
+
+                                // Color based on GID (simple visualization)
+                                let base_color = tile_preview_color(gid);
+                                let color = egui::Color32::from_rgba_unmultiplied(
+                                    base_color.r(),
+                                    base_color.g(),
+                                    base_color.b(),
+                                    (base_color.a() as u16 * alpha as u16 / 255) as u8,
+                                );
+
+                                painter.rect_filled(egui::Rect::from_min_max(screen_min, screen_max), 0.0, color);
+                            }
+                        }
+                    }
+                }
+            }
+            "objectgroup" => {
+                // Draw object layer (objects as shapes)
+                if let Some(ref objects) = layer.objects {
+                    for obj in objects {
+                        // Convert object position to screen coordinates
+                        let world_x = obj.x;
+                        let world_y = obj.y;
+
+                        // Skip objects outside visible range
+                        if world_x < min_world_x - 100.0 || world_x > max_world_x + 100.0
+                            || world_y < min_world_y - 100.0 || world_y > max_world_y + 100.0
+                        {
+                            continue;
+                        }
+
+                        let screen_min = world_to_screen(world_x, world_y + obj.height, canvas_rect, camera_pos, zoom);
+                        let screen_max = world_to_screen(world_x + obj.width, world_y, canvas_rect, camera_pos, zoom);
+
+                        // Color for objects
+                        let object_color = egui::Color32::from_rgba_unmultiplied(100, 150, 255, alpha.min(150));
+                        let stroke_color = egui::Color32::from_rgba_unmultiplied(50, 100, 200, alpha);
+
+                        if obj.ellipse {
+                            // Draw ellipse
+                            let center = egui::Pos2::new(
+                                (screen_min.x + screen_max.x) / 2.0,
+                                (screen_min.y + screen_max.y) / 2.0,
+                            );
+                            let radius = egui::Vec2::new(
+                                (screen_max.x - screen_min.x) / 2.0,
+                                (screen_max.y - screen_min.y) / 2.0,
+                            );
+                            // egui doesn't have native ellipse, use circle as approximation
+                            painter.circle_filled(center, radius.x.min(radius.y), object_color);
+                            painter.circle_stroke(center, radius.x.min(radius.y), egui::Stroke::new(1.0, stroke_color));
+                        } else if obj.point {
+                            // Draw point
+                            let screen_pos = world_to_screen(world_x, world_y, canvas_rect, camera_pos, zoom);
+                            painter.circle_filled(screen_pos, 4.0, object_color);
+                        } else {
+                            // Draw rectangle
+                            let rect = egui::Rect::from_min_max(screen_min, screen_max);
+                            painter.rect_filled(rect, 0.0, object_color);
+                            painter.rect_stroke(rect, 0.0, egui::Stroke::new(1.0, stroke_color), egui::StrokeKind::Outside);
+                        }
+
+                        // Draw object name if present
+                        if !obj.name.is_empty() {
+                            let label_pos = screen_min;
+                            painter.text(
+                                label_pos,
+                                egui::Align2::LEFT_TOP,
+                                &obj.name,
+                                egui::FontId::default(),
+                                stroke_color,
+                            );
+                        }
+                    }
+                }
+            }
+            _ => {
+                // Skip other layer types for now (imagelayer, group, etc.)
+            }
+        }
+    }
+
+    // Highlight selected layer's edges
+    if let Some(selected_id) = editor_state.world.selected_layer_id {
+        if let Some(layer) = tilemap.get_layer(selected_id) {
+            if layer.layer_type == "tilelayer" {
+                if let Some(ref chunks) = layer.chunks {
+                    for chunk in chunks {
+                        let chunk_world_x = chunk.x as f32 * tile_size;
+                        let chunk_world_y = chunk.y as f32 * tile_size;
+                        let chunk_world_max_x = (chunk.x as f32 + chunk.width as f32) * tile_size;
+                        let chunk_world_max_y = (chunk.y as f32 + chunk.height as f32) * tile_size;
+
+                        let screen_min = world_to_screen(chunk_world_x, chunk_world_max_y, canvas_rect, camera_pos, zoom);
+                        let screen_max = world_to_screen(chunk_world_max_x, chunk_world_y, canvas_rect, camera_pos, zoom);
+
+                        painter.rect_stroke(
+                            egui::Rect::from_min_max(screen_min, screen_max),
+                            0.0,
+                            egui::Stroke::new(1.0, egui::Color32::from_rgba_unmultiplied(255, 255, 0, 100)),
+                            egui::StrokeKind::Outside,
+                        );
+                    }
                 }
             }
         }
@@ -1760,6 +2067,297 @@ pub fn update_auto_tile_region(
     }
 
     operations
+}
+
+// === Layer Panel UI (Tiled-compatible) ===
+
+/// Render the layer panel for the new layer system
+fn render_layer_panel(ui: &mut egui::Ui, editor_state: &mut EditorState) {
+    if !editor_state.world.use_new_layer_system {
+        return;
+    }
+
+    egui::SidePanel::right("layer_panel")
+        .default_width(editor_state.world.layer_panel_width)
+        .resizable(true)
+        .show_inside(ui, |ui| {
+            // Header with toggle and actions
+            ui.horizontal(|ui| {
+                ui.heading("Layers");
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("+").on_hover_text("Add layer").clicked() {
+                        editor_state.world.show_add_layer_menu = !editor_state.world.show_add_layer_menu;
+                    }
+                });
+            });
+
+            // Add layer menu (dropdown)
+            if editor_state.world.show_add_layer_menu {
+                ui.horizontal(|ui| {
+                    if ui.button("Tile Layer").clicked() {
+                        editor_state.world.add_tile_layer("New Tile Layer");
+                        editor_state.world.show_add_layer_menu = false;
+                        editor_state.has_unsaved_changes = true;
+                    }
+                    if ui.button("Object Layer").clicked() {
+                        editor_state.world.add_object_layer("New Object Layer");
+                        editor_state.world.show_add_layer_menu = false;
+                        editor_state.has_unsaved_changes = true;
+                    }
+                });
+                ui.separator();
+            }
+
+            // Layer list - collect layer info first to avoid borrow conflicts
+            struct LayerInfo {
+                id: u32,
+                name: String,
+                layer_type: String,
+                visible: bool,
+                locked: bool,
+                opacity: f32,
+            }
+
+            let layer_infos: Vec<LayerInfo> = editor_state.world.editing_tilemap_new
+                .as_ref()
+                .map(|tm| {
+                    tm.layers.iter().rev().map(|layer| LayerInfo {
+                        id: layer.id,
+                        name: layer.name.clone(),
+                        layer_type: layer.layer_type.clone(),
+                        visible: layer.visible,
+                        locked: layer.locked,
+                        opacity: layer.opacity,
+                    }).collect()
+                })
+                .unwrap_or_default();
+
+            let has_tilemap = editor_state.world.editing_tilemap_new.is_some();
+
+            egui::ScrollArea::vertical()
+                .id_salt("layer_list_scroll")
+                .max_height(300.0)
+                .show(ui, |ui| {
+                    if has_tilemap {
+                        for info in &layer_infos {
+                            let is_selected = editor_state.world.selected_layer_id == Some(info.id);
+
+                            // Layer row
+                            ui.horizontal(|ui| {
+                                // Visibility toggle (eye icon)
+                                let vis_icon = if info.visible { "👁" } else { "○" };
+                                if ui.button(vis_icon).on_hover_text(if info.visible { "Hide layer" } else { "Show layer" }).clicked() {
+                                    if let Some(ref mut tm) = editor_state.world.editing_tilemap_new {
+                                        if let Some(l) = tm.get_layer_mut(info.id) {
+                                            l.visible = !l.visible;
+                                            editor_state.has_unsaved_changes = true;
+                                        }
+                                    }
+                                }
+
+                                // Lock toggle
+                                let lock_icon = if info.locked { "🔒" } else { "🔓" };
+                                if ui.button(lock_icon).on_hover_text(if info.locked { "Unlock layer" } else { "Lock layer" }).clicked() {
+                                    if let Some(ref mut tm) = editor_state.world.editing_tilemap_new {
+                                        if let Some(l) = tm.get_layer_mut(info.id) {
+                                            l.locked = !l.locked;
+                                            editor_state.has_unsaved_changes = true;
+                                        }
+                                    }
+                                }
+
+                                // Layer type icon
+                                let type_icon = match info.layer_type.as_str() {
+                                    "tilelayer" => "▦",
+                                    "objectgroup" => "⬡",
+                                    "imagelayer" => "🖼",
+                                    "group" => "📁",
+                                    _ => "?",
+                                };
+                                ui.label(type_icon);
+
+                                // Layer name (selectable, double-click to rename)
+                                let is_renaming = editor_state.world.renaming_layer == Some(info.id);
+
+                                if is_renaming {
+                                    // Rename text field
+                                    let response = ui.text_edit_singleline(&mut editor_state.world.rename_buffer);
+                                    if response.lost_focus() || ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                                        // Apply rename
+                                        if let Some(ref mut tm) = editor_state.world.editing_tilemap_new {
+                                            if let Some(l) = tm.get_layer_mut(info.id) {
+                                                l.name = editor_state.world.rename_buffer.clone();
+                                                editor_state.has_unsaved_changes = true;
+                                            }
+                                        }
+                                        editor_state.world.renaming_layer = None;
+                                    }
+                                    if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                                        editor_state.world.renaming_layer = None;
+                                    }
+                                } else {
+                                    // Selectable label with double-click rename
+                                    let label_response = ui.selectable_label(is_selected, &info.name);
+                                    if label_response.clicked() {
+                                        editor_state.world.selected_layer_id = Some(info.id);
+                                    }
+                                    if label_response.double_clicked() {
+                                        editor_state.world.renaming_layer = Some(info.id);
+                                        editor_state.world.rename_buffer = info.name.clone();
+                                    }
+                                }
+
+                                // Show opacity if not 100%
+                                if info.opacity < 1.0 {
+                                    ui.weak(format!("{}%", (info.opacity * 100.0) as u32));
+                                }
+                            });
+                        }
+
+                        if layer_infos.is_empty() {
+                            ui.label("No layers. Click + to add one.");
+                        }
+                    } else {
+                        ui.label("No tilemap. Create one first.");
+                    }
+                });
+
+            ui.separator();
+
+            // Layer actions toolbar
+            ui.horizontal(|ui| {
+                let has_selection = editor_state.world.selected_layer_id.is_some();
+
+                // Move up
+                if ui.add_enabled(has_selection, egui::Button::new("↑"))
+                    .on_hover_text("Move layer up")
+                    .clicked()
+                {
+                    editor_state.world.move_selected_layer_up();
+                    editor_state.has_unsaved_changes = true;
+                }
+
+                // Move down
+                if ui.add_enabled(has_selection, egui::Button::new("↓"))
+                    .on_hover_text("Move layer down")
+                    .clicked()
+                {
+                    editor_state.world.move_selected_layer_down();
+                    editor_state.has_unsaved_changes = true;
+                }
+
+                ui.separator();
+
+                // Duplicate (future feature)
+                if ui.add_enabled(has_selection, egui::Button::new("⎘"))
+                    .on_hover_text("Duplicate layer")
+                    .clicked()
+                {
+                    // TODO: Implement duplicate
+                    editor_state.status_message = "Duplicate layer: Not yet implemented".to_string();
+                }
+
+                // Delete
+                if ui.add_enabled(has_selection, egui::Button::new("🗑"))
+                    .on_hover_text("Delete layer")
+                    .clicked()
+                {
+                    editor_state.world.delete_selected_layer();
+                    editor_state.has_unsaved_changes = true;
+                }
+            });
+
+            ui.separator();
+
+            // Selected layer properties
+            if let Some(layer_id) = editor_state.world.selected_layer_id {
+                ui.label("Layer Properties");
+
+                if let Some(ref mut tilemap) = editor_state.world.editing_tilemap_new {
+                    if let Some(layer) = tilemap.get_layer_mut(layer_id) {
+                        // Opacity slider
+                        ui.horizontal(|ui| {
+                            ui.label("Opacity:");
+                            let mut opacity_percent = layer.opacity * 100.0;
+                            if ui.add(egui::Slider::new(&mut opacity_percent, 0.0..=100.0).suffix("%")).changed() {
+                                layer.opacity = opacity_percent / 100.0;
+                                editor_state.has_unsaved_changes = true;
+                            }
+                        });
+
+                        // Tint color (if applicable)
+                        if let Some(ref mut tint) = layer.tintcolor {
+                            ui.horizontal(|ui| {
+                                ui.label("Tint:");
+                                // Parse tint as hex color
+                                let mut color = parse_tint_color(tint);
+                                if egui::color_picker::color_edit_button_srgba(ui, &mut color, egui::color_picker::Alpha::Opaque).changed() {
+                                    *tint = format!("#{:02x}{:02x}{:02x}", color.r(), color.g(), color.b());
+                                    editor_state.has_unsaved_changes = true;
+                                }
+                            });
+                        } else {
+                            if ui.button("Add Tint").clicked() {
+                                layer.tintcolor = Some("#ffffff".to_string());
+                            }
+                        }
+
+                        // Parallax (for image/tile layers)
+                        if layer.layer_type == "tilelayer" || layer.layer_type == "imagelayer" {
+                            ui.horizontal(|ui| {
+                                ui.label("Parallax:");
+                                if ui.add(egui::DragValue::new(&mut layer.parallaxx).speed(0.1).prefix("X: ")).changed() {
+                                    editor_state.has_unsaved_changes = true;
+                                }
+                                if ui.add(egui::DragValue::new(&mut layer.parallaxy).speed(0.1).prefix("Y: ")).changed() {
+                                    editor_state.has_unsaved_changes = true;
+                                }
+                            });
+                        }
+
+                        // Offset
+                        ui.horizontal(|ui| {
+                            ui.label("Offset:");
+                            if ui.add(egui::DragValue::new(&mut layer.offsetx).speed(1.0).prefix("X: ")).changed() {
+                                editor_state.has_unsaved_changes = true;
+                            }
+                            if ui.add(egui::DragValue::new(&mut layer.offsety).speed(1.0).prefix("Y: ")).changed() {
+                                editor_state.has_unsaved_changes = true;
+                            }
+                        });
+
+                        // Layer type info
+                        ui.label(format!("Type: {}", layer.layer_type));
+
+                        // Show stats based on layer type
+                        match layer.layer_type.as_str() {
+                            "tilelayer" => {
+                                let chunk_count = layer.chunks.as_ref().map(|c| c.len()).unwrap_or(0);
+                                ui.label(format!("Chunks: {}", chunk_count));
+                            }
+                            "objectgroup" => {
+                                let object_count = layer.objects.as_ref().map(|o| o.len()).unwrap_or(0);
+                                ui.label(format!("Objects: {}", object_count));
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        });
+}
+
+/// Parse a tint color string (e.g., "#ff0000") to egui Color32
+fn parse_tint_color(tint: &str) -> egui::Color32 {
+    let hex = tint.trim_start_matches('#');
+    if hex.len() >= 6 {
+        let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(255);
+        let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(255);
+        let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(255);
+        egui::Color32::from_rgb(r, g, b)
+    } else {
+        egui::Color32::WHITE
+    }
 }
 
 /// Generate a preview color for a tile based on its ID

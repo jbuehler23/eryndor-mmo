@@ -3193,6 +3193,7 @@ dependencies = [
  "bevy",
  "bevy_replicon",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
