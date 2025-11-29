@@ -341,7 +341,7 @@ pub fn handle_use_ability(
         }
         info!("Range check passed: {:.1} <= {:.1}", distance, ability_range_pixels);
 
-        Some((target_entity, target_pos.0, target_stats.clone()))
+        Some((target_entity, target_pos.0, *target_stats))
     } else {
         None
     };
@@ -376,7 +376,7 @@ pub fn handle_use_ability(
         for (enemy_entity, enemy_pos, _, enemy_stats) in targets.iter() {
             let dist = target_pos.distance(enemy_pos.0);
             if dist <= radius {
-                nearby_enemies.push((enemy_entity, enemy_pos.0, enemy_stats.clone(), dist));
+                nearby_enemies.push((enemy_entity, enemy_pos.0, *enemy_stats, dist));
             }
         }
 
@@ -489,15 +489,10 @@ pub fn handle_use_ability(
             }
             AbilityType::Mobility { distance, dash_speed: _ } => {
                 // Determine dash direction - prefer target entity, fall back to cursor position
-                let dash_target: Option<Vec2> = if let Some((_, target_pos, _)) = &primary_target_data {
-                    // Dash towards targeted entity
-                    Some(*target_pos)
-                } else if let Some(cursor_pos) = request.target_position {
-                    // Dash towards cursor position
-                    Some(cursor_pos)
-                } else {
-                    None
-                };
+                let dash_target: Option<Vec2> = primary_target_data
+                    .as_ref()
+                    .map(|(_, target_pos, _)| *target_pos)
+                    .or(request.target_position);
 
                 if let Some(target_pos) = dash_target {
                     let direction = (target_pos - attacker_position).normalize_or_zero();

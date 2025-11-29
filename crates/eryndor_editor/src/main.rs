@@ -1,6 +1,16 @@
 //! Eryndor Game Content Editor
 //! A web-based design toolkit for creating game content.
 
+// Editor is still in development - allow unused code and stylistic warnings
+#![allow(dead_code)]
+#![allow(clippy::type_complexity)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::wrong_self_convention)]
+#![allow(clippy::op_ref)]
+#![allow(clippy::needless_borrows_for_generic_args)]
+#![allow(clippy::unnecessary_cast)]
+
 mod api_client;
 mod api_events;
 mod editor_state;

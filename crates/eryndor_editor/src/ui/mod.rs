@@ -6,7 +6,7 @@ use crate::editor_state::{EditorState, EditorTab};
 /// Render the main menu bar at the top of the editor
 pub fn render_main_menu(ctx: &egui::Context, editor_state: &mut EditorState) {
     egui::TopBottomPanel::top("main_menu").show(ctx, |ui| {
-        egui::menu::bar(ui, |ui| {
+        ui.horizontal(|ui| {
             // File menu
             ui.menu_button("File", |ui| {
                 if ui.button("New Zone...").clicked() {

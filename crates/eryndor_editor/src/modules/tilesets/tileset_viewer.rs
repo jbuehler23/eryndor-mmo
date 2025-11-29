@@ -554,6 +554,7 @@ fn render_spritesheet_grid(
                         String::new()
                     };
 
+                    #[allow(deprecated)]
                     egui::show_tooltip(ui.ctx(), ui.layer_id(), egui::Id::new("tile_tooltip"), |ui| {
                         ui.label(format!("Tile #{}", tile_index));
                         ui.label(format!("Position: ({}, {}){}", col, row, extra_info));

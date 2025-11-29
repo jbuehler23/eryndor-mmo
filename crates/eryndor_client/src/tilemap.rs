@@ -66,8 +66,10 @@ pub fn load_tile_palette(
 
     // For now, we'll hardcode a simple palette until we implement proper JSON loading
     // In a full implementation, you'd load this from the JSON file
-    let mut palette = TilePalette::default();
-    palette.tile_size = 16;
+    let palette = TilePalette {
+        tile_size: 16,
+        ..Default::default()
+    };
 
     // Load textures for common tiles
     let tile_paths = [
@@ -286,11 +288,11 @@ pub fn create_test_tilemap(
 
             // Random-ish tree placement
             let seed = (chunk_x.abs() + chunk_y.abs() * 7) as usize;
-            if seed % 2 == 0 {
+            if seed.is_multiple_of(2) {
                 chunk.set_decoration(4, 4, 100); // Big oak
                 chunk.set_collision(4, 4, true);
             }
-            if seed % 3 == 0 {
+            if seed.is_multiple_of(3) {
                 chunk.set_decoration(12, 8, 110); // Medium oak
                 chunk.set_collision(12, 8, true);
             }

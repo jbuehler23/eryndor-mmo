@@ -178,7 +178,7 @@ fn spawn_zone_npcs(commands: &mut Commands, zone: &crate::game_data::ZoneDefinit
                             item_id: ti.item_id,
                             cost: ti.cost,
                         }).collect(),
-                        trainer_type: npc.trainer_type.clone(),
+                        trainer_type: npc.trainer_type,
                         teaching_quests: npc.teaching_quests.clone(),
                     },
                     Position(position),

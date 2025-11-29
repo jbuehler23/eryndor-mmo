@@ -122,7 +122,7 @@ pub fn handle_interact_npc(
             message: TrainerDialogueEvent {
                 npc_name: npc_name.0.clone(),
                 items_for_sale: trainer_comp.items_for_sale.clone(),
-                trainer_type: trainer_comp.trainer_type.clone(),
+                trainer_type: trainer_comp.trainer_type,
                 teaching_quests,
             },
         });

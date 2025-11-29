@@ -264,6 +264,7 @@ pub fn load_all_content_assets(
 }
 
 /// System to handle item asset events (loaded/modified)
+#[allow(deprecated)]
 fn handle_item_asset_events(
     mut events: bevy::ecs::event::EventReader<AssetEvent<ItemAsset>>,
     item_assets: Res<Assets<ItemAsset>>,
@@ -292,6 +293,7 @@ fn handle_item_asset_events(
 }
 
 /// System to handle enemy asset events (loaded/modified)
+#[allow(deprecated)]
 fn handle_enemy_asset_events(
     mut events: bevy::ecs::event::EventReader<AssetEvent<EnemyAsset>>,
     enemy_assets: Res<Assets<EnemyAsset>>,
@@ -369,6 +371,7 @@ fn handle_enemy_asset_events(
 }
 
 /// System to handle zone asset events (loaded/modified)
+#[allow(deprecated)]
 fn handle_zone_asset_events(
     mut events: bevy::ecs::event::EventReader<AssetEvent<ZoneAsset>>,
     zone_assets: Res<Assets<ZoneAsset>>,
@@ -396,6 +399,7 @@ fn handle_zone_asset_events(
 }
 
 /// System to handle quest asset events (loaded/modified)
+#[allow(deprecated)]
 fn handle_quest_asset_events(
     mut events: bevy::ecs::event::EventReader<AssetEvent<QuestAsset>>,
     quest_assets: Res<Assets<QuestAsset>>,
@@ -423,6 +427,7 @@ fn handle_quest_asset_events(
 }
 
 /// System to handle ability asset events (loaded/modified)
+#[allow(deprecated)]
 fn handle_ability_asset_events(
     mut events: bevy::ecs::event::EventReader<AssetEvent<AbilityAsset>>,
     ability_assets: Res<Assets<AbilityAsset>>,

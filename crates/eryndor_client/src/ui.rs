@@ -922,17 +922,17 @@ pub fn game_ui(
 
                 if has_shop || has_training {
                     ui.horizontal(|ui| {
-                        if has_shop {
-                            if ui.selectable_label(trainer_data.active_tab == TrainerTab::Shop, "Shop").clicked() {
-                                trainer_data.active_tab = TrainerTab::Shop;
-                                ui_state.trainer_window = Some(trainer_data.clone());
-                            }
+                        if has_shop
+                            && ui.selectable_label(trainer_data.active_tab == TrainerTab::Shop, "Shop").clicked()
+                        {
+                            trainer_data.active_tab = TrainerTab::Shop;
+                            ui_state.trainer_window = Some(trainer_data.clone());
                         }
-                        if has_training {
-                            if ui.selectable_label(trainer_data.active_tab == TrainerTab::Training, "Training").clicked() {
-                                trainer_data.active_tab = TrainerTab::Training;
-                                ui_state.trainer_window = Some(trainer_data.clone());
-                            }
+                        if has_training
+                            && ui.selectable_label(trainer_data.active_tab == TrainerTab::Training, "Training").clicked()
+                        {
+                            trainer_data.active_tab = TrainerTab::Training;
+                            ui_state.trainer_window = Some(trainer_data.clone());
                         }
                     });
                     ui.separator();
@@ -1743,7 +1743,7 @@ pub fn handle_trainer_dialogue(
     ui_state.trainer_window = Some(TrainerWindowData {
         npc_name: event.npc_name.clone(),
         items_for_sale: event.items_for_sale.clone(),
-        trainer_type: event.trainer_type.clone(),
+        trainer_type: event.trainer_type,
         teaching_quests: event.teaching_quests.clone(),
         active_tab: default_tab,
     });
