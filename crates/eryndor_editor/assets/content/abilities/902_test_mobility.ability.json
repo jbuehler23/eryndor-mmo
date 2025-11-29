@@ -1,0 +1,18 @@
+{
+  "id": 902,
+  "name": "Test Dash",
+  "description": "Test mobility ability - dash toward target",
+  "damage_multiplier": 0.0,
+  "cooldown": 3.0,
+  "range": 200.0,
+  "mana_cost": 10.0,
+  "ability_types": [
+    {
+      "Mobility": {
+        "distance": 5.0,
+        "dash_speed": 50.0
+      }
+    }
+  ],
+  "unlock_requirement": "None"
+}

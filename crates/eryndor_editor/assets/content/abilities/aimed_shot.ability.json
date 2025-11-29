@@ -1,0 +1,17 @@
+{
+  "id": 600,
+  "name": "Aimed Shot",
+  "description": "A careful shot with increased critical chance.",
+  "damage_multiplier": 1.8,
+  "cooldown": 3.0,
+  "range": 15.0,
+  "mana_cost": 15.0,
+  "ability_types": [
+    {
+      "DirectDamage": {
+        "multiplier": 1.8
+      }
+    }
+  ],
+  "unlock_requirement": "None"
+}

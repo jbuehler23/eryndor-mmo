@@ -1,0 +1,13 @@
+{
+  "id": 1205,
+  "name": "Time Warp",
+  "description": "Manipulate time to greatly increase your movement and attack speed.",
+  "damage_multiplier": 0.0,
+  "cooldown": 90.0,
+  "range": 0.0,
+  "mana_cost": 40.0,
+  "ability_types": [
+    { "Buff": { "duration": 10.0, "stat_bonuses": { "attack_power": 10.0, "defense": 0.0, "move_speed": 80.0 } } }
+  ],
+  "unlock_requirement": "None"
+}

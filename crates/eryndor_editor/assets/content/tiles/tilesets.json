@@ -1,0 +1,512 @@
+{
+  "tilesets": [
+    {
+      "id": "ground",
+      "name": "Ground Tiles",
+      "category": "Ground",
+      "display_tile_size": 32,
+      "sources": [
+        {
+          "type": "single_image",
+          "path": "tiles/Tiles/Grass/Grass_1_Middle.png",
+          "name": "Grass 1",
+          "has_collision": false
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Tiles/Grass/Grass_2_Middle.png",
+          "name": "Grass 2",
+          "has_collision": false
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Tiles/Grass/Grass_3_Middle.png",
+          "name": "Grass 3",
+          "has_collision": false
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Tiles/Grass/Grass_4_Middle.png",
+          "name": "Grass 4",
+          "has_collision": false
+        },
+        {
+          "type": "spritesheet",
+          "path": "tiles/Tiles/Grass/Grass_Tiles_2.png",
+          "tile_width": 16,
+          "tile_height": 16,
+          "margin": 0,
+          "spacing": 0,
+          "image_width": 256,
+          "image_height": 160,
+          "columns": 16,
+          "rows": 10
+        },
+        {
+          "type": "spritesheet",
+          "path": "tiles/Tiles/Grass/Grass_Tiles_3.png",
+          "tile_width": 16,
+          "tile_height": 16,
+          "margin": 0,
+          "spacing": 0,
+          "image_width": 256,
+          "image_height": 160,
+          "columns": 16,
+          "rows": 10
+        },
+        {
+          "type": "spritesheet",
+          "path": "tiles/Tiles/Grass/Grass_Tiles_4.png",
+          "tile_width": 16,
+          "tile_height": 16,
+          "margin": 0,
+          "spacing": 0,
+          "image_width": 256,
+          "image_height": 160,
+          "columns": 16,
+          "rows": 10
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Tiles/Grass/Path_Middle.png",
+          "name": "Path Middle",
+          "has_collision": false
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Tiles/Grass/Path_Decoration.png",
+          "name": "Path Decoration",
+          "has_collision": false
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Tiles/Cobble_Road/Cobble_Road_1.png",
+          "name": "Cobble Road 1",
+          "has_collision": false
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Tiles/Cobble_Road/Cobble_Road_2.png",
+          "name": "Cobble Road 2",
+          "has_collision": false
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Tiles/Pavement_Tiles.png",
+          "name": "Pavement",
+          "has_collision": false
+        }
+      ]
+    },
+    {
+      "id": "water",
+      "name": "Water Tiles",
+      "category": "Ground",
+      "display_tile_size": 32,
+      "sources": [
+        {
+          "type": "single_image",
+          "path": "tiles/Tiles/Water/Water_Middle.png",
+          "name": "Water Middle",
+          "has_collision": false
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Tiles/Water/Water_Tile_1.png",
+          "name": "Water Tile 1",
+          "has_collision": false
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Tiles/Water/Water_Tile_2.png",
+          "name": "Water Tile 2",
+          "has_collision": false
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Tiles/Water/Water_Tile_3.png",
+          "name": "Water Tile 3",
+          "has_collision": false
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Tiles/Water/Water_Tile_4.png",
+          "name": "Water Tile 4",
+          "has_collision": false
+        },
+        {
+          "type": "spritesheet",
+          "path": "tiles/Tiles/Beach/Beach_Tiles.png",
+          "tile_width": 16,
+          "tile_height": 16,
+          "margin": 0,
+          "spacing": 0,
+          "image_width": 480,
+          "image_height": 48,
+          "columns": 30,
+          "rows": 3
+        }
+      ]
+    },
+    {
+      "id": "trees",
+      "name": "Trees",
+      "category": "Decoration",
+      "display_tile_size": 48,
+      "sources": [
+        {
+          "type": "single_image",
+          "path": "tiles/Trees/Big_Oak_Tree.png",
+          "name": "Big Oak Tree",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Trees/Big_Birch_Tree.png",
+          "name": "Big Birch Tree",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Trees/Big_Spruce_tree.png",
+          "name": "Big Spruce Tree",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Trees/Big_Fruit_Tree.png",
+          "name": "Big Fruit Tree",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Trees/Medium_Oak_Tree.png",
+          "name": "Medium Oak Tree",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Trees/Medium_Birch_Tree.png",
+          "name": "Medium Birch Tree",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Trees/Medium_Spruce_Tree.png",
+          "name": "Medium Spruce Tree",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Trees/Medium_Fruit_Tree.png",
+          "name": "Medium Fruit Tree",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Trees/Small_Oak_Tree.png",
+          "name": "Small Oak Tree",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Trees/Small_Birch_Tree.png",
+          "name": "Small Birch Tree",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Trees/Small_Spruce_Tree.png",
+          "name": "Small Spruce Tree",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Trees/Small_Fruit_Tree.png",
+          "name": "Small Fruit Tree",
+          "has_collision": true
+        }
+      ]
+    },
+    {
+      "id": "outdoor_decor",
+      "name": "Outdoor Decorations",
+      "category": "Decoration",
+      "display_tile_size": 32,
+      "sources": [
+        {
+          "type": "single_image",
+          "path": "tiles/Outdoor decoration/Flowers.png",
+          "name": "Flowers",
+          "has_collision": false
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Outdoor decoration/Fountain.png",
+          "name": "Fountain",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Outdoor decoration/Well.png",
+          "name": "Well",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Outdoor decoration/Benches.png",
+          "name": "Benches",
+          "has_collision": false
+        },
+        {
+          "type": "spritesheet",
+          "path": "tiles/Outdoor decoration/Fences.png",
+          "tile_width": 16,
+          "tile_height": 16,
+          "margin": 0,
+          "spacing": 0,
+          "image_width": 64,
+          "image_height": 64,
+          "columns": 4,
+          "rows": 4
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Outdoor decoration/Fence_Big.png",
+          "name": "Fence Big",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Outdoor decoration/barrels.png",
+          "name": "Barrels",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Outdoor decoration/Hay_Bales.png",
+          "name": "Hay Bales",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Outdoor decoration/Lanter_Posts.png",
+          "name": "Lantern Posts",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Outdoor decoration/Camp_Decor.png",
+          "name": "Camp Decor",
+          "has_collision": false
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Outdoor decoration/Outdoor_Decor.png",
+          "name": "Outdoor Decor",
+          "has_collision": false
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Outdoor decoration/Signs.png",
+          "name": "Signs",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/Outdoor decoration/Boat.png",
+          "name": "Boat",
+          "has_collision": true
+        }
+      ]
+    },
+    {
+      "id": "houses",
+      "name": "Houses",
+      "category": "Decoration",
+      "display_tile_size": 64,
+      "sources": [
+        {
+          "type": "single_image",
+          "path": "tiles/House/Buildings/Houses/House_1_1.png",
+          "name": "House 1-1",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/House/Buildings/Houses/House_1_2.png",
+          "name": "House 1-2",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/House/Buildings/Houses/House_1_3.png",
+          "name": "House 1-3",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/House/Buildings/Houses/House_2_1.png",
+          "name": "House 2-1",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/House/Buildings/Houses/House_2_2.png",
+          "name": "House 2-2",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/House/Buildings/Houses/House_2_3.png",
+          "name": "House 2-3",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/House/Buildings/Houses/House_3_1.png",
+          "name": "House 3-1",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/House/Buildings/Houses/House_3_2.png",
+          "name": "House 3-2",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/House/Buildings/Houses/House_3_3.png",
+          "name": "House 3-3",
+          "has_collision": true
+        }
+      ]
+    },
+    {
+      "id": "special_buildings",
+      "name": "Special Buildings",
+      "category": "Decoration",
+      "display_tile_size": 64,
+      "sources": [
+        {
+          "type": "single_image",
+          "path": "tiles/House/Buildings/Special_Buildings/Barn/Barn.png",
+          "name": "Barn",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/House/Buildings/Special_Buildings/Blacksmith_House/Blacksmith_House.png",
+          "name": "Blacksmith House",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/House/Buildings/Special_Buildings/Chicken_Coop/Chicken_Coop.png",
+          "name": "Chicken Coop",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/House/Buildings/Special_Buildings/Greenhouse/GreenHouse_Green.png",
+          "name": "Greenhouse (Green)",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/House/Buildings/Special_Buildings/Greenhouse/GreenHouse_Wood.png",
+          "name": "Greenhouse (Wood)",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/House/Buildings/Special_Buildings/Silo/Silo.png",
+          "name": "Silo",
+          "has_collision": true
+        },
+        {
+          "type": "single_image",
+          "path": "tiles/House/Buildings/Special_Buildings/Windmill/Windmill.png",
+          "name": "Windmill",
+          "has_collision": true
+        }
+      ]
+    },
+    {
+      "id": "interior_floors",
+      "name": "Interior Floors",
+      "category": "Ground",
+      "display_tile_size": 32,
+      "sources": [
+        {
+          "type": "spritesheet",
+          "path": "tiles/House/Buildings/Houses_Interiors/Wood_Floor_Tiles.png",
+          "tile_width": 16,
+          "tile_height": 16,
+          "margin": 0,
+          "spacing": 0,
+          "image_width": 0,
+          "image_height": 0,
+          "columns": 0,
+          "rows": 0
+        }
+      ]
+    },
+    {
+      "id": "interior_walls",
+      "name": "Interior Walls",
+      "category": "Decoration",
+      "display_tile_size": 32,
+      "sources": [
+        {
+          "type": "spritesheet",
+          "path": "tiles/House/Buildings/Houses_Interiors/Interior_Walls.png",
+          "tile_width": 16,
+          "tile_height": 16,
+          "margin": 0,
+          "spacing": 0,
+          "image_width": 0,
+          "image_height": 0,
+          "columns": 0,
+          "rows": 0
+        },
+        {
+          "type": "spritesheet",
+          "path": "tiles/House/Buildings/Houses_Interiors/Brick_Wall_Fillers.png",
+          "tile_width": 16,
+          "tile_height": 16,
+          "margin": 0,
+          "spacing": 0,
+          "image_width": 0,
+          "image_height": 0,
+          "columns": 0,
+          "rows": 0
+        },
+        {
+          "type": "spritesheet",
+          "path": "tiles/House/Buildings/Houses_Interiors/Stone_Wall_Fillers.png",
+          "tile_width": 16,
+          "tile_height": 16,
+          "margin": 0,
+          "spacing": 0,
+          "image_width": 0,
+          "image_height": 0,
+          "columns": 0,
+          "rows": 0
+        },
+        {
+          "type": "spritesheet",
+          "path": "tiles/House/Buildings/Houses_Interiors/Wood_Wall_Fillers.png",
+          "tile_width": 16,
+          "tile_height": 16,
+          "margin": 0,
+          "spacing": 0,
+          "image_width": 0,
+          "image_height": 0,
+          "columns": 0,
+          "rows": 0
+        }
+      ]
+    }
+  ]
+}

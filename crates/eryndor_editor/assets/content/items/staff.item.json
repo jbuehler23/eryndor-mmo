@@ -1,0 +1,13 @@
+{
+  "id": 4,
+  "name": "Staff",
+  "item_type": "Weapon",
+  "grants_ability": 400,
+  "stat_bonuses": {
+    "attack_power": 14.0,
+    "defense": 0.0,
+    "max_health": 0.0,
+    "max_mana": 30.0,
+    "crit_chance": 0.0
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "id": 303,
+  "name": "Shadow Step",
+  "description": "Dash through shadows, gaining increased critical strike chance.",
+  "damage_multiplier": 0.0,
+  "cooldown": 12.0,
+  "range": 8.0,
+  "mana_cost": 30.0,
+  "ability_types": [
+    {
+      "Mobility": {
+        "distance": 8.0,
+        "dash_speed": 25.0
+      }
+    },
+    {
+      "Buff": {
+        "duration": 5.0,
+        "stat_bonuses": {
+          "attack_power": 3.0,
+          "defense": 0.0,
+          "move_speed": 0.0
+        }
+      }
+    }
+  ],
+  "unlock_requirement": {
+    "Level": 7
+  }
+}

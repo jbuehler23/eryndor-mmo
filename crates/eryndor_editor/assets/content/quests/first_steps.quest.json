@@ -1,0 +1,12 @@
+{
+  "id": 1,
+  "name": "First Steps",
+  "description": "The Elder has asked you to prove yourself by defeating some of the slimes that have been troubling the village.",
+  "objectives": [
+    { "type": "TalkToNpc", "npc_id": 1 },
+    { "type": "KillEnemy", "enemy_type": 1, "count": 5 }
+  ],
+  "reward_exp": 100,
+  "proficiency_requirements": [],
+  "reward_abilities": []
+}

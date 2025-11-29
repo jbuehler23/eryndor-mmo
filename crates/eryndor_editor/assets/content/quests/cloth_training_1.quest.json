@@ -1,0 +1,9 @@
+{
+  "id": 200,
+  "name": "Cloth Training: Mana Efficiency",
+  "description": "Learn to channel your magical energy more efficiently.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 20 }],
+  "reward_exp": 50,
+  "proficiency_requirements": [],
+  "reward_abilities": [1100]
+}

@@ -1,0 +1,14 @@
+{
+  "id": 1207,
+  "name": "Meteor Storm",
+  "description": "Call down a devastating storm of meteors on the area.",
+  "damage_multiplier": 2.0,
+  "cooldown": 60.0,
+  "range": 100.0,
+  "mana_cost": 60.0,
+  "ability_types": [
+    { "DirectDamage": { "multiplier": 2.0 } },
+    { "AreaOfEffect": { "radius": 150.0, "max_targets": 10 } }
+  ],
+  "unlock_requirement": "None"
+}

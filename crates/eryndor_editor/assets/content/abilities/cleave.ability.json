@@ -1,0 +1,25 @@
+{
+  "id": 103,
+  "name": "Cleave",
+  "description": "Swing your weapon in a wide arc, hitting multiple enemies.",
+  "damage_multiplier": 1.5,
+  "cooldown": 6.0,
+  "range": 2.0,
+  "mana_cost": 30.0,
+  "ability_types": [
+    {
+      "DirectDamage": {
+        "multiplier": 1.5
+      }
+    },
+    {
+      "AreaOfEffect": {
+        "radius": 2.0,
+        "max_targets": 3
+      }
+    }
+  ],
+  "unlock_requirement": {
+    "Level": 7
+  }
+}

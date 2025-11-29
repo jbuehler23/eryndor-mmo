@@ -1,0 +1,53 @@
+{
+  "palette_id": "default",
+  "tile_size": 16,
+  "categories": {
+    "ground": {
+      "grass_1": { "id": 1, "path": "tiles/Tiles/Grass/Grass_1_Middle.png" },
+      "grass_2": { "id": 2, "path": "tiles/Tiles/Grass/Grass_2_Middle.png" },
+      "grass_3": { "id": 3, "path": "tiles/Tiles/Grass/Grass_3_Middle.png" },
+      "grass_4": { "id": 4, "path": "tiles/Tiles/Grass/Grass_4_Middle.png" },
+      "grass_tiles_2": { "id": 5, "path": "tiles/Tiles/Grass/Grass_Tiles_2.png" },
+      "grass_tiles_3": { "id": 6, "path": "tiles/Tiles/Grass/Grass_Tiles_3.png" },
+      "grass_tiles_4": { "id": 7, "path": "tiles/Tiles/Grass/Grass_Tiles_4.png" },
+      "path_middle": { "id": 10, "path": "tiles/Tiles/Grass/Path_Middle.png" },
+      "path_decoration": { "id": 11, "path": "tiles/Tiles/Grass/Path_Decoration.png" },
+      "cobble_road_1": { "id": 20, "path": "tiles/Tiles/Cobble_Road/Cobble_Road_1.png" },
+      "cobble_road_2": { "id": 21, "path": "tiles/Tiles/Cobble_Road/Cobble_Road_2.png" },
+      "pavement": { "id": 30, "path": "tiles/Tiles/Pavement_Tiles.png" },
+      "water_middle": { "id": 40, "path": "tiles/Tiles/Water/Water_Middle.png" },
+      "water_tile_1": { "id": 41, "path": "tiles/Tiles/Water/Water_Tile_1.png" },
+      "water_tile_2": { "id": 42, "path": "tiles/Tiles/Water/Water_Tile_2.png" },
+      "water_tile_3": { "id": 43, "path": "tiles/Tiles/Water/Water_Tile_3.png" },
+      "water_tile_4": { "id": 44, "path": "tiles/Tiles/Water/Water_Tile_4.png" },
+      "beach": { "id": 50, "path": "tiles/Tiles/Beach/Beach_Tiles.png" }
+    },
+    "decorations": {
+      "big_oak_tree": { "id": 100, "path": "tiles/Trees/Big_Oak_Tree.png", "collision": true },
+      "big_birch_tree": { "id": 101, "path": "tiles/Trees/Big_Birch_Tree.png", "collision": true },
+      "big_spruce_tree": { "id": 102, "path": "tiles/Trees/Big_Spruce_tree.png", "collision": true },
+      "big_fruit_tree": { "id": 103, "path": "tiles/Trees/Big_Fruit_Tree.png", "collision": true },
+      "medium_oak_tree": { "id": 110, "path": "tiles/Trees/Medium_Oak_Tree.png", "collision": true },
+      "medium_birch_tree": { "id": 111, "path": "tiles/Trees/Medium_Birch_Tree.png", "collision": true },
+      "medium_spruce_tree": { "id": 112, "path": "tiles/Trees/Medium_Spruce_Tree.png", "collision": true },
+      "medium_fruit_tree": { "id": 113, "path": "tiles/Trees/Medium_Fruit_Tree.png", "collision": true },
+      "small_oak_tree": { "id": 120, "path": "tiles/Trees/Small_Oak_Tree.png", "collision": true },
+      "small_birch_tree": { "id": 121, "path": "tiles/Trees/Small_Birch_Tree.png", "collision": true },
+      "small_spruce_tree": { "id": 122, "path": "tiles/Trees/Small_Spruce_Tree.png", "collision": true },
+      "small_fruit_tree": { "id": 123, "path": "tiles/Trees/Small_Fruit_Tree.png", "collision": true },
+      "flowers": { "id": 150, "path": "tiles/Outdoor decoration/Flowers.png" },
+      "fountain": { "id": 151, "path": "tiles/Outdoor decoration/Fountain.png", "collision": true },
+      "well": { "id": 152, "path": "tiles/Outdoor decoration/Well.png", "collision": true },
+      "benches": { "id": 153, "path": "tiles/Outdoor decoration/Benches.png" },
+      "fences": { "id": 154, "path": "tiles/Outdoor decoration/Fences.png", "collision": true },
+      "fence_big": { "id": 155, "path": "tiles/Outdoor decoration/Fence_Big.png", "collision": true },
+      "barrels": { "id": 156, "path": "tiles/Outdoor decoration/barrels.png", "collision": true },
+      "hay_bales": { "id": 157, "path": "tiles/Outdoor decoration/Hay_Bales.png", "collision": true },
+      "lantern_posts": { "id": 158, "path": "tiles/Outdoor decoration/Lanter_Posts.png", "collision": true },
+      "camp_decor": { "id": 159, "path": "tiles/Outdoor decoration/Camp_Decor.png" },
+      "outdoor_decor": { "id": 160, "path": "tiles/Outdoor decoration/Outdoor_Decor.png" },
+      "signs": { "id": 161, "path": "tiles/Outdoor decoration/Signs.png", "collision": true },
+      "boat": { "id": 162, "path": "tiles/Outdoor decoration/Boat.png", "collision": true }
+    }
+  }
+}

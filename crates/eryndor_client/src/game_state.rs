@@ -200,28 +200,28 @@ pub struct PendingWebTransportConnection {
 #[cfg(target_family = "wasm")]
 pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>, _time: Res<Time>) {
     // WASM Client: Uses WebTransport (HTTP/3 + QUIC)
-    // - Production: Connects to SERVER_IP (from .do/app.yaml) via port 5002
-    // - Local dev: Defaults to 127.0.0.1:5002
+    // - Production: Connects to SERVER_IP via port 5002, fetches cert from CERT_URL (HTTPS via nginx)
+    // - Local dev: Defaults to 127.0.0.1:5002, fetches cert from http://127.0.0.1:8080/cert
     // - Test local against prod: SERVER_IP=165.227.217.144 bevy run web
     //
-    // Certificate hash is fetched from http://SERVER_IP:8080/cert
-    // Server uses self-signed cert, hash validates the connection
+    // Server uses self-signed cert, hash validates the WebTransport connection
 
     info!("Connecting to server via WebTransport...");
 
     // Environment-based configuration - allows testing local client against prod server
     // Local dev: defaults to 127.0.0.1
     // Test against prod: SERVER_IP=165.227.217.144 bevy run web
-    // Production build: .do/app.yaml sets SERVER_IP
+    // Production build: .do/app.yaml sets SERVER_IP and CERT_URL
     let server_ip = option_env!("SERVER_IP").unwrap_or("127.0.0.1");
     let wt_port: u16 = option_env!("SERVER_PORT_WT")
         .and_then(|s| s.parse().ok())
         .unwrap_or(5002);
-    let cert_port: u16 = option_env!("SERVER_CERT_PORT")
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(8080);
 
-    info!("Server IP: {}, WebTransport port: {}, Cert port: {}", server_ip, wt_port, cert_port);
+    // For production, use HTTPS cert URL via nginx proxy
+    // For local dev, use HTTP directly to cert server
+    let cert_url_override = option_env!("CERT_URL");
+
+    info!("Server IP: {}, WebTransport port: {}", server_ip, wt_port);
 
     let connection_config = ConnectionConfig::from_channels(
         channels.server_configs(),
@@ -242,7 +242,11 @@ pub fn connect_to_server(mut commands: Commands, channels: Res<RepliconChannels>
     info!("Generated client_id: {}", client_id);
 
     // Fetch certificate hash and connect - this must be async
-    let cert_url = format!("http://{}:{}/cert", server_ip, cert_port);
+    // Use CERT_URL if set (production via nginx HTTPS), otherwise fall back to HTTP
+    let cert_url = match cert_url_override {
+        Some(url) => url.to_string(),
+        None => format!("http://{}:8080/cert", server_ip),
+    };
     let server_url_str = format!("https://{}:{}", server_ip, wt_port);
 
     info!("Fetching WebTransport certificate hash from {}", cert_url);

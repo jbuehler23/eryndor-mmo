@@ -1,0 +1,9 @@
+{
+  "id": 119,
+  "name": "Mace Training: Judgment",
+  "description": "Master the divine judgment technique.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 14 }],
+  "reward_exp": 150,
+  "proficiency_requirements": [["Mace", 20]],
+  "reward_abilities": [1019]
+}

@@ -1,0 +1,9 @@
+{
+  "id": 308,
+  "name": "Rogue Training: Distract",
+  "description": "Learn to create diversions for tactical advantage.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 32 }],
+  "reward_exp": 50,
+  "proficiency_requirements": [],
+  "reward_abilities": [1208]
+}

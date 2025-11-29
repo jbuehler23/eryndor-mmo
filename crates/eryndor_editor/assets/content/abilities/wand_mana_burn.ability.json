@@ -1,0 +1,13 @@
+{
+  "id": 1014,
+  "name": "Mana Burn",
+  "description": "Drain magical energy from your target, dealing damage.",
+  "damage_multiplier": 1.5,
+  "cooldown": 12.0,
+  "range": 100.0,
+  "mana_cost": 25.0,
+  "ability_types": [
+    { "DirectDamage": { "multiplier": 1.5 } }
+  ],
+  "unlock_requirement": { "WeaponProficiency": { "weapon": "Wand", "level": 15 } }
+}

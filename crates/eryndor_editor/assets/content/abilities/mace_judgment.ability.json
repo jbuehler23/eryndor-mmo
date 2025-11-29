@@ -1,0 +1,14 @@
+{
+  "id": 1019,
+  "name": "Judgment",
+  "description": "Deliver divine judgment upon your foe, dealing massive holy damage.",
+  "damage_multiplier": 2.5,
+  "cooldown": 22.0,
+  "range": 1.5,
+  "mana_cost": 40.0,
+  "ability_types": [
+    { "DirectDamage": { "multiplier": 2.5 } },
+    { "Heal": { "amount": 15.0, "is_percent": false } }
+  ],
+  "unlock_requirement": { "WeaponProficiency": { "weapon": "Mace", "level": 20 } }
+}

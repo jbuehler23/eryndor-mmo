@@ -1,0 +1,13 @@
+{
+  "id": 1007,
+  "name": "Assassination",
+  "description": "A deadly strike that deals massive damage to weakened targets.",
+  "damage_multiplier": 3.0,
+  "cooldown": 25.0,
+  "range": 1.5,
+  "mana_cost": 40.0,
+  "ability_types": [
+    { "DirectDamage": { "multiplier": 3.0 } }
+  ],
+  "unlock_requirement": { "WeaponProficiency": { "weapon": "Dagger", "level": 20 } }
+}

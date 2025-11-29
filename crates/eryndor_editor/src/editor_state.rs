@@ -691,6 +691,10 @@ pub struct TilesetsEditorState {
     pub new_tileset_tile_height: u32,
     pub new_tileset_margin: u32,
     pub new_tileset_spacing: u32,
+
+    /// Import dialog state
+    pub show_import_dialog: bool,
+    pub import_json_text: String,
 }
 
 impl TilesetsEditorState {
@@ -718,6 +722,8 @@ impl TilesetsEditorState {
             new_tileset_tile_height: 16,
             new_tileset_margin: 0,
             new_tileset_spacing: 0,
+            show_import_dialog: false,
+            import_json_text: String::new(),
         }
     }
 }

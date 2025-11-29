@@ -1,0 +1,17 @@
+{
+  "id": 500,
+  "name": "Smite",
+  "description": "Strike with holy power, dealing moderate damage.",
+  "damage_multiplier": 1.7,
+  "cooldown": 2.5,
+  "range": 1.5,
+  "mana_cost": 20.0,
+  "ability_types": [
+    {
+      "DirectDamage": {
+        "multiplier": 1.7
+      }
+    }
+  ],
+  "unlock_requirement": "None"
+}

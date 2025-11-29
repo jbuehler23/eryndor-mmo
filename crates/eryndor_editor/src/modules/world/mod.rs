@@ -142,9 +142,12 @@ fn render_left_sidebar(ui: &mut egui::Ui, editor_state: &mut EditorState) {
 }
 
 fn render_canvas(ui: &mut egui::Ui, editor_state: &mut EditorState) {
-    egui::CentralPanel::default().show_inside(ui, |ui| {
-        // Canvas toolbar - row 1: general options
-        ui.horizontal(|ui| {
+    // Note: We're already inside a CentralPanel, so don't nest another one.
+    // This function renders directly into the passed ui to avoid layout conflicts
+    // with the bottom palette panel.
+
+    // Canvas toolbar - row 1: general options
+    ui.horizontal(|ui| {
             ui.checkbox(&mut editor_state.world.show_grid, "Grid");
             ui.checkbox(&mut editor_state.world.snap_to_grid, "Snap");
 
@@ -551,7 +554,6 @@ fn render_canvas(ui: &mut egui::Ui, editor_state: &mut EditorState) {
                 egui::Color32::GRAY,
             );
         }
-    });
 }
 
 /// Convert world coordinates to screen coordinates
@@ -874,36 +876,50 @@ fn render_properties_panel(ui: &mut egui::Ui, editor_state: &mut EditorState) {
 }
 
 fn draw_grid(painter: &egui::Painter, rect: &egui::Rect, editor_state: &EditorState) {
-    let grid_size = editor_state.world.grid_size * editor_state.world.zoom;
+    let tile_size = editor_state.world.grid_size;
+    let zoom = editor_state.world.zoom;
+    let camera_pos = editor_state.world.camera_pos;
+    let grid_size_screen = tile_size * zoom;
 
     // Safety guard: prevent infinite loop if grid size is too small
-    if grid_size < 1.0 {
+    if grid_size_screen < 1.0 {
         return;
     }
 
     let grid_color = egui::Color32::from_rgba_unmultiplied(80, 80, 80, 60);
 
-    let start_x = rect.left();
-    let start_y = rect.top();
+    // Calculate the world coordinates at the screen edges
+    let (min_world_x, _) = screen_to_world(rect.min, rect, camera_pos, zoom);
+    let (max_world_x, _) = screen_to_world(rect.max, rect, camera_pos, zoom);
+    let (_, max_world_y) = screen_to_world(rect.min, rect, camera_pos, zoom);
+    let (_, min_world_y) = screen_to_world(rect.max, rect, camera_pos, zoom);
 
-    // Vertical lines
-    let mut x = start_x;
-    while x < rect.right() {
+    // Find the first grid line in world coordinates (aligned to tile boundaries)
+    let first_grid_x = (min_world_x / tile_size).floor() * tile_size;
+    let first_grid_y = (min_world_y / tile_size).floor() * tile_size;
+
+    // Draw vertical lines (aligned to world X coordinates)
+    let mut world_x = first_grid_x;
+    while world_x <= max_world_x + tile_size {
+        // Convert world X to screen X (using y=0 for simplicity, we just need X)
+        let screen_pos = world_to_screen(world_x, 0.0, rect, camera_pos, zoom);
         painter.line_segment(
-            [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
+            [egui::pos2(screen_pos.x, rect.top()), egui::pos2(screen_pos.x, rect.bottom())],
             egui::Stroke::new(1.0, grid_color),
         );
-        x += grid_size;
+        world_x += tile_size;
     }
 
-    // Horizontal lines
-    let mut y = start_y;
-    while y < rect.bottom() {
+    // Draw horizontal lines (aligned to world Y coordinates)
+    let mut world_y = first_grid_y;
+    while world_y <= max_world_y + tile_size {
+        // Convert world Y to screen Y (using x=0 for simplicity, we just need Y)
+        let screen_pos = world_to_screen(0.0, world_y, rect, camera_pos, zoom);
         painter.line_segment(
-            [egui::pos2(rect.left(), y), egui::pos2(rect.right(), y)],
+            [egui::pos2(rect.left(), screen_pos.y), egui::pos2(rect.right(), screen_pos.y)],
             egui::Stroke::new(1.0, grid_color),
         );
-        y += grid_size;
+        world_y += tile_size;
     }
 }
 

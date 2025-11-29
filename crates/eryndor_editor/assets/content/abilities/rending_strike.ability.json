@@ -1,0 +1,17 @@
+{
+  "id": 700,
+  "name": "Rending Strike",
+  "description": "A brutal axe strike that rends flesh.",
+  "damage_multiplier": 2.5,
+  "cooldown": 4.0,
+  "range": 1.5,
+  "mana_cost": 25.0,
+  "ability_types": [
+    {
+      "DirectDamage": {
+        "multiplier": 2.5
+      }
+    }
+  ],
+  "unlock_requirement": "None"
+}

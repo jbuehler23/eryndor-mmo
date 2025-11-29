@@ -1,0 +1,9 @@
+{
+  "id": 124,
+  "name": "Axe Training: Cleaving Strike",
+  "description": "Learn wide sweeping attacks with your axe.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 16 }],
+  "reward_exp": 50,
+  "proficiency_requirements": [["Axe", 5]],
+  "reward_abilities": [1024]
+}

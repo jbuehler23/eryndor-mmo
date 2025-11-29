@@ -1,0 +1,9 @@
+{
+  "id": 205,
+  "name": "Leather Training: Shadow Cloak",
+  "description": "Master the art of blending with shadows.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 21 }],
+  "reward_exp": 75,
+  "proficiency_requirements": [],
+  "reward_abilities": [1105]
+}

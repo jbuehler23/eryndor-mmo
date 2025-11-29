@@ -1,0 +1,23 @@
+{
+  "id": 900,
+  "name": "Test AoE",
+  "description": "Test AoE ability - hits all enemies in radius",
+  "damage_multiplier": 1.0,
+  "cooldown": 3.0,
+  "range": 50.0,
+  "mana_cost": 10.0,
+  "ability_types": [
+    {
+      "DirectDamage": {
+        "multiplier": 1.0
+      }
+    },
+    {
+      "AreaOfEffect": {
+        "radius": 100.0,
+        "max_targets": 5
+      }
+    }
+  ],
+  "unlock_requirement": "None"
+}

@@ -52,12 +52,15 @@ pub fn render(ui: &mut egui::Ui, editor_state: &mut EditorState) {
 
     // Asset browser dialog (WASM only)
     render_asset_browser(ui.ctx(), editor_state);
+
+    // Import dialog (WASM only)
+    render_import_dialog(ui.ctx(), editor_state);
 }
 
 /// Render the toolbar with edit mode buttons and view options
 fn render_toolbar(ui: &mut egui::Ui, editor_state: &mut EditorState) {
     ui.horizontal(|ui| {
-        // File operations (native only)
+        // File operations - platform-specific implementations
         #[cfg(not(target_family = "wasm"))]
         {
             if ui.button("Save").on_hover_text("Save tilesets to JSON file").clicked() {
@@ -65,6 +68,18 @@ fn render_toolbar(ui: &mut egui::Ui, editor_state: &mut EditorState) {
             }
             if ui.button("Load").on_hover_text("Load tilesets from JSON file").clicked() {
                 handle_load_tilesets(editor_state);
+            }
+            ui.separator();
+        }
+
+        // WASM: Save via download, Load via import dialog
+        #[cfg(target_family = "wasm")]
+        {
+            if ui.button("Save").on_hover_text("Download tilesets as JSON file").clicked() {
+                handle_save_tilesets_wasm(editor_state);
+            }
+            if ui.button("Load").on_hover_text("Import tilesets from JSON").clicked() {
+                editor_state.tilesets.show_import_dialog = true;
             }
             ui.separator();
         }
@@ -566,5 +581,161 @@ fn collect_folder_paths(node: &serde_json::Value, path: &str, expanded: &mut std
                 collect_folder_paths(value, &full_path, expanded);
             }
         }
+    }
+}
+
+// === WASM Save/Load Functions ===
+
+/// Handle save tilesets action for WASM (triggers browser download)
+#[cfg(target_family = "wasm")]
+pub fn handle_save_tilesets_wasm(editor_state: &mut EditorState) {
+    let tilesets = &editor_state.world.tile_palette.tilesets;
+
+    match serde_json::to_string_pretty(tilesets) {
+        Ok(json) => {
+            // Use web_sys to trigger a browser download
+            if let Err(e) = trigger_browser_download("tilesets.json", &json) {
+                editor_state.error_popup = Some(format!("Failed to download: {:?}", e));
+            } else {
+                editor_state.status_message = "Downloading tilesets.json...".to_string();
+            }
+        }
+        Err(e) => {
+            editor_state.error_popup = Some(format!("Failed to serialize tilesets: {}", e));
+        }
+    }
+}
+
+/// Trigger a browser file download via JavaScript
+#[cfg(target_family = "wasm")]
+fn trigger_browser_download(filename: &str, content: &str) -> Result<(), wasm_bindgen::JsValue> {
+    use wasm_bindgen::JsCast;
+    use web_sys::{Blob, BlobPropertyBag, HtmlAnchorElement, Url};
+
+    let window = web_sys::window().ok_or("No window")?;
+    let document = window.document().ok_or("No document")?;
+
+    // Create a Blob from the JSON content
+    let blob_parts = js_sys::Array::new();
+    blob_parts.push(&wasm_bindgen::JsValue::from_str(content));
+
+    let mut blob_options = BlobPropertyBag::new();
+    blob_options.type_("application/json");
+
+    let blob = Blob::new_with_str_sequence_and_options(&blob_parts, &blob_options)?;
+
+    // Create a download URL
+    let url = Url::create_object_url_with_blob(&blob)?;
+
+    // Create an anchor element and trigger download
+    let anchor: HtmlAnchorElement = document
+        .create_element("a")?
+        .dyn_into()?;
+    anchor.set_href(&url);
+    anchor.set_download(filename);
+
+    // Add to document, click, and remove
+    document.body().ok_or("No body")?.append_child(&anchor)?;
+    anchor.click();
+    document.body().ok_or("No body")?.remove_child(&anchor)?;
+
+    // Clean up the object URL
+    Url::revoke_object_url(&url)?;
+
+    Ok(())
+}
+
+/// Render the import tileset dialog
+fn render_import_dialog(ctx: &egui::Context, editor_state: &mut EditorState) {
+    if !editor_state.tilesets.show_import_dialog {
+        return;
+    }
+
+    let mut should_close = false;
+    let mut should_import = false;
+
+    egui::Window::new("Import Tilesets")
+        .collapsible(false)
+        .resizable(true)
+        .default_width(500.0)
+        .default_height(400.0)
+        .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+        .show(ctx, |ui| {
+            ui.heading("Paste Tileset JSON");
+
+            ui.label("Open your saved tilesets.json file in a text editor, copy all the content, and paste it below:");
+
+            ui.add_space(10.0);
+
+            // Large text area for JSON input
+            egui::ScrollArea::vertical()
+                .max_height(250.0)
+                .show(ui, |ui| {
+                    ui.add(
+                        egui::TextEdit::multiline(&mut editor_state.tilesets.import_json_text)
+                            .desired_width(f32::INFINITY)
+                            .desired_rows(15)
+                            .font(egui::TextStyle::Monospace)
+                            .hint_text("Paste JSON here...")
+                    );
+                });
+
+            ui.add_space(10.0);
+            ui.separator();
+            ui.add_space(5.0);
+
+            // Preview info
+            if !editor_state.tilesets.import_json_text.is_empty() {
+                match serde_json::from_str::<Vec<TilesetDefinition>>(&editor_state.tilesets.import_json_text) {
+                    Ok(tilesets) => {
+                        ui.colored_label(egui::Color32::GREEN, format!("Valid JSON: {} tileset(s) found", tilesets.len()));
+                    }
+                    Err(e) => {
+                        ui.colored_label(egui::Color32::RED, format!("Invalid JSON: {}", e));
+                    }
+                }
+            }
+
+            ui.add_space(10.0);
+
+            // Action buttons
+            ui.horizontal(|ui| {
+                let can_import = !editor_state.tilesets.import_json_text.is_empty()
+                    && serde_json::from_str::<Vec<TilesetDefinition>>(&editor_state.tilesets.import_json_text).is_ok();
+
+                if ui.add_enabled(can_import, egui::Button::new("Import")).clicked() {
+                    should_import = true;
+                }
+
+                if ui.button("Cancel").clicked() {
+                    should_close = true;
+                }
+            });
+        });
+
+    if should_import {
+        // Parse and import the tilesets
+        match serde_json::from_str::<Vec<TilesetDefinition>>(&editor_state.tilesets.import_json_text) {
+            Ok(tilesets) => {
+                let count = tilesets.len();
+                editor_state.world.tile_palette.tilesets = tilesets;
+                editor_state.tilesets.selected_tileset = None;
+                editor_state.tilesets.selected_tile = None;
+                // Clear texture caches to trigger reload
+                editor_state.world.tile_palette.tileset_texture_handles.clear();
+                editor_state.world.tile_palette.tileset_egui_ids.clear();
+                editor_state.world.tile_palette.tileset_textures_loading = true;
+                editor_state.status_message = format!("Imported {} tileset(s)", count);
+                should_close = true;
+            }
+            Err(e) => {
+                editor_state.error_popup = Some(format!("Failed to parse tilesets: {}", e));
+            }
+        }
+    }
+
+    if should_close {
+        editor_state.tilesets.show_import_dialog = false;
+        editor_state.tilesets.import_json_text.clear();
     }
 }

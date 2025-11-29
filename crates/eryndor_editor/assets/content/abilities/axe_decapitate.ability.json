@@ -1,0 +1,13 @@
+{
+  "id": 1027,
+  "name": "Decapitate",
+  "description": "A devastating execution strike that deals massive damage.",
+  "damage_multiplier": 3.5,
+  "cooldown": 30.0,
+  "range": 1.5,
+  "mana_cost": 50.0,
+  "ability_types": [
+    { "DirectDamage": { "multiplier": 3.5 } }
+  ],
+  "unlock_requirement": { "WeaponProficiency": { "weapon": "Axe", "level": 20 } }
+}

@@ -1,0 +1,17 @@
+{
+  "id": 200,
+  "name": "Fireball",
+  "description": "Launch a ball of fire at your enemy.",
+  "damage_multiplier": 1.5,
+  "cooldown": 2.5,
+  "range": 15.0,
+  "mana_cost": 25.0,
+  "ability_types": [
+    {
+      "DirectDamage": {
+        "multiplier": 1.5
+      }
+    }
+  ],
+  "unlock_requirement": "None"
+}

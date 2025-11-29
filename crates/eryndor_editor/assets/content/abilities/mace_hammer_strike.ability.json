@@ -1,0 +1,13 @@
+{
+  "id": 1016,
+  "name": "Hammer Strike",
+  "description": "A powerful overhead smash with your mace.",
+  "damage_multiplier": 1.6,
+  "cooldown": 4.0,
+  "range": 1.5,
+  "mana_cost": 12.0,
+  "ability_types": [
+    { "DirectDamage": { "multiplier": 1.6 } }
+  ],
+  "unlock_requirement": { "WeaponProficiency": { "weapon": "Mace", "level": 5 } }
+}

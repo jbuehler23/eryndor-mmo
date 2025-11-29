@@ -1,0 +1,14 @@
+{
+  "id": 1201,
+  "name": "Intimidating Shout",
+  "description": "Terrify nearby enemies, slowing their movements.",
+  "damage_multiplier": 0.0,
+  "cooldown": 45.0,
+  "range": 0.0,
+  "mana_cost": 25.0,
+  "ability_types": [
+    { "AreaOfEffect": { "radius": 100.0, "max_targets": 5 } },
+    { "Debuff": { "duration": 5.0, "effect": { "Slow": { "move_speed_reduction": 0.5 } } } }
+  ],
+  "unlock_requirement": "None"
+}

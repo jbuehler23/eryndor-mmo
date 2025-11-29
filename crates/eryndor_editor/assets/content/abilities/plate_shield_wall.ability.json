@@ -1,0 +1,13 @@
+{
+  "id": 1108,
+  "name": "Shield Wall",
+  "description": "Raise your defenses, greatly reducing incoming damage.",
+  "damage_multiplier": 0.0,
+  "cooldown": 45.0,
+  "range": 0.0,
+  "mana_cost": 20.0,
+  "ability_types": [
+    { "Buff": { "duration": 10.0, "stat_bonuses": { "attack_power": 0.0, "defense": 30.0, "move_speed": -20.0 } } }
+  ],
+  "unlock_requirement": "None"
+}

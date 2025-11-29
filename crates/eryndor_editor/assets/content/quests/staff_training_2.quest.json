@@ -1,0 +1,9 @@
+{
+  "id": 109,
+  "name": "Staff Training: Staff Sweep",
+  "description": "Master sweeping attacks that can hit multiple foes.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 12 }],
+  "reward_exp": 75,
+  "proficiency_requirements": [["Staff", 10]],
+  "reward_abilities": [1009]
+}

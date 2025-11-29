@@ -1,0 +1,26 @@
+{
+  "id": 302,
+  "name": "Poison Blade",
+  "description": "Poison your weapon, dealing immediate and ongoing damage.",
+  "damage_multiplier": 1.0,
+  "cooldown": 8.0,
+  "range": 1.5,
+  "mana_cost": 25.0,
+  "ability_types": [
+    {
+      "DirectDamage": {
+        "multiplier": 1.0
+      }
+    },
+    {
+      "DamageOverTime": {
+        "duration": 8.0,
+        "ticks": 8,
+        "damage_per_tick": 5.0
+      }
+    }
+  ],
+  "unlock_requirement": {
+    "Level": 5
+  }
+}

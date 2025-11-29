@@ -1,0 +1,30 @@
+{
+  "id": 104,
+  "name": "Second Wind",
+  "description": "Recover health and gain a defensive boost.",
+  "damage_multiplier": 0.0,
+  "cooldown": 30.0,
+  "range": 0.0,
+  "mana_cost": 40.0,
+  "ability_types": [
+    {
+      "Heal": {
+        "amount": 0.3,
+        "is_percent": true
+      }
+    },
+    {
+      "Buff": {
+        "duration": 10.0,
+        "stat_bonuses": {
+          "attack_power": 0.0,
+          "defense": 5.0,
+          "move_speed": 0.0
+        }
+      }
+    }
+  ],
+  "unlock_requirement": {
+    "Level": 10
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "id": 209,
+  "name": "Plate Training: Iron Will",
+  "description": "Steel your resolve against debilitating effects.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 22 }],
+  "reward_exp": 75,
+  "proficiency_requirements": [],
+  "reward_abilities": [1109]
+}

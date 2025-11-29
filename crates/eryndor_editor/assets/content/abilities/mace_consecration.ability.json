@@ -1,0 +1,15 @@
+{
+  "id": 1018,
+  "name": "Consecration",
+  "description": "Sanctify the ground around you, damaging enemies and healing allies.",
+  "damage_multiplier": 0.6,
+  "cooldown": 20.0,
+  "range": 0.0,
+  "mana_cost": 35.0,
+  "ability_types": [
+    { "DirectDamage": { "multiplier": 0.6 } },
+    { "AreaOfEffect": { "radius": 100.0, "max_targets": 6 } },
+    { "Heal": { "amount": 20.0, "is_percent": false } }
+  ],
+  "unlock_requirement": { "WeaponProficiency": { "weapon": "Mace", "level": 15 } }
+}

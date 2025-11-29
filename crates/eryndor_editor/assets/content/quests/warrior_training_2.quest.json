@@ -1,0 +1,9 @@
+{
+  "id": 301,
+  "name": "Warrior Training: Intimidating Shout",
+  "description": "Learn to terrify your enemies with your presence.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 30 }],
+  "reward_exp": 75,
+  "proficiency_requirements": [],
+  "reward_abilities": [1201]
+}

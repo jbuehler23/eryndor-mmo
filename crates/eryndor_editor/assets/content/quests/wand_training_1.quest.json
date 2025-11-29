@@ -1,0 +1,9 @@
+{
+  "id": 112,
+  "name": "Wand Training: Magic Missile",
+  "description": "Learn to fire bolts of pure magical energy.",
+  "objectives": [{ "type": "TalkToNpc", "npc_id": 13 }],
+  "reward_exp": 50,
+  "proficiency_requirements": [["Wand", 5]],
+  "reward_abilities": [1012]
+}

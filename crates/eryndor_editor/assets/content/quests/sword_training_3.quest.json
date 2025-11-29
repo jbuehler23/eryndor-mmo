@@ -1,0 +1,11 @@
+{
+  "id": 102,
+  "name": "Sword Training: Blade Storm",
+  "description": "Master the devastating spinning attack that can strike multiple foes at once.",
+  "objectives": [
+    { "type": "TalkToNpc", "npc_id": 10 }
+  ],
+  "reward_exp": 100,
+  "proficiency_requirements": [["Sword", 15]],
+  "reward_abilities": [1002]
+}
