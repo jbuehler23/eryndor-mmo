@@ -15,6 +15,7 @@ mod input;
 mod game_state;
 mod item_cache;
 mod ability_cache;
+mod tilemap;
 
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
@@ -32,14 +33,20 @@ use bevy_web_keepalive::WebKeepalivePlugin;
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "Eryndor MMO".to_string(),
-                    resolution: [1280, 720].into(),
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "Eryndor MMO".to_string(),
+                        resolution: [1280, 720].into(),
+                        ..default()
+                    }),
+                    ..default()
+                })
+                .set(AssetPlugin {
+                    // Point to workspace root assets folder (2 levels up from crate)
+                    file_path: "../../assets".to_string(),
                     ..default()
                 }),
-                ..default()
-            }),
             RepliconPlugins,
             RepliconRenetPlugins,
             ShapePlugin,
@@ -52,6 +59,9 @@ fn main() {
         .init_resource::<ui::UiState>()
         .init_resource::<item_cache::ClientItemDatabase>()
         .init_resource::<ability_cache::ClientAbilityDatabase>()
+        .init_resource::<tilemap::TilePaletteResource>()
+        .init_resource::<tilemap::CurrentZoneTilemap>()
+        .init_resource::<tilemap::LoadedTileChunks>()
         // Register replicated components (same as server)
         .replicate::<Player>()
         .replicate::<Character>()
@@ -174,33 +184,34 @@ fn main() {
             ui::chat_window.run_if(in_state(GameState::InGame)),
         ))
         .add_systems(OnExit(GameState::InGame), game_state::cleanup_game_entities)
+        // Core game state systems
         .add_systems(Update, (
-            // OAuth callback check (runs during Login state)
             ui::check_oauth_callback.run_if(in_state(GameState::Login)),
-            // Chat message receiver
             ui::receive_chat_messages.run_if(in_state(GameState::InGame)),
-            // Connection monitoring
             game_state::monitor_connection,
-            // Player entity detection
             game_state::detect_player_entity.run_if(in_state(GameState::InGame)),
             game_state::handle_character_despawn.run_if(in_state(GameState::InGame)),
-            // Rendering
+        ))
+        // Tilemap rendering systems
+        .add_systems(Update, (
+            tilemap::load_tile_palette,
+            tilemap::create_test_tilemap.run_if(in_state(GameState::InGame)),
+            tilemap::spawn_tilemap_sprites.run_if(in_state(GameState::InGame)),
+        ))
+        // Entity rendering systems
+        .add_systems(Update, (
             rendering::spawn_visual_entities,
             rendering::update_visual_positions,
             rendering::spawn_name_labels,
             rendering::update_name_label_positions,
             rendering::cleanup_despawned_entities,
             rendering::update_camera_follow.run_if(in_state(GameState::InGame)),
-            // Debug rendering (commented out - uncomment when needed)
-            // rendering::spawn_debug_grid.run_if(in_state(GameState::InGame)),
-            // rendering::draw_debug_labels.run_if(in_state(GameState::InGame)),
-            // Target indicator
             rendering::draw_target_indicator.run_if(in_state(GameState::InGame)),
-            // Damage numbers
             rendering::update_damage_numbers.run_if(in_state(GameState::InGame)),
-            // UI Input
+        ))
+        // Input systems
+        .add_systems(Update, (
             ui::handle_esc_key.run_if(in_state(GameState::InGame)),
-            // Input
             input::handle_movement_input.run_if(in_state(GameState::InGame)),
             input::handle_targeting_input.run_if(in_state(GameState::InGame)),
             input::handle_ability_input.run_if(in_state(GameState::InGame)),
@@ -248,6 +259,9 @@ fn start_app() {
         .init_resource::<ui::UiState>()
         .init_resource::<item_cache::ClientItemDatabase>()
         .insert_resource(ability_cache::ClientAbilityDatabase::default())
+        .init_resource::<tilemap::TilePaletteResource>()
+        .init_resource::<tilemap::CurrentZoneTilemap>()
+        .init_resource::<tilemap::LoadedTileChunks>()
         // Register replicated components (same as server)
         .replicate::<Player>()
         .replicate::<Character>()
@@ -370,32 +384,35 @@ fn start_app() {
             ui::chat_window.run_if(in_state(GameState::InGame)),
         ))
         .add_systems(OnExit(GameState::InGame), game_state::cleanup_game_entities)
+        // Core game state systems
         .add_systems(Update, (
-            // OAuth callback check (runs during Login state)
             ui::check_oauth_callback.run_if(in_state(GameState::Login)),
-            // Chat message receiver
             ui::receive_chat_messages.run_if(in_state(GameState::InGame)),
-            // WebTransport connection polling (WASM only)
             game_state::poll_webtransport_connection,
-            // Connection monitoring
             game_state::monitor_connection,
-            // Player entity detection
             game_state::detect_player_entity.run_if(in_state(GameState::InGame)),
             game_state::handle_character_despawn.run_if(in_state(GameState::InGame)),
-            // Rendering
+        ))
+        // Tilemap rendering systems
+        .add_systems(Update, (
+            tilemap::load_tile_palette,
+            tilemap::create_test_tilemap.run_if(in_state(GameState::InGame)),
+            tilemap::spawn_tilemap_sprites.run_if(in_state(GameState::InGame)),
+        ))
+        // Entity rendering systems
+        .add_systems(Update, (
             rendering::spawn_visual_entities,
             rendering::update_visual_positions,
             rendering::spawn_name_labels,
             rendering::update_name_label_positions,
             rendering::cleanup_despawned_entities,
             rendering::update_camera_follow.run_if(in_state(GameState::InGame)),
-            // Target indicator
             rendering::draw_target_indicator.run_if(in_state(GameState::InGame)),
-            // Damage numbers
             rendering::update_damage_numbers.run_if(in_state(GameState::InGame)),
-            // UI Input
+        ))
+        // Input systems
+        .add_systems(Update, (
             ui::handle_esc_key.run_if(in_state(GameState::InGame)),
-            // Input
             input::handle_movement_input.run_if(in_state(GameState::InGame)),
             input::handle_targeting_input.run_if(in_state(GameState::InGame)),
             input::handle_ability_input.run_if(in_state(GameState::InGame)),

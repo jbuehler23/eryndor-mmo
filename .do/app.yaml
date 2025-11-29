@@ -28,7 +28,7 @@ static_sites:
 
       # Build WASM client
       cd crates/eryndor_client
-      bevy build --yes --release web --bundle
+      SERVER_IP=165.227.217.144 bevy build --yes --release web --bundle
 
     output_dir: target/bevy_web/web-release/client
 

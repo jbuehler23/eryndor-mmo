@@ -175,3 +175,39 @@ pub fn render_status_bar(ctx: &egui::Context, editor_state: &EditorState) {
         });
     });
 }
+
+/// Render the error popup window if there is an error to display
+pub fn render_error_popup(ctx: &egui::Context, editor_state: &mut EditorState) {
+    let mut should_close = false;
+
+    if let Some(error) = &editor_state.error_popup {
+        egui::Window::new("Error")
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .show(ctx, |ui| {
+                ui.set_min_width(300.0);
+
+                // Error icon and message
+                ui.horizontal(|ui| {
+                    ui.colored_label(egui::Color32::RED, "\u{26A0}"); // Warning symbol
+                    ui.label(error);
+                });
+
+                ui.add_space(10.0);
+                ui.separator();
+                ui.add_space(5.0);
+
+                // OK button to dismiss
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
+                    if ui.button("OK").clicked() {
+                        should_close = true;
+                    }
+                });
+            });
+    }
+
+    if should_close {
+        editor_state.error_popup = None;
+    }
+}

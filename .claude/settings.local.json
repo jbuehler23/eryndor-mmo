@@ -37,7 +37,11 @@
       "Bash(gh api:*)",
       "Bash(curl:*)",
       "Bash(powershell.exe -Command \"Stop-Process -Id 89080 -Force\")",
-      "Bash(sort:*)"
+      "Bash(sort:*)",
+      "WebFetch(domain:ldtk.io)",
+      "WebFetch(domain:doc.mapeditor.org)",
+      "WebFetch(domain:manual.gamemaker.io)",
+      "Bash(wslpath:*)"
     ],
     "deny": [],
     "ask": []

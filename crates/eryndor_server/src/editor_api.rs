@@ -133,6 +133,9 @@ pub fn create_editor_router() -> Router {
         .route("/zones/:id", get(get_zone))
         .route("/zones/:id", put(update_zone))
         .route("/zones/:id", delete(delete_zone))
+        // Zone Tilemaps
+        .route("/zones/:id/tilemap", get(get_zone_tilemap))
+        .route("/zones/:id/tilemap", put(update_zone_tilemap))
         // Items
         .route("/items", get(list_items))
         .route("/items", post(create_item))
@@ -333,6 +336,76 @@ async fn delete_zone(
 
     info!("Deleted zone: {}", id);
     (StatusCode::OK, ApiResponse::success(()))
+}
+
+// =============================================================================
+// Zone Tilemap API
+// =============================================================================
+
+async fn get_zone_tilemap(
+    State(state): State<EditorApiState>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let zone_path = state.content_path.join("zones").join(format!("{}.zone.json", id));
+
+    match std::fs::read_to_string(&zone_path) {
+        Ok(content) => {
+            match serde_json::from_str::<serde_json::Value>(&content) {
+                Ok(zone_data) => {
+                    // Extract tilemap from zone data, or return default empty tilemap
+                    let tilemap = zone_data.get("tilemap").cloned().unwrap_or_else(|| {
+                        serde_json::json!({
+                            "tile_size": 16,
+                            "chunk_size": 16,
+                            "chunks": {}
+                        })
+                    });
+                    (StatusCode::OK, ApiResponse::success(tilemap))
+                }
+                Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, ApiResponse::error(format!("Failed to parse zone: {}", e))),
+            }
+        }
+        Err(e) => (StatusCode::NOT_FOUND, ApiResponse::error(format!("Zone not found: {}", e))),
+    }
+}
+
+async fn update_zone_tilemap(
+    State(state): State<EditorApiState>,
+    Path(id): Path<String>,
+    Json(tilemap): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let zone_path = state.content_path.join("zones").join(format!("{}.zone.json", id));
+
+    // Read existing zone data
+    let zone_content = match std::fs::read_to_string(&zone_path) {
+        Ok(content) => content,
+        Err(e) => return (StatusCode::NOT_FOUND, ApiResponse::<serde_json::Value>::error(format!("Zone not found: {}", e))),
+    };
+
+    // Parse zone data
+    let mut zone_data: serde_json::Value = match serde_json::from_str(&zone_content) {
+        Ok(data) => data,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, ApiResponse::error(format!("Failed to parse zone: {}", e))),
+    };
+
+    // Update tilemap field
+    if let Some(obj) = zone_data.as_object_mut() {
+        obj.insert("tilemap".to_string(), tilemap.clone());
+    } else {
+        return (StatusCode::INTERNAL_SERVER_ERROR, ApiResponse::error("Zone data is not an object"));
+    }
+
+    // Write back to file
+    match serde_json::to_string_pretty(&zone_data) {
+        Ok(content) => {
+            if let Err(e) = std::fs::write(&zone_path, content) {
+                return (StatusCode::INTERNAL_SERVER_ERROR, ApiResponse::error(format!("Failed to write zone: {}", e)));
+            }
+            info!("Updated tilemap for zone: {}", id);
+            (StatusCode::OK, ApiResponse::success(tilemap))
+        }
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, ApiResponse::error(format!("Failed to serialize zone: {}", e))),
+    }
 }
 
 // =============================================================================

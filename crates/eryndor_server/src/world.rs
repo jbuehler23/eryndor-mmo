@@ -114,6 +114,10 @@ pub fn spawn_world_boundaries(mut commands: Commands) {
     info!("World boundaries spawned");
 }
 
+/// Marker component for tilemap collision entities
+#[derive(Component)]
+pub struct TilemapCollider;
+
 /// System to spawn world entities from zone data (runs when zone data is loaded)
 pub fn spawn_world(
     mut commands: Commands,
@@ -130,6 +134,7 @@ pub fn spawn_world(
         info!("Spawning world from zone: {}", zone.zone_name);
         spawn_zone_npcs(&mut commands, zone);
         spawn_zone_enemies(&mut commands, zone, &enemy_db);
+        spawn_tilemap_collision(&mut commands, zone);
     }
 
     info!("World initialization complete!");
@@ -268,5 +273,50 @@ fn spawn_zone_enemies(
             warn!("Enemy type {} not found in database for region: {}",
                 region.enemy_type, region.region_id);
         }
+    }
+}
+
+/// Spawn tilemap collision entities from zone tilemap data
+fn spawn_tilemap_collision(commands: &mut Commands, zone: &crate::game_data::ZoneDefinition) {
+    let Some(tilemap) = &zone.tilemap else {
+        info!("No tilemap data for zone, skipping collision spawning");
+        return;
+    };
+
+    let tile_size = tilemap.tile_size as f32;
+    let chunk_size = tilemap.chunk_size as i32;
+    let mut collision_count = 0;
+
+    for (chunk_key, chunk) in &tilemap.chunks {
+        let Some((chunk_x, chunk_y)) = eryndor_shared::ZoneTilemap::parse_chunk_key(chunk_key) else {
+            continue;
+        };
+
+        // Iterate through collision layer
+        for (row_idx, row) in chunk.collision.iter().enumerate() {
+            for (col_idx, &is_blocked) in row.iter().enumerate() {
+                if is_blocked == 0 {
+                    continue;
+                }
+
+                // Calculate world position for this tile
+                let world_x = (chunk_x * chunk_size + col_idx as i32) as f32 * tile_size + (tile_size / 2.0);
+                let world_y = (chunk_y * chunk_size + row_idx as i32) as f32 * tile_size + (tile_size / 2.0);
+
+                // Spawn collision entity
+                commands.spawn((
+                    TilemapCollider,
+                    PhysicsPosition(Vec2::new(world_x, world_y)),
+                    RigidBody::Static,
+                    Collider::rectangle(tile_size, tile_size),
+                    CollisionLayers::new(GameLayer::Environment, [GameLayer::Player, GameLayer::Enemy]),
+                ));
+                collision_count += 1;
+            }
+        }
+    }
+
+    if collision_count > 0 {
+        info!("Spawned {} tilemap collision entities for zone: {}", collision_count, zone.zone_id);
     }
 }

@@ -97,6 +97,10 @@ pub struct ApiTaskQueue {
     pub creating_loot_table: bool,
     pub updating_loot_table: bool,
     pub deleting_loot_table: bool,
+
+    // Tilemap
+    pub tilemap_save_result: Arc<Mutex<Option<Result<(), String>>>>,
+    pub saving_tilemap: bool,
 }
 
 /// Zone data structure matching the server API
@@ -518,6 +522,13 @@ pub struct DeleteLootTableEvent {
     pub loot_table_id: String,
 }
 
+/// Message to request saving a zone's tilemap
+#[derive(Message)]
+pub struct SaveTilemapEvent {
+    pub zone_id: String,
+    pub tilemap: eryndor_shared::ZoneTilemap,
+}
+
 /// API Plugin - adds all necessary systems and resources
 pub struct ApiEventsPlugin;
 
@@ -560,6 +571,8 @@ impl Plugin for ApiEventsPlugin {
             .add_message::<CreateLootTableEvent>()
             .add_message::<UpdateLootTableEvent>()
             .add_message::<DeleteLootTableEvent>()
+            // Tilemap messages
+            .add_message::<SaveTilemapEvent>()
             // Split systems into smaller tuples to avoid Bevy's tuple size limit
             .add_systems(Update, (
                 // Zone handlers
@@ -599,6 +612,10 @@ impl Plugin for ApiEventsPlugin {
                 handle_create_loot_table,
                 handle_update_loot_table,
                 handle_delete_loot_table,
+            ))
+            .add_systems(Update, (
+                // Tilemap handler
+                handle_save_tilemap,
                 // Polling
                 poll_api_results,
             ));
@@ -2043,6 +2060,52 @@ fn handle_delete_loot_table(
     }
 }
 
+/// System to handle tilemap save requests
+fn handle_save_tilemap(
+    mut events: MessageReader<SaveTilemapEvent>,
+    mut task_queue: ResMut<ApiTaskQueue>,
+    editor_state: Res<EditorState>,
+) {
+    for event in events.read() {
+        if task_queue.saving_tilemap { continue; }
+        task_queue.saving_tilemap = true;
+        let result_holder = task_queue.tilemap_save_result.clone();
+        let api_url = editor_state.api_url.clone();
+        let zone_id = event.zone_id.clone();
+        let tilemap = event.tilemap.clone();
+
+        #[cfg(target_family = "wasm")]
+        wasm_bindgen_futures::spawn_local(async move {
+            let config = ApiConfig { base_url: api_url.clone(), auth_token: None };
+            let client = ApiClient::new(config);
+            // Use custom endpoint for tilemap: PUT /zones/{id}/tilemap
+            let url = format!("{}/zones/{}/tilemap", api_url, zone_id);
+            let result = client.put_json(&url, &tilemap).await;
+            let mut holder = result_holder.lock().unwrap();
+            *holder = Some(match result {
+                Ok(response) => if response.success { Ok(()) } else { Err(response.error.unwrap_or_else(|| "Unknown error".to_string())) },
+                Err(e) => Err(e),
+            });
+        });
+
+        #[cfg(not(target_family = "wasm"))]
+        {
+            use bevy::tasks::IoTaskPool;
+            IoTaskPool::get().spawn(async move {
+                let config = ApiConfig { base_url: api_url.clone(), auth_token: None };
+                let client = ApiClient::new(config);
+                let url = format!("{}/zones/{}/tilemap", api_url, zone_id);
+                let result = client.put_json(&url, &tilemap).await;
+                let mut holder = result_holder.lock().unwrap();
+                *holder = Some(match result {
+                    Ok(response) => if response.success { Ok(()) } else { Err(response.error.unwrap_or_else(|| "Unknown error".to_string())) },
+                    Err(e) => Err(e),
+                });
+            }).detach();
+        }
+    }
+}
+
 /// System to poll for completed API results and update editor state
 fn poll_api_results(
     mut task_queue: ResMut<ApiTaskQueue>,
@@ -2561,6 +2624,31 @@ fn poll_api_results(
                     load_loot_table_list_events.write(LoadLootTableListEvent);
                 }
                 Err(e) => editor_state.status_message = format!("Failed to delete loot table: {}", e),
+            }
+        }
+    }
+
+    // =============================================================================
+    // Tilemap Polling
+    // =============================================================================
+
+    if task_queue.saving_tilemap {
+        let result = {
+            let mut holder = task_queue.tilemap_save_result.lock().unwrap();
+            holder.take()
+        };
+        if let Some(result) = result {
+            task_queue.saving_tilemap = false;
+            match result {
+                Ok(()) => {
+                    editor_state.status_message = "Tilemap saved".to_string();
+                    editor_state.has_unsaved_changes = false;
+                }
+                Err(e) => {
+                    let error_msg = format!("Failed to save tilemap: {}", e);
+                    editor_state.status_message = error_msg.clone();
+                    editor_state.error_popup = Some(error_msg);
+                }
             }
         }
     }

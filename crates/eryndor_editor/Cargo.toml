@@ -30,6 +30,14 @@ web-sys = { version = "0.3", features = [
     "RequestMode",
     "Response",
     "Headers",
+    "HtmlInputElement",
+    "FileList",
+    "File",
+    "Blob",
+    "Url",
+    "Element",
+    "Event",
+    "HtmlElement",
 ] }
 js-sys = "0.3"
 console_error_panic_hook = "0.1"
@@ -44,3 +52,4 @@ gloo-storage = "0.3"
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 reqwest = { version = "0.12", default-features = false, features = ["json", "native-tls"] }
 tokio = { version = "1", features = ["rt", "macros"] }
+rfd = "0.15"

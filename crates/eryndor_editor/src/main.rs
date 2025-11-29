@@ -11,8 +11,8 @@ use bevy::prelude::*;
 use bevy_egui::{EguiContexts, EguiPlugin, egui};
 
 use api_events::ApiEventsPlugin;
-use editor_state::{EditorState, EditorTab};
-use ui::{render_main_menu, render_tab_bar, render_status_bar};
+use editor_state::{EditorState, EditorTab, TilesetDefinition, TileSource, TileCategory};
+use ui::{render_main_menu, render_tab_bar, render_status_bar, render_error_popup};
 
 fn main() {
     // Set up panic hook for WASM
@@ -43,10 +43,17 @@ fn main() {
             process_npc_quest_actions,
             process_ability_loot_actions,
         ))
+        .add_systems(Update, (
+            load_tile_textures,
+            register_tile_textures,
+            load_tileset_textures,
+            register_tileset_textures,
+            update_tileset_dimensions,
+        ))
         .run();
 }
 
-fn setup(mut commands: Commands) {
+fn setup(mut commands: Commands, mut editor_state: ResMut<EditorState>) {
     // Spawn 2D camera for the editor
     commands.spawn((
         Camera2d,
@@ -56,7 +63,77 @@ fn setup(mut commands: Commands) {
         },
     ));
 
+    // Initialize tile palette with static data from tile_palette.tiles.json structure
+    initialize_tile_palette(&mut editor_state);
+
+    // Initialize new tileset system
+    initialize_tilesets(&mut editor_state);
+
     info!("Eryndor Editor initialized");
+}
+
+/// Initialize the tile palette with known tiles from the asset structure
+fn initialize_tile_palette(editor_state: &mut EditorState) {
+    use editor_state::TilePaletteEntry;
+
+    // Ground tiles
+    editor_state.world.tile_palette.ground_tiles = vec![
+        TilePaletteEntry { id: 1, name: "Grass 1".to_string(), path: "tiles/Tiles/Grass/Grass_1_Middle.png".to_string(), has_collision: false },
+        TilePaletteEntry { id: 2, name: "Grass 2".to_string(), path: "tiles/Tiles/Grass/Grass_2_Middle.png".to_string(), has_collision: false },
+        TilePaletteEntry { id: 3, name: "Grass 3".to_string(), path: "tiles/Tiles/Grass/Grass_3_Middle.png".to_string(), has_collision: false },
+        TilePaletteEntry { id: 4, name: "Grass 4".to_string(), path: "tiles/Tiles/Grass/Grass_4_Middle.png".to_string(), has_collision: false },
+        TilePaletteEntry { id: 5, name: "Grass Tiles 2".to_string(), path: "tiles/Tiles/Grass/Grass_Tiles_2.png".to_string(), has_collision: false },
+        TilePaletteEntry { id: 6, name: "Grass Tiles 3".to_string(), path: "tiles/Tiles/Grass/Grass_Tiles_3.png".to_string(), has_collision: false },
+        TilePaletteEntry { id: 7, name: "Grass Tiles 4".to_string(), path: "tiles/Tiles/Grass/Grass_Tiles_4.png".to_string(), has_collision: false },
+        TilePaletteEntry { id: 10, name: "Path Middle".to_string(), path: "tiles/Tiles/Grass/Path_Middle.png".to_string(), has_collision: false },
+        TilePaletteEntry { id: 11, name: "Path Decor".to_string(), path: "tiles/Tiles/Grass/Path_Decoration.png".to_string(), has_collision: false },
+        TilePaletteEntry { id: 20, name: "Cobble Road 1".to_string(), path: "tiles/Tiles/Cobble_Road/Cobble_Road_1.png".to_string(), has_collision: false },
+        TilePaletteEntry { id: 21, name: "Cobble Road 2".to_string(), path: "tiles/Tiles/Cobble_Road/Cobble_Road_2.png".to_string(), has_collision: false },
+        TilePaletteEntry { id: 30, name: "Pavement".to_string(), path: "tiles/Tiles/Pavement_Tiles.png".to_string(), has_collision: false },
+        TilePaletteEntry { id: 40, name: "Water".to_string(), path: "tiles/Tiles/Water/Water_Middle.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 41, name: "Water Tile 1".to_string(), path: "tiles/Tiles/Water/Water_Tile_1.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 42, name: "Water Tile 2".to_string(), path: "tiles/Tiles/Water/Water_Tile_2.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 43, name: "Water Tile 3".to_string(), path: "tiles/Tiles/Water/Water_Tile_3.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 44, name: "Water Tile 4".to_string(), path: "tiles/Tiles/Water/Water_Tile_4.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 50, name: "Beach".to_string(), path: "tiles/Tiles/Beach/Beach_Tiles.png".to_string(), has_collision: false },
+    ];
+
+    // Decoration tiles
+    editor_state.world.tile_palette.decoration_tiles = vec![
+        TilePaletteEntry { id: 100, name: "Big Oak".to_string(), path: "tiles/Trees/Big_Oak_Tree.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 101, name: "Big Birch".to_string(), path: "tiles/Trees/Big_Birch_Tree.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 102, name: "Big Spruce".to_string(), path: "tiles/Trees/Big_Spruce_tree.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 103, name: "Big Fruit".to_string(), path: "tiles/Trees/Big_Fruit_Tree.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 110, name: "Med Oak".to_string(), path: "tiles/Trees/Medium_Oak_Tree.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 111, name: "Med Birch".to_string(), path: "tiles/Trees/Medium_Birch_Tree.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 112, name: "Med Spruce".to_string(), path: "tiles/Trees/Medium_Spruce_Tree.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 113, name: "Med Fruit".to_string(), path: "tiles/Trees/Medium_Fruit_Tree.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 120, name: "Small Oak".to_string(), path: "tiles/Trees/Small_Oak_Tree.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 121, name: "Small Birch".to_string(), path: "tiles/Trees/Small_Birch_Tree.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 122, name: "Small Spruce".to_string(), path: "tiles/Trees/Small_Spruce_Tree.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 123, name: "Small Fruit".to_string(), path: "tiles/Trees/Small_Fruit_Tree.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 150, name: "Flowers".to_string(), path: "tiles/Outdoor decoration/Flowers.png".to_string(), has_collision: false },
+        TilePaletteEntry { id: 151, name: "Fountain".to_string(), path: "tiles/Outdoor decoration/Fountain.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 152, name: "Well".to_string(), path: "tiles/Outdoor decoration/Well.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 153, name: "Benches".to_string(), path: "tiles/Outdoor decoration/Benches.png".to_string(), has_collision: false },
+        TilePaletteEntry { id: 154, name: "Fences".to_string(), path: "tiles/Outdoor decoration/Fences.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 155, name: "Fence Big".to_string(), path: "tiles/Outdoor decoration/Fence_Big.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 156, name: "Barrels".to_string(), path: "tiles/Outdoor decoration/barrels.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 157, name: "Hay Bales".to_string(), path: "tiles/Outdoor decoration/Hay_Bales.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 158, name: "Lanterns".to_string(), path: "tiles/Outdoor decoration/Lanter_Posts.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 159, name: "Camp Decor".to_string(), path: "tiles/Outdoor decoration/Camp_Decor.png".to_string(), has_collision: false },
+        TilePaletteEntry { id: 160, name: "Outdoor Decor".to_string(), path: "tiles/Outdoor decoration/Outdoor_Decor.png".to_string(), has_collision: false },
+        TilePaletteEntry { id: 161, name: "Signs".to_string(), path: "tiles/Outdoor decoration/Signs.png".to_string(), has_collision: true },
+        TilePaletteEntry { id: 162, name: "Boat".to_string(), path: "tiles/Outdoor decoration/Boat.png".to_string(), has_collision: true },
+    ];
+
+    editor_state.world.tile_palette.loaded = true;
+
+    // Mark that we need to load textures
+    editor_state.world.tile_palette.textures_loading = true;
+    info!("Tile palette initialized with {} ground tiles and {} decoration tiles",
+        editor_state.world.tile_palette.ground_tiles.len(),
+        editor_state.world.tile_palette.decoration_tiles.len());
 }
 
 fn editor_ui_system(
@@ -74,10 +151,20 @@ fn editor_ui_system(
     // Tab bar below menu
     render_tab_bar(ctx, &mut editor_state);
 
+    // Status bar at very bottom (render FIRST to claim outermost bottom position)
+    render_status_bar(ctx, &editor_state);
+
+    // Render World tab's bottom palette panel at context level (before CentralPanel)
+    // This renders AFTER status bar so it appears ABOVE the status bar
+    if editor_state.active_tab == EditorTab::World {
+        modules::world::render_bottom_panel(ctx, &mut editor_state);
+    }
+
     // Main content area based on active tab
     egui::CentralPanel::default().show(ctx, |ui| {
         match editor_state.active_tab {
             EditorTab::World => modules::world::render(ui, &mut editor_state),
+            EditorTab::Tilesets => modules::tilesets::render(ui, &mut editor_state),
             EditorTab::Items => modules::items::render(ui, &mut editor_state),
             EditorTab::Enemies => modules::enemies::render(ui, &mut editor_state),
             EditorTab::Npcs => modules::npcs::render(ui, &mut editor_state),
@@ -88,8 +175,8 @@ fn editor_ui_system(
         }
     });
 
-    // Status bar at bottom
-    render_status_bar(ctx, &editor_state);
+    // Error popup (renders on top of everything when there's an error)
+    render_error_popup(ctx, &mut editor_state);
 }
 
 /// System to process zone and item actions
@@ -101,6 +188,7 @@ fn process_zone_item_actions(
     mut create_item_events: MessageWriter<api_events::CreateItemEvent>,
     mut update_item_events: MessageWriter<api_events::UpdateItemEvent>,
     mut delete_item_events: MessageWriter<api_events::DeleteItemEvent>,
+    mut save_tilemap_events: MessageWriter<api_events::SaveTilemapEvent>,
 ) {
     // Process load zones action
     if editor_state.action_load_zones {
@@ -213,6 +301,21 @@ fn process_zone_item_actions(
         if let Some(item_id) = editor_state.items.selected_item {
             editor_state.status_message = format!("Deleting item {}...", item_id);
             delete_item_events.write(api_events::DeleteItemEvent { item_id });
+        }
+    }
+
+    // Process save tilemap action
+    if editor_state.action_save_tilemap {
+        editor_state.action_save_tilemap = false;
+
+        if let (Some(zone_id), Some(tilemap)) = (
+            editor_state.world.current_zone.clone(),
+            editor_state.world.editing_tilemap.clone(),
+        ) {
+            editor_state.status_message = format!("Saving tilemap for zone {}...", zone_id);
+            save_tilemap_events.write(api_events::SaveTilemapEvent { zone_id, tilemap });
+        } else {
+            editor_state.status_message = "Cannot save: No zone selected or no tilemap".to_string();
         }
     }
 }
@@ -689,6 +792,702 @@ fn process_ability_loot_actions(
         if let Some(loot_table_id) = editor_state.loot.selected_loot_table.clone() {
             editor_state.status_message = format!("Deleting loot table {}...", loot_table_id);
             delete_loot_table_events.write(api_events::DeleteLootTableEvent { loot_table_id });
+        }
+    }
+}
+
+// =============================================================================
+// Tile Texture Loading Systems
+// =============================================================================
+
+/// System to start loading tile textures via AssetServer when palette is ready
+fn load_tile_textures(
+    asset_server: Res<AssetServer>,
+    mut editor_state: ResMut<EditorState>,
+) {
+    // Only load once when textures_loading is true and handles are empty
+    if !editor_state.world.tile_palette.textures_loading {
+        return;
+    }
+    if !editor_state.world.tile_palette.texture_handles.is_empty() {
+        return; // Already started loading
+    }
+
+    info!("Starting tile texture loading...");
+
+    // Collect tile info first to avoid borrow checker issues
+    let tiles_to_load: Vec<(u32, String)> = editor_state.world.tile_palette.ground_tiles
+        .iter()
+        .chain(editor_state.world.tile_palette.decoration_tiles.iter())
+        .map(|tile| (tile.id, tile.path.clone()))
+        .collect();
+
+    // Now load textures and insert handles
+    for (tile_id, path) in tiles_to_load {
+        let handle = asset_server.load::<Image>(&path);
+        editor_state.world.tile_palette.texture_handles.insert(tile_id, handle);
+    }
+
+    info!("Initiated loading of {} tile textures", editor_state.world.tile_palette.texture_handles.len());
+}
+
+/// System to register loaded textures with egui for display in the palette
+fn register_tile_textures(
+    mut contexts: EguiContexts,
+    mut editor_state: ResMut<EditorState>,
+    images: Res<Assets<Image>>,
+) {
+    // Only run when textures are loading but not yet registered
+    if !editor_state.world.tile_palette.textures_loading {
+        return;
+    }
+    if editor_state.world.tile_palette.textures_registered {
+        return;
+    }
+    if editor_state.world.tile_palette.texture_handles.is_empty() {
+        return; // Handles not yet created
+    }
+
+    // Check if at least some images are loaded (for progressive loading)
+    // We'll register what we can and continue checking each frame
+    let mut any_registered = false;
+    let handles_to_check: Vec<_> = editor_state.world.tile_palette.texture_handles
+        .iter()
+        .filter(|(id, _)| !editor_state.world.tile_palette.egui_texture_ids.contains_key(id))
+        .map(|(id, handle)| (*id, handle.clone()))
+        .collect();
+
+    for (tile_id, handle) in handles_to_check {
+        // Check if this image is loaded
+        if images.get(&handle).is_some() {
+            // Register with egui using bevy_egui's add_image
+            // Wrap handle in EguiTextureHandle::Strong for bevy_egui 0.38
+            let egui_handle = bevy_egui::EguiTextureHandle::Strong(handle);
+            let egui_id = contexts.add_image(egui_handle);
+            editor_state.world.tile_palette.egui_texture_ids.insert(tile_id, egui_id);
+            any_registered = true;
+        }
+    }
+
+    // Check if all textures are now registered
+    let total_tiles = editor_state.world.tile_palette.texture_handles.len();
+    let registered_tiles = editor_state.world.tile_palette.egui_texture_ids.len();
+
+    if registered_tiles == total_tiles {
+        editor_state.world.tile_palette.textures_registered = true;
+        editor_state.world.tile_palette.textures_loading = false;
+        info!("All {} tile textures registered with egui", registered_tiles);
+    } else if any_registered {
+        // Progress update
+        info!("Tile texture progress: {}/{} registered", registered_tiles, total_tiles);
+    }
+}
+
+// =============================================================================
+// New Tileset System
+// =============================================================================
+
+/// Initialize the hybrid tileset system with known tilesets
+fn initialize_tilesets(editor_state: &mut EditorState) {
+    // Ground tileset - grass, paths, water
+    let ground_tileset = TilesetDefinition {
+        id: "ground".to_string(),
+        name: "Ground Tiles".to_string(),
+        category: TileCategory::Ground,
+        display_tile_size: 32,
+        sources: vec![
+            TileSource::SingleImage {
+                path: "tiles/Tiles/Grass/Grass_1_Middle.png".to_string(),
+                tile_index: 0,
+                name: "Grass 1".to_string(),
+                has_collision: false,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Tiles/Grass/Grass_2_Middle.png".to_string(),
+                tile_index: 0,
+                name: "Grass 2".to_string(),
+                has_collision: false,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Tiles/Grass/Grass_3_Middle.png".to_string(),
+                tile_index: 0,
+                name: "Grass 3".to_string(),
+                has_collision: false,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Tiles/Grass/Grass_4_Middle.png".to_string(),
+                tile_index: 0,
+                name: "Grass 4".to_string(),
+                has_collision: false,
+            },
+            TileSource::Spritesheet {
+                path: "tiles/Tiles/Grass/Grass_Tiles_2.png".to_string(),
+                tile_width: 16,
+                tile_height: 16,
+                margin: 0,
+                spacing: 0,
+                image_width: 256,
+                image_height: 160,
+                columns: 16,
+                rows: 10,
+                first_tile_index: 0,
+            },
+            TileSource::Spritesheet {
+                path: "tiles/Tiles/Grass/Grass_Tiles_3.png".to_string(),
+                tile_width: 16,
+                tile_height: 16,
+                margin: 0,
+                spacing: 0,
+                image_width: 256,
+                image_height: 160,
+                columns: 16,
+                rows: 10,
+                first_tile_index: 0,
+            },
+            TileSource::Spritesheet {
+                path: "tiles/Tiles/Grass/Grass_Tiles_4.png".to_string(),
+                tile_width: 16,
+                tile_height: 16,
+                margin: 0,
+                spacing: 0,
+                image_width: 256,
+                image_height: 160,
+                columns: 16,
+                rows: 10,
+                first_tile_index: 0,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Tiles/Grass/Path_Middle.png".to_string(),
+                tile_index: 0,
+                name: "Path Middle".to_string(),
+                has_collision: false,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Tiles/Grass/Path_Decoration.png".to_string(),
+                tile_index: 0,
+                name: "Path Decoration".to_string(),
+                has_collision: false,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Tiles/Cobble_Road/Cobble_Road_1.png".to_string(),
+                tile_index: 0,
+                name: "Cobble Road 1".to_string(),
+                has_collision: false,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Tiles/Cobble_Road/Cobble_Road_2.png".to_string(),
+                tile_index: 0,
+                name: "Cobble Road 2".to_string(),
+                has_collision: false,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Tiles/Pavement_Tiles.png".to_string(),
+                tile_index: 0,
+                name: "Pavement".to_string(),
+                has_collision: false,
+            },
+        ],
+        total_tiles: 0,
+        tile_metadata: std::collections::HashMap::new(),
+        terrain_sets: Vec::new(),
+    };
+
+    // Water tileset
+    let water_tileset = TilesetDefinition {
+        id: "water".to_string(),
+        name: "Water Tiles".to_string(),
+        category: TileCategory::Ground,
+        display_tile_size: 32,
+        sources: vec![
+            TileSource::SingleImage {
+                path: "tiles/Tiles/Water/Water_Middle.png".to_string(),
+                tile_index: 0,
+                name: "Water Middle".to_string(),
+                has_collision: false,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Tiles/Water/Water_Tile_1.png".to_string(),
+                tile_index: 0,
+                name: "Water Tile 1".to_string(),
+                has_collision: false,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Tiles/Water/Water_Tile_2.png".to_string(),
+                tile_index: 0,
+                name: "Water Tile 2".to_string(),
+                has_collision: false,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Tiles/Water/Water_Tile_3.png".to_string(),
+                tile_index: 0,
+                name: "Water Tile 3".to_string(),
+                has_collision: false,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Tiles/Water/Water_Tile_4.png".to_string(),
+                tile_index: 0,
+                name: "Water Tile 4".to_string(),
+                has_collision: false,
+            },
+            TileSource::Spritesheet {
+                path: "tiles/Tiles/Beach/Beach_Tiles.png".to_string(),
+                tile_width: 16,
+                tile_height: 16,
+                margin: 0,
+                spacing: 0,
+                image_width: 480,
+                image_height: 48,
+                columns: 30,
+                rows: 3,
+                first_tile_index: 0,
+            },
+        ],
+        total_tiles: 0,
+        tile_metadata: std::collections::HashMap::new(),
+        terrain_sets: Vec::new(),
+    };
+
+    // Trees tileset
+    let trees_tileset = TilesetDefinition {
+        id: "trees".to_string(),
+        name: "Trees".to_string(),
+        category: TileCategory::Decorations,
+        display_tile_size: 48,
+        sources: vec![
+            TileSource::SingleImage {
+                path: "tiles/Trees/Big_Oak_Tree.png".to_string(),
+                tile_index: 0,
+                name: "Big Oak Tree".to_string(),
+                has_collision: true,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Trees/Big_Birch_Tree.png".to_string(),
+                tile_index: 0,
+                name: "Big Birch Tree".to_string(),
+                has_collision: true,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Trees/Big_Spruce_tree.png".to_string(),
+                tile_index: 0,
+                name: "Big Spruce Tree".to_string(),
+                has_collision: true,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Trees/Big_Fruit_Tree.png".to_string(),
+                tile_index: 0,
+                name: "Big Fruit Tree".to_string(),
+                has_collision: true,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Trees/Medium_Oak_Tree.png".to_string(),
+                tile_index: 0,
+                name: "Medium Oak Tree".to_string(),
+                has_collision: true,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Trees/Medium_Birch_Tree.png".to_string(),
+                tile_index: 0,
+                name: "Medium Birch Tree".to_string(),
+                has_collision: true,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Trees/Medium_Spruce_Tree.png".to_string(),
+                tile_index: 0,
+                name: "Medium Spruce Tree".to_string(),
+                has_collision: true,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Trees/Medium_Fruit_Tree.png".to_string(),
+                tile_index: 0,
+                name: "Medium Fruit Tree".to_string(),
+                has_collision: true,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Trees/Small_Oak_Tree.png".to_string(),
+                tile_index: 0,
+                name: "Small Oak Tree".to_string(),
+                has_collision: true,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Trees/Small_Birch_Tree.png".to_string(),
+                tile_index: 0,
+                name: "Small Birch Tree".to_string(),
+                has_collision: true,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Trees/Small_Spruce_Tree.png".to_string(),
+                tile_index: 0,
+                name: "Small Spruce Tree".to_string(),
+                has_collision: true,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Trees/Small_Fruit_Tree.png".to_string(),
+                tile_index: 0,
+                name: "Small Fruit Tree".to_string(),
+                has_collision: true,
+            },
+        ],
+        total_tiles: 0,
+        tile_metadata: std::collections::HashMap::new(),
+        terrain_sets: Vec::new(),
+    };
+
+    // Outdoor decorations tileset
+    let outdoor_decor_tileset = TilesetDefinition {
+        id: "outdoor_decor".to_string(),
+        name: "Outdoor Decorations".to_string(),
+        category: TileCategory::Decorations,
+        display_tile_size: 32,
+        sources: vec![
+            TileSource::SingleImage {
+                path: "tiles/Outdoor decoration/Flowers.png".to_string(),
+                tile_index: 0,
+                name: "Flowers".to_string(),
+                has_collision: false,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Outdoor decoration/Fountain.png".to_string(),
+                tile_index: 0,
+                name: "Fountain".to_string(),
+                has_collision: true,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Outdoor decoration/Well.png".to_string(),
+                tile_index: 0,
+                name: "Well".to_string(),
+                has_collision: true,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Outdoor decoration/Benches.png".to_string(),
+                tile_index: 0,
+                name: "Benches".to_string(),
+                has_collision: false,
+            },
+            TileSource::Spritesheet {
+                path: "tiles/Outdoor decoration/Fences.png".to_string(),
+                tile_width: 16,
+                tile_height: 16,
+                margin: 0,
+                spacing: 0,
+                image_width: 64,
+                image_height: 64,
+                columns: 4,
+                rows: 4,
+                first_tile_index: 0,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Outdoor decoration/Fence_Big.png".to_string(),
+                tile_index: 0,
+                name: "Fence Big".to_string(),
+                has_collision: true,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Outdoor decoration/barrels.png".to_string(),
+                tile_index: 0,
+                name: "Barrels".to_string(),
+                has_collision: true,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Outdoor decoration/Hay_Bales.png".to_string(),
+                tile_index: 0,
+                name: "Hay Bales".to_string(),
+                has_collision: true,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Outdoor decoration/Lanter_Posts.png".to_string(),
+                tile_index: 0,
+                name: "Lantern Posts".to_string(),
+                has_collision: true,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Outdoor decoration/Camp_Decor.png".to_string(),
+                tile_index: 0,
+                name: "Camp Decor".to_string(),
+                has_collision: false,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Outdoor decoration/Outdoor_Decor.png".to_string(),
+                tile_index: 0,
+                name: "Outdoor Decor".to_string(),
+                has_collision: false,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Outdoor decoration/Signs.png".to_string(),
+                tile_index: 0,
+                name: "Signs".to_string(),
+                has_collision: true,
+            },
+            TileSource::SingleImage {
+                path: "tiles/Outdoor decoration/Boat.png".to_string(),
+                tile_index: 0,
+                name: "Boat".to_string(),
+                has_collision: true,
+            },
+        ],
+        total_tiles: 0,
+        tile_metadata: std::collections::HashMap::new(),
+        terrain_sets: Vec::new(),
+    };
+
+    // Add tilesets and recalculate indices
+    let mut tilesets = vec![ground_tileset, water_tileset, trees_tileset, outdoor_decor_tileset];
+    for tileset in &mut tilesets {
+        tileset.recalculate_indices();
+    }
+
+    let tileset_count = tilesets.len();
+    let total_sources: usize = tilesets.iter().map(|t| t.sources.len()).sum();
+
+    editor_state.world.tile_palette.tilesets = tilesets;
+    editor_state.world.tile_palette.selected_tileset = Some(0);
+    editor_state.world.tile_palette.tileset_textures_loading = true;
+
+    info!("Initialized {} tilesets with {} total sources", tileset_count, total_sources);
+}
+
+/// System to load tileset textures via AssetServer
+fn load_tileset_textures(
+    asset_server: Res<AssetServer>,
+    mut editor_state: ResMut<EditorState>,
+) {
+    if !editor_state.world.tile_palette.tileset_textures_loading {
+        return;
+    }
+
+    // Collect unique image paths from all tileset sources
+    let mut paths_needed: Vec<String> = Vec::new();
+
+    for tileset in &editor_state.world.tile_palette.tilesets {
+        for source in &tileset.sources {
+            let path = source.image_path().to_string();
+            if !paths_needed.contains(&path) {
+                paths_needed.push(path);
+            }
+        }
+    }
+
+    // Find paths that are NOT yet in our handles (need to be loaded)
+    let missing_paths: Vec<String> = paths_needed
+        .iter()
+        .filter(|path| !editor_state.world.tile_palette.tileset_texture_handles.contains_key(*path))
+        .cloned()
+        .collect();
+
+    // If no missing paths, nothing to do
+    if missing_paths.is_empty() {
+        return;
+    }
+
+    info!("Loading {} tileset textures...", missing_paths.len());
+
+    // Load each missing path
+    for path in &missing_paths {
+        let handle = asset_server.load::<Image>(path);
+        editor_state.world.tile_palette.tileset_texture_handles.insert(path.clone(), handle);
+    }
+
+    info!("Initiated loading of {} tileset textures (total: {})",
+        missing_paths.len(),
+        editor_state.world.tile_palette.tileset_texture_handles.len());
+}
+
+/// System to register tileset textures with egui
+fn register_tileset_textures(
+    mut contexts: EguiContexts,
+    mut editor_state: ResMut<EditorState>,
+    images: Res<Assets<Image>>,
+) {
+    if !editor_state.world.tile_palette.tileset_textures_loading {
+        return;
+    }
+    if editor_state.world.tile_palette.tileset_texture_handles.is_empty() {
+        return; // Handles not yet created
+    }
+
+    let mut any_registered = false;
+    let handles_to_check: Vec<_> = editor_state.world.tile_palette.tileset_texture_handles
+        .iter()
+        .filter(|(path, _)| !editor_state.world.tile_palette.tileset_egui_ids.contains_key(*path))
+        .map(|(path, handle)| (path.clone(), handle.clone()))
+        .collect();
+
+    for (path, handle) in handles_to_check {
+        if let Some(image) = images.get(&handle) {
+            // Get image dimensions
+            let image_width = image.width();
+            let image_height = image.height();
+
+            // Update tileset source metadata with actual image dimensions
+            update_tileset_source_dimensions(&mut editor_state, &path, image_width, image_height);
+
+            let egui_handle = bevy_egui::EguiTextureHandle::Strong(handle);
+            let egui_id = contexts.add_image(egui_handle);
+            editor_state.world.tile_palette.tileset_egui_ids.insert(path, egui_id);
+            any_registered = true;
+        }
+    }
+
+    let total = editor_state.world.tile_palette.tileset_texture_handles.len();
+    let registered = editor_state.world.tile_palette.tileset_egui_ids.len();
+
+    if registered == total {
+        editor_state.world.tile_palette.tileset_textures_loading = false;
+        info!("All {} tileset textures registered with egui", registered);
+    } else if any_registered {
+        info!("Tileset texture progress: {}/{} registered", registered, total);
+    }
+}
+
+/// Update the tileset source dimensions when image is loaded
+fn update_tileset_source_dimensions(
+    editor_state: &mut EditorState,
+    path: &str,
+    image_width: u32,
+    image_height: u32,
+) {
+    use crate::editor_state::TileSource;
+
+    for tileset in &mut editor_state.world.tile_palette.tilesets {
+        for source in &mut tileset.sources {
+            if let TileSource::Spritesheet {
+                path: source_path,
+                tile_width,
+                tile_height,
+                margin,
+                spacing,
+                image_width: ref mut iw,
+                image_height: ref mut ih,
+                columns: ref mut cols,
+                rows: ref mut rws,
+                ..
+            } = source {
+                if source_path == path && (*cols == 0 || *rws == 0) {
+                    *iw = image_width;
+                    *ih = image_height;
+
+                    // Calculate columns and rows based on tile size, margin, and spacing
+                    // Formula: columns = (image_width - 2*margin + spacing) / (tile_width + spacing)
+                    let tw = *tile_width;
+                    let th = *tile_height;
+                    let m = *margin;
+                    let s = *spacing;
+
+                    if tw > 0 && th > 0 {
+                        // Account for margin and spacing
+                        let usable_width = image_width.saturating_sub(2 * m);
+                        let usable_height = image_height.saturating_sub(2 * m);
+
+                        *cols = if s > 0 {
+                            (usable_width + s) / (tw + s)
+                        } else {
+                            usable_width / tw
+                        };
+
+                        *rws = if s > 0 {
+                            (usable_height + s) / (th + s)
+                        } else {
+                            usable_height / th
+                        };
+
+                        // Update total tiles
+                        tileset.total_tiles = *cols * *rws;
+
+                        info!(
+                            "Updated tileset source '{}': {}x{} image, {}x{} tiles, {} total",
+                            path, image_width, image_height, *cols, *rws, tileset.total_tiles
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// System to update tileset dimensions for ALL spritesheet sources
+/// This runs independently from registration to ensure dimensions are calculated
+/// even when textures are already registered (e.g., reusing same image path)
+fn update_tileset_dimensions(
+    mut editor_state: ResMut<EditorState>,
+    images: Res<Assets<Image>>,
+) {
+    use crate::editor_state::TileSource;
+
+    // Only run if we have texture handles loaded
+    if editor_state.world.tile_palette.tileset_texture_handles.is_empty() {
+        return;
+    }
+
+    // Track if we made any changes
+    let mut any_updated = false;
+
+    // Get handles clone to avoid borrow issues
+    let handles: Vec<_> = editor_state.world.tile_palette.tileset_texture_handles
+        .iter()
+        .map(|(path, handle)| (path.clone(), handle.clone()))
+        .collect();
+
+    // Check each tileset source
+    for tileset in &mut editor_state.world.tile_palette.tilesets {
+        for source in &mut tileset.sources {
+            if let TileSource::Spritesheet {
+                path: source_path,
+                tile_width,
+                tile_height,
+                margin,
+                spacing,
+                image_width: ref mut iw,
+                image_height: ref mut ih,
+                columns: ref mut cols,
+                rows: ref mut rws,
+                ..
+            } = source {
+                // Only update if dimensions are not yet calculated
+                if *cols == 0 || *rws == 0 {
+                    // Look up the image handle for this path
+                    if let Some((_, handle)) = handles.iter().find(|(p, _)| p == source_path) {
+                        if let Some(image) = images.get(handle) {
+                            let img_w = image.width();
+                            let img_h = image.height();
+
+                            *iw = img_w;
+                            *ih = img_h;
+
+                            let tw = *tile_width;
+                            let th = *tile_height;
+                            let m = *margin;
+                            let s = *spacing;
+
+                            if tw > 0 && th > 0 {
+                                let usable_width = img_w.saturating_sub(2 * m);
+                                let usable_height = img_h.saturating_sub(2 * m);
+
+                                *cols = if s > 0 {
+                                    (usable_width + s) / (tw + s)
+                                } else {
+                                    usable_width / tw
+                                };
+
+                                *rws = if s > 0 {
+                                    (usable_height + s) / (th + s)
+                                } else {
+                                    usable_height / th
+                                };
+
+                                info!(
+                                    "Dimension update for '{}': {}x{} image -> {}x{} grid",
+                                    source_path, img_w, img_h, *cols, *rws
+                                );
+                                any_updated = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Recalculate total tiles for the tileset if we updated anything
+        if any_updated {
+            tileset.recalculate_indices();
         }
     }
 }

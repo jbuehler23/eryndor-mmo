@@ -28,6 +28,15 @@ pub struct ApiResponse<T> {
     pub error: Option<String>,
 }
 
+/// API response that ignores the data field (for PUT/DELETE operations where we don't need the response data)
+#[derive(Debug, Deserialize)]
+pub struct ApiResponseAny {
+    pub success: bool,
+    #[serde(default)]
+    pub error: Option<String>,
+    // Intentionally ignores `data` field - it can be any type
+}
+
 /// Paginated list response
 #[derive(Debug, Deserialize)]
 pub struct ListResponse<T> {
@@ -174,6 +183,53 @@ mod wasm_impl {
             }
 
             self.fetch::<(), ListResponse<T>>("GET", &url, None).await
+        }
+
+        /// PUT JSON to custom URL (returns ApiResponseAny to handle any response data type)
+        pub async fn put_json<T: Serialize>(
+            &self,
+            url: &str,
+            data: &T,
+        ) -> Result<ApiResponseAny, String> {
+            let window = web_sys::window().ok_or("No window object")?;
+
+            let mut opts = RequestInit::new();
+            opts.method("PUT");
+            opts.mode(RequestMode::Cors);
+
+            let headers = Headers::new().map_err(|e| format!("Failed to create headers: {:?}", e))?;
+            headers.set("Content-Type", "application/json").map_err(|e| format!("{:?}", e))?;
+
+            if let Some(token) = &self.config.auth_token {
+                headers.set("Authorization", &format!("Bearer {}", token))
+                    .map_err(|e| format!("{:?}", e))?;
+            }
+
+            opts.headers(&headers);
+
+            let json_body = serde_json::to_string(data)
+                .map_err(|e| format!("Failed to serialize: {}", e))?;
+            opts.body(Some(&JsValue::from_str(&json_body)));
+
+            let request = Request::new_with_str_and_init(url, &opts)
+                .map_err(|e| format!("Failed to create request: {:?}", e))?;
+
+            let resp_value = JsFuture::from(window.fetch_with_request(&request))
+                .await
+                .map_err(|e| format!("Fetch failed: {:?}", e))?;
+
+            let resp: Response = resp_value.dyn_into()
+                .map_err(|_| "Response is not a Response object")?;
+
+            let json = JsFuture::from(resp.json().map_err(|e| format!("{:?}", e))?)
+                .await
+                .map_err(|e| format!("Failed to get JSON: {:?}", e))?;
+
+            // Use ApiResponseAny which ignores the data field
+            let result: ApiResponseAny = serde_wasm_bindgen::from_value(json)
+                .map_err(|e| format!("Failed to deserialize: {:?}", e))?;
+
+            Ok(result)
         }
 
         /// Internal fetch implementation
@@ -339,6 +395,26 @@ mod native_impl {
             let client = reqwest::Client::new();
 
             let mut request = client.get(&url);
+            if let Some(token) = &self.config.auth_token {
+                request = request.header("Authorization", format!("Bearer {}", token));
+            }
+
+            let response = request.send().await
+                .map_err(|e| format!("Request failed: {}", e))?;
+
+            response.json().await
+                .map_err(|e| format!("Failed to parse response: {}", e))
+        }
+
+        /// PUT JSON to custom URL (returns ApiResponseAny to handle any response data type)
+        pub async fn put_json<T: Serialize>(
+            &self,
+            url: &str,
+            data: &T,
+        ) -> Result<ApiResponseAny, String> {
+            let client = reqwest::Client::new();
+
+            let mut request = client.put(url).json(data);
             if let Some(token) = &self.config.auth_token {
                 request = request.header("Authorization", format!("Bearer {}", token));
             }

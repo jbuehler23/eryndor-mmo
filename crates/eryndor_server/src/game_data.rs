@@ -199,6 +199,9 @@ pub struct ZoneDatabase {
 pub struct ZoneDefinition {
     pub zone_id: String,
     pub zone_name: String,
+    /// Optional tilemap data for the zone (ground tiles, decorations, collision)
+    #[serde(default)]
+    pub tilemap: Option<ZoneTilemap>,
     pub enemy_spawns: Vec<EnemySpawnRegion>,
     pub npc_spawns: Vec<NpcSpawnDef>,
 }
