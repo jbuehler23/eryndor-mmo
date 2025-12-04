@@ -5,8 +5,10 @@
 use bevy::prelude::*;
 use bevy::input::mouse::MouseWheel;
 use bevy_egui::EguiContexts;
+use std::collections::HashMap;
 
 use crate::autotile;
+use crate::commands::{CommandHistory, BatchTileCommand, collect_tiles_in_region};
 use crate::map::{EntityInstance, LayerData};
 use crate::project::Project;
 use crate::EditorState;
@@ -19,9 +21,11 @@ pub struct EditorToolsPlugin;
 impl Plugin for EditorToolsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ViewportInputState>()
+            .init_resource::<PaintStrokeTracker>()
             .add_systems(Update, (
                 handle_viewport_input,
                 handle_zoom_input,
+                finalize_paint_stroke,
             ));
     }
 }
@@ -43,6 +47,51 @@ pub struct ViewportInputState {
     pub last_paint_target: Option<autotile::PaintTarget>,
 }
 
+/// Tracks tile changes during a painting stroke for undo support
+#[derive(Resource, Default)]
+pub struct PaintStrokeTracker {
+    /// Whether we're currently in a paint stroke
+    pub active: bool,
+    /// The level being painted
+    pub level_id: Option<uuid::Uuid>,
+    /// The layer being painted
+    pub layer_idx: Option<usize>,
+    /// Changes made during this stroke: (x, y) -> (old_tile, new_tile)
+    pub changes: HashMap<(u32, u32), (Option<u32>, Option<u32>)>,
+    /// Description of the operation
+    pub description: String,
+}
+
+/// Capture a snapshot of tiles in a region around a center point for undo tracking
+/// Returns a map of (x, y) -> tile_value for tiles within the specified radius
+fn capture_tile_region(
+    tiles: &[Option<u32>],
+    width: u32,
+    height: u32,
+    center_x: i32,
+    center_y: i32,
+    radius: i32,
+) -> HashMap<(u32, u32), Option<u32>> {
+    let mut snapshot = HashMap::new();
+
+    for dy in -radius..=radius {
+        for dx in -radius..=radius {
+            let x = center_x + dx;
+            let y = center_y + dy;
+
+            if x >= 0 && y >= 0 && x < width as i32 && y < height as i32 {
+                let x = x as u32;
+                let y = y as u32;
+                let idx = (y * width + x) as usize;
+                let tile = tiles.get(idx).copied().flatten();
+                snapshot.insert((x, y), tile);
+            }
+        }
+    }
+
+    snapshot
+}
+
 /// System to handle viewport input (painting, panning)
 fn handle_viewport_input(
     mut contexts: EguiContexts,
@@ -50,6 +99,8 @@ fn handle_viewport_input(
     mut project: ResMut<Project>,
     mut render_state: ResMut<RenderState>,
     mut input_state: ResMut<ViewportInputState>,
+    mut stroke_tracker: ResMut<PaintStrokeTracker>,
+    mut history: ResMut<CommandHistory>,
     windows: Query<&Window>,
     camera_q: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
@@ -110,7 +161,7 @@ fn handle_viewport_input(
     let is_rectangle_mode = editor_state.tool_mode == ToolMode::Rectangle
         && editor_state.current_tool.supports_modes();
 
-    // Handle painting/erasing/entity placement with left mouse
+    // Handle painting/erasing/entity placement/selection with left mouse
     if mouse_buttons.just_pressed(MouseButton::Left) && !input_state.is_panning {
         match editor_state.current_tool {
             EditorTool::Entity => {
@@ -118,6 +169,15 @@ fn handle_viewport_input(
             }
             EditorTool::Fill => {
                 fill_area(&mut editor_state, &mut project, &mut render_state, world_pos);
+            }
+            // Select tool - start marquee selection
+            EditorTool::Select => {
+                let tile_x = (world_pos.x / tile_size).floor() as i32;
+                let tile_y = (-world_pos.y / tile_size).floor() as i32;
+                input_state.rect_start_tile = Some((tile_x, tile_y));
+                input_state.is_drawing_rect = true;
+                editor_state.tile_selection.is_selecting = true;
+                editor_state.tile_selection.drag_start = Some((tile_x, tile_y));
             }
             // For tools that support modes, start rectangle drawing if in Rectangle mode
             EditorTool::Paint | EditorTool::Erase | EditorTool::Terrain if is_rectangle_mode => {
@@ -139,10 +199,35 @@ fn handle_viewport_input(
             // Fill based on the current tool
             match editor_state.current_tool {
                 EditorTool::Terrain => {
-                    fill_terrain_rectangle(&mut editor_state, &mut project, &mut render_state, start_x, start_y, end_x, end_y);
+                    fill_terrain_rectangle(&mut editor_state, &mut project, &mut render_state, &mut history, start_x, start_y, end_x, end_y);
                 }
                 EditorTool::Paint | EditorTool::Erase => {
                     fill_rectangle(&mut editor_state, &mut project, &mut render_state, start_x, start_y, end_x, end_y);
+                }
+                EditorTool::Select => {
+                    // Finalize marquee selection
+                    if let (Some(level_id), Some(layer_idx)) = (editor_state.selected_level, editor_state.selected_layer) {
+                        // Additive selection not yet implemented (would need keyboard input param)
+                        let additive = false;
+
+                        // Normalize rectangle bounds
+                        let min_x = start_x.min(end_x).max(0) as u32;
+                        let max_x = start_x.max(end_x).max(0) as u32;
+                        let min_y = start_y.min(end_y).max(0) as u32;
+                        let max_y = start_y.max(end_y).max(0) as u32;
+
+                        editor_state.tile_selection.select_rectangle(
+                            level_id,
+                            layer_idx,
+                            min_x,
+                            min_y,
+                            max_x,
+                            max_y,
+                            additive,
+                        );
+                    }
+                    editor_state.tile_selection.is_selecting = false;
+                    editor_state.tile_selection.drag_start = None;
                 }
                 _ => {}
             }
@@ -155,13 +240,13 @@ fn handle_viewport_input(
     if mouse_buttons.pressed(MouseButton::Left) && !input_state.is_panning && !is_rectangle_mode {
         match editor_state.current_tool {
             EditorTool::Paint => {
-                paint_tile(&mut editor_state, &mut project, &mut render_state, world_pos);
+                paint_tile(&mut editor_state, &mut project, &mut render_state, &mut stroke_tracker, world_pos);
             }
             EditorTool::Terrain => {
-                paint_terrain_tile(&mut editor_state, &mut project, &mut render_state, &mut input_state, world_pos);
+                paint_terrain_tile(&mut editor_state, &mut project, &mut render_state, &mut input_state, &mut stroke_tracker, world_pos);
             }
             EditorTool::Erase => {
-                erase_tile(&mut editor_state, &mut project, &mut render_state, world_pos);
+                erase_tile(&mut editor_state, &mut project, &mut render_state, &mut stroke_tracker, world_pos);
             }
             _ => {}
         }
@@ -240,6 +325,7 @@ fn paint_tile(
     editor_state: &mut EditorState,
     project: &mut Project,
     render_state: &mut RenderState,
+    stroke_tracker: &mut PaintStrokeTracker,
     world_pos: Vec2,
 ) {
     // Need a selected level, layer, tile, and tileset
@@ -293,9 +379,31 @@ fn paint_tile(
         }
     }
 
+    // Get old tile for undo tracking
+    let old_tile = level.get_tile(layer_idx, tile_x, tile_y);
+
     // Set the tile
     level.set_tile(layer_idx, tile_x, tile_y, Some(tile_index));
     project.mark_dirty();
+
+    // Track changes for undo
+    if !stroke_tracker.active {
+        stroke_tracker.active = true;
+        stroke_tracker.level_id = Some(level_id);
+        stroke_tracker.layer_idx = Some(layer_idx);
+        stroke_tracker.changes.clear();
+        stroke_tracker.description = "Paint Tiles".to_string();
+    }
+
+    // Only track if this is a new change for this position
+    if !stroke_tracker.changes.contains_key(&(tile_x, tile_y)) {
+        stroke_tracker.changes.insert((tile_x, tile_y), (old_tile, Some(tile_index)));
+    } else {
+        // Update the new_tile value but keep the original old_tile
+        if let Some(change) = stroke_tracker.changes.get_mut(&(tile_x, tile_y)) {
+            change.1 = Some(tile_index);
+        }
+    }
 
     // Mark for re-render
     render_state.needs_rebuild = true;
@@ -309,6 +417,7 @@ fn erase_tile(
     editor_state: &mut EditorState,
     project: &mut Project,
     render_state: &mut RenderState,
+    stroke_tracker: &mut PaintStrokeTracker,
     world_pos: Vec2,
 ) {
     // Need a selected level and layer
@@ -353,9 +462,31 @@ fn erase_tile(
     let tile_x = tile_x as u32;
     let tile_y = tile_y as u32;
 
+    // Get old tile for undo tracking
+    let old_tile = level.get_tile(layer_idx, tile_x, tile_y);
+
     // Erase the tile
     level.set_tile(layer_idx, tile_x, tile_y, None);
     project.mark_dirty();
+
+    // Track changes for undo
+    if !stroke_tracker.active {
+        stroke_tracker.active = true;
+        stroke_tracker.level_id = Some(level_id);
+        stroke_tracker.layer_idx = Some(layer_idx);
+        stroke_tracker.changes.clear();
+        stroke_tracker.description = "Erase Tiles".to_string();
+    }
+
+    // Only track if this is a new change for this position
+    if !stroke_tracker.changes.contains_key(&(tile_x, tile_y)) {
+        stroke_tracker.changes.insert((tile_x, tile_y), (old_tile, None));
+    } else {
+        // Update the new_tile value but keep the original old_tile
+        if let Some(change) = stroke_tracker.changes.get_mut(&(tile_x, tile_y)) {
+            change.1 = None;
+        }
+    }
 
     // Mark for re-render
     render_state.needs_rebuild = true;
@@ -556,6 +687,7 @@ fn paint_terrain_tile(
     project: &mut Project,
     render_state: &mut RenderState,
     input_state: &mut ViewportInputState,
+    stroke_tracker: &mut PaintStrokeTracker,
     world_pos: Vec2,
 ) {
     // Need a selected level and layer
@@ -565,10 +697,10 @@ fn paint_terrain_tile(
     // Check if we're using new terrain sets or legacy terrains
     if let Some(terrain_set_id) = editor_state.selected_terrain_set {
         // New Tiled-style terrain system
-        paint_terrain_set_tile(editor_state, project, render_state, input_state, world_pos, level_id, layer_idx, terrain_set_id);
+        paint_terrain_set_tile(editor_state, project, render_state, input_state, stroke_tracker, world_pos, level_id, layer_idx, terrain_set_id);
     } else if let Some(terrain_id) = editor_state.selected_terrain {
         // Legacy 47-tile blob terrain system
-        paint_legacy_terrain_tile(editor_state, project, render_state, world_pos, level_id, layer_idx, terrain_id);
+        paint_legacy_terrain_tile(editor_state, project, render_state, stroke_tracker, world_pos, level_id, layer_idx, terrain_id);
     }
 }
 
@@ -578,6 +710,7 @@ fn paint_terrain_set_tile(
     project: &mut Project,
     render_state: &mut RenderState,
     input_state: &mut ViewportInputState,
+    stroke_tracker: &mut PaintStrokeTracker,
     world_pos: Vec2,
     level_id: uuid::Uuid,
     layer_idx: usize,
@@ -646,6 +779,17 @@ fn paint_terrain_set_tile(
         return;
     };
 
+    // Snapshot tiles in the affected region before painting (for undo tracking)
+    // Terrain painting affects a region around the paint target, typically 3x3 or larger
+    let (center_x, center_y): (i32, i32) = match paint_target {
+        autotile::PaintTarget::Corner { corner_x, corner_y } => (corner_x as i32, corner_y as i32),
+        autotile::PaintTarget::HorizontalEdge { tile_x, edge_y } => (tile_x as i32, edge_y as i32),
+        autotile::PaintTarget::VerticalEdge { edge_x, tile_y } => (edge_x as i32, tile_y as i32),
+    };
+
+    // Capture a 5x5 region around the center for undo (terrain painting can affect neighbors)
+    let snapshot_region = capture_tile_region(tiles, level_width, level_height, center_x, center_y, 2);
+
     // Use the autotile module to paint at the determined target (corner or edge)
     autotile::paint_terrain_at_target(
         tiles,
@@ -655,6 +799,32 @@ fn paint_terrain_set_tile(
         &terrain_set,
         terrain_idx,
     );
+
+    // Track changes for undo by comparing before/after
+    if !stroke_tracker.active {
+        stroke_tracker.active = true;
+        stroke_tracker.level_id = Some(level_id);
+        stroke_tracker.layer_idx = Some(layer_idx);
+        stroke_tracker.changes.clear();
+        stroke_tracker.description = "Paint Terrain".to_string();
+    }
+
+    // Compare snapshot to current state and record changes
+    for ((x, y), old_tile) in snapshot_region {
+        let idx = (y * level_width + x) as usize;
+        let new_tile = tiles.get(idx).copied().flatten();
+        if old_tile != new_tile {
+            // Only track if this position hasn't been tracked yet in this stroke
+            if !stroke_tracker.changes.contains_key(&(x, y)) {
+                stroke_tracker.changes.insert((x, y), (old_tile, new_tile));
+            } else {
+                // Update the new_tile value but keep the original old_tile
+                if let Some(change) = stroke_tracker.changes.get_mut(&(x, y)) {
+                    change.1 = new_tile;
+                }
+            }
+        }
+    }
 
     project.mark_dirty();
     render_state.needs_rebuild = true;
@@ -668,6 +838,7 @@ fn paint_legacy_terrain_tile(
     editor_state: &mut EditorState,
     project: &mut Project,
     render_state: &mut RenderState,
+    stroke_tracker: &mut PaintStrokeTracker,
     world_pos: Vec2,
     level_id: uuid::Uuid,
     layer_idx: usize,
@@ -702,8 +873,8 @@ fn paint_legacy_terrain_tile(
         return;
     }
 
-    let tile_x = tile_x as u32;
-    let tile_y = tile_y as u32;
+    let tile_x_u32 = tile_x as u32;
+    let tile_y_u32 = tile_y as u32;
 
     // Check tileset compatibility - only update if layer is empty, otherwise require matching tileset
     let (has_tiles, layer_tileset) = level.layers.get(layer_idx)
@@ -724,9 +895,15 @@ fn paint_legacy_terrain_tile(
         }
     }
 
+    let level_width = level.width;
+    let level_height = level.height;
+
     // Get the tiles array for this layer and apply autotiling
     if let Some(layer) = level.layers.get_mut(layer_idx) {
         if let LayerData::Tiles { tiles, .. } = &mut layer.data {
+            // Snapshot tiles around the paint area for undo tracking (3x3 region)
+            let snapshot_region = capture_tile_region(tiles, level_width, level_height, tile_x, tile_y, 1);
+
             // Create a closure that checks if a tile belongs to this terrain
             // A tile belongs to the terrain if it's within the terrain's tile range
             let first_tile = terrain.base_tile.saturating_sub(46);
@@ -741,13 +918,37 @@ fn paint_legacy_terrain_tile(
             // Use the autotile module to paint with proper neighbor updates
             autotile::paint_autotile(
                 tiles,
-                level.width,
-                level.height,
-                tile_x,
-                tile_y,
+                level_width,
+                level_height,
+                tile_x_u32,
+                tile_y_u32,
                 &terrain,
                 is_terrain_tile,
             );
+
+            // Track changes for undo by comparing before/after
+            if !stroke_tracker.active {
+                stroke_tracker.active = true;
+                stroke_tracker.level_id = Some(level_id);
+                stroke_tracker.layer_idx = Some(layer_idx);
+                stroke_tracker.changes.clear();
+                stroke_tracker.description = "Paint Terrain".to_string();
+            }
+
+            // Compare snapshot to current state and record changes
+            for ((x, y), old_tile) in snapshot_region {
+                let idx = (y * level_width + x) as usize;
+                let new_tile = tiles.get(idx).copied().flatten();
+                if old_tile != new_tile {
+                    if !stroke_tracker.changes.contains_key(&(x, y)) {
+                        stroke_tracker.changes.insert((x, y), (old_tile, new_tile));
+                    } else {
+                        if let Some(change) = stroke_tracker.changes.get_mut(&(x, y)) {
+                            change.1 = new_tile;
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -755,7 +956,7 @@ fn paint_legacy_terrain_tile(
     render_state.needs_rebuild = true;
 
     editor_state.is_painting = true;
-    editor_state.last_painted_tile = Some((tile_x, tile_y));
+    editor_state.last_painted_tile = Some((tile_x_u32, tile_y_u32));
 }
 
 /// Fill a rectangular area with terrain tiles using the autotile system
@@ -763,6 +964,7 @@ fn fill_terrain_rectangle(
     editor_state: &mut EditorState,
     project: &mut Project,
     render_state: &mut RenderState,
+    history: &mut CommandHistory,
     start_x: i32,
     start_y: i32,
     end_x: i32,
@@ -790,6 +992,21 @@ fn fill_terrain_rectangle(
     let max_x = start_x.max(end_x).min(level_width - 1);
     let min_y = start_y.min(end_y).max(0);
     let max_y = start_y.max(end_y).min(level_height - 1);
+
+    // Calculate the affected region (includes neighbors for autotiling)
+    let update_min_x = (min_x - 1).max(0);
+    let update_max_x = (max_x + 1).min(level_width - 1);
+    let update_min_y = (min_y - 1).max(0);
+    let update_max_y = (max_y + 1).min(level_height - 1);
+
+    // Capture tile state BEFORE modifications for undo
+    let before_tiles = collect_tiles_in_region(
+        project, level_id, layer_idx,
+        update_min_x, update_max_x, update_min_y, update_max_y,
+    );
+
+    // Re-get mutable level reference after immutable borrow
+    let Some(level) = project.get_level_mut(level_id) else { return };
 
     // Check tileset compatibility
     let (has_tiles, layer_tileset) = level.layers.get(layer_idx)
@@ -884,6 +1101,82 @@ fn fill_terrain_rectangle(
         }
     }
 
+    // Capture tile state AFTER modifications for undo command
+    let after_tiles = collect_tiles_in_region(
+        project, level_id, layer_idx,
+        update_min_x, update_max_x, update_min_y, update_max_y,
+    );
+
+    // Create undo command from diff and push to history
+    let command = BatchTileCommand::from_diff(
+        level_id,
+        layer_idx,
+        before_tiles,
+        after_tiles,
+        "Fill Terrain Rectangle",
+    );
+
+    // Only add to history if there were actual changes
+    if !command.changes.is_empty() {
+        // Create inverse for undo (swap old and new)
+        let mut inverse_changes = std::collections::HashMap::new();
+        for ((x, y), (old_tile, new_tile)) in &command.changes {
+            inverse_changes.insert((*x, *y), (*new_tile, *old_tile));
+        }
+
+        let inverse_command = BatchTileCommand::new(
+            level_id,
+            layer_idx,
+            inverse_changes,
+            "Undo Fill Terrain Rectangle",
+        );
+        history.push_undo(Box::new(inverse_command));
+    }
+
     project.mark_dirty();
     render_state.needs_rebuild = true;
+}
+
+/// System to finalize paint strokes and create undo commands
+fn finalize_paint_stroke(
+    mut stroke_tracker: ResMut<PaintStrokeTracker>,
+    mut history: ResMut<CommandHistory>,
+    editor_state: Res<EditorState>,
+    mouse_buttons: Res<ButtonInput<MouseButton>>,
+) {
+    // Only finalize when left mouse button is released and we have an active stroke
+    if !stroke_tracker.active {
+        return;
+    }
+
+    // Check if painting has stopped
+    if !editor_state.is_painting && !mouse_buttons.pressed(MouseButton::Left) {
+        // Finalize the stroke - create a command for undo
+        if !stroke_tracker.changes.is_empty() {
+            if let (Some(level_id), Some(layer_idx)) = (stroke_tracker.level_id, stroke_tracker.layer_idx) {
+                // We need to create the inverse command manually since we already applied changes
+                let mut inverse_changes = HashMap::new();
+                for ((x, y), (old_tile, new_tile)) in &stroke_tracker.changes {
+                    // Swap old and new for inverse
+                    inverse_changes.insert((*x, *y), (*new_tile, *old_tile));
+                }
+
+                let inverse_command = BatchTileCommand::new(
+                    level_id,
+                    layer_idx,
+                    inverse_changes,
+                    stroke_tracker.description.clone(),
+                );
+
+                history.push_undo(Box::new(inverse_command));
+            }
+        }
+
+        // Reset the stroke tracker
+        stroke_tracker.active = false;
+        stroke_tracker.level_id = None;
+        stroke_tracker.layer_idx = None;
+        stroke_tracker.changes.clear();
+        stroke_tracker.description.clear();
+    }
 }

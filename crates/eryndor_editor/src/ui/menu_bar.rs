@@ -1,5 +1,6 @@
 use bevy_egui::egui;
 
+use crate::commands::{CommandHistory, TileClipboard};
 use crate::project::Project;
 use crate::EditorState;
 use super::UiState;
@@ -9,6 +10,8 @@ pub fn render_menu_bar(
     ui_state: &mut UiState,
     editor_state: &mut EditorState,
     project: &mut Project,
+    history: Option<&CommandHistory>,
+    clipboard: Option<&TileClipboard>,
 ) {
     egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
         egui::MenuBar::new().ui(ui, |ui| {
@@ -49,25 +52,63 @@ pub fn render_menu_bar(
 
             // Edit menu
             ui.menu_button("Edit", |ui| {
-                if ui.button("Undo").clicked() {
-                    // TODO: Implement undo
+                // Undo
+                let can_undo = history.map(|h| h.can_undo()).unwrap_or(false);
+                let undo_text = history
+                    .and_then(|h| h.undo_description())
+                    .map(|desc| format!("Undo {}", desc))
+                    .unwrap_or_else(|| "Undo".to_string());
+
+                if ui.add_enabled(can_undo, egui::Button::new(&undo_text)).clicked() {
+                    editor_state.pending_action = Some(PendingAction::Undo);
                     ui.close();
                 }
-                if ui.button("Redo").clicked() {
-                    // TODO: Implement redo
+
+                // Redo
+                let can_redo = history.map(|h| h.can_redo()).unwrap_or(false);
+                let redo_text = history
+                    .and_then(|h| h.redo_description())
+                    .map(|desc| format!("Redo {}", desc))
+                    .unwrap_or_else(|| "Redo".to_string());
+
+                if ui.add_enabled(can_redo, egui::Button::new(&redo_text)).clicked() {
+                    editor_state.pending_action = Some(PendingAction::Redo);
                     ui.close();
                 }
+
                 ui.separator();
-                if ui.button("Cut").clicked() {
-                    // TODO: Implement cut
+
+                // Cut
+                let has_selection = !editor_state.tile_selection.is_empty();
+                if ui.add_enabled(has_selection, egui::Button::new("Cut")).clicked() {
+                    editor_state.pending_action = Some(PendingAction::Cut);
                     ui.close();
                 }
-                if ui.button("Copy").clicked() {
-                    // TODO: Implement copy
+
+                // Copy
+                if ui.add_enabled(has_selection, egui::Button::new("Copy")).clicked() {
+                    editor_state.pending_action = Some(PendingAction::Copy);
                     ui.close();
                 }
-                if ui.button("Paste").clicked() {
-                    // TODO: Implement paste
+
+                // Paste
+                let can_paste = clipboard.map(|c| c.has_content()).unwrap_or(false);
+                if ui.add_enabled(can_paste, egui::Button::new("Paste")).clicked() {
+                    editor_state.pending_action = Some(PendingAction::Paste);
+                    ui.close();
+                }
+
+                ui.separator();
+
+                // Delete
+                if ui.add_enabled(has_selection, egui::Button::new("Delete")).clicked() {
+                    editor_state.pending_delete_selection = true;
+                    ui.close();
+                }
+
+                // Select All
+                if ui.button("Select All").clicked() {
+                    editor_state.pending_action = Some(PendingAction::SelectAll);
                     ui.close();
                 }
             });
@@ -78,6 +119,10 @@ pub fn render_menu_bar(
                     ui.close();
                 }
                 if ui.checkbox(&mut ui_state.show_inspector, "Inspector").clicked() {
+                    ui.close();
+                }
+                ui.separator();
+                if ui.checkbox(&mut editor_state.show_grid, "Show Grid").clicked() {
                     ui.close();
                 }
                 ui.separator();
@@ -167,4 +212,10 @@ pub enum PendingAction {
     Save,
     SaveAs,
     Export,
+    Undo,
+    Redo,
+    Cut,
+    Copy,
+    Paste,
+    SelectAll,
 }

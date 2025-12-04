@@ -29,7 +29,9 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass, EguiTextureHandle};
 use uuid::Uuid;
 
+use crate::commands::{CommandHistory, TileClipboard};
 use crate::project::Project;
+use crate::render::RenderState;
 use crate::EditorState;
 
 /// Resource to track spritesheet texture loading
@@ -66,6 +68,7 @@ impl Plugin for EditorUiPlugin {
                 update_animation_preview,
                 load_spritesheet_textures,
                 load_tileset_textures,
+                process_edit_actions,
             ))
             .add_systems(EguiPrimaryContextPass, render_ui);
     }
@@ -263,11 +266,13 @@ fn render_ui(
     mut project: ResMut<Project>,
     tileset_cache: Res<TilesetTextureCache>,
     assets_base_path: Res<crate::AssetsBasePath>,
+    history: Res<CommandHistory>,
+    clipboard: Res<TileClipboard>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else { return };
 
     // Menu bar
-    render_menu_bar(ctx, &mut ui_state, &mut editor_state, &mut project);
+    render_menu_bar(ctx, &mut ui_state, &mut editor_state, &mut project, Some(&history), Some(&clipboard));
 
     // Toolbar
     render_toolbar(ctx, &mut editor_state);
@@ -586,4 +591,74 @@ fn convert_to_asset_path(absolute_path: &str) -> String {
     }
 
     path
+}
+
+/// System to process edit-related pending actions (Undo, Redo, Copy, Cut, Paste, SelectAll)
+fn process_edit_actions(
+    mut editor_state: ResMut<EditorState>,
+    mut project: ResMut<Project>,
+    mut history: ResMut<CommandHistory>,
+    mut clipboard: ResMut<TileClipboard>,
+    mut render_state: ResMut<RenderState>,
+) {
+    // Check for pending edit actions
+    let action = editor_state.pending_action.take();
+
+    if let Some(action) = action {
+        match action {
+            PendingAction::Undo => {
+                history.undo(&mut project, &mut render_state);
+            }
+            PendingAction::Redo => {
+                history.redo(&mut project, &mut render_state);
+            }
+            PendingAction::Copy => {
+                clipboard.copy_selection(&editor_state.tile_selection, &project, &editor_state);
+            }
+            PendingAction::Cut => {
+                // Copy first
+                clipboard.copy_selection(&editor_state.tile_selection, &project, &editor_state);
+                // Then flag for deletion (handled elsewhere)
+                editor_state.pending_delete_selection = true;
+            }
+            PendingAction::Paste => {
+                if clipboard.has_content() {
+                    editor_state.is_pasting = true;
+                }
+            }
+            PendingAction::SelectAll => {
+                select_all_visible_tiles(&mut editor_state, &project);
+            }
+            // File operations are handled in dialogs.rs
+            _ => {
+                // Put the action back so dialogs.rs can handle it
+                editor_state.pending_action = Some(action);
+            }
+        }
+    }
+}
+
+/// Select all tiles in the current layer
+fn select_all_visible_tiles(editor_state: &mut EditorState, project: &Project) {
+    let Some(level_id) = editor_state.selected_level else {
+        return;
+    };
+    let Some(layer_idx) = editor_state.selected_layer else {
+        return;
+    };
+
+    let Some(level) = project.levels.iter().find(|l| l.id == level_id) else {
+        return;
+    };
+
+    editor_state.tile_selection.clear();
+    editor_state.tile_selection.select_rectangle(
+        level_id,
+        layer_idx,
+        0,
+        0,
+        level.width.saturating_sub(1),
+        level.height.saturating_sub(1),
+        false,
+    );
 }

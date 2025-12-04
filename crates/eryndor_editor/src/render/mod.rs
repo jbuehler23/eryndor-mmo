@@ -18,9 +18,11 @@ pub struct MapRenderPlugin;
 impl Plugin for MapRenderPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<RenderState>()
+            .init_resource::<SelectionRenderState>()
             .add_systems(Update, sync_level_rendering)
             .add_systems(Update, sync_grid_rendering)
             .add_systems(Update, sync_selection_preview)
+            .add_systems(Update, sync_tile_selection_highlights)
             .add_systems(Update, update_camera_from_editor_state);
     }
 }
@@ -459,4 +461,82 @@ fn get_tile_size(editor_state: &EditorState, project: &Project) -> f32 {
         .and_then(|id| project.tilesets.iter().find(|t| t.id == id))
         .map(|t| t.tile_size as f32)
         .unwrap_or(32.0)
+}
+
+/// Resource tracking the current selection highlight state for change detection
+#[derive(Resource, Default)]
+pub struct SelectionRenderState {
+    /// Set of currently highlighted tiles (level_id, layer_idx, x, y)
+    pub highlighted_tiles: std::collections::HashSet<(Uuid, usize, u32, u32)>,
+    /// Entities for each highlight sprite
+    pub highlight_entities: HashMap<(Uuid, usize, u32, u32), Entity>,
+}
+
+/// Marker component for tile selection highlight sprites
+#[derive(Component)]
+pub struct TileSelectionHighlight;
+
+/// System to render tile selection highlights
+fn sync_tile_selection_highlights(
+    mut commands: Commands,
+    editor_state: Res<EditorState>,
+    project: Res<Project>,
+    mut selection_state: ResMut<SelectionRenderState>,
+) {
+    let current_selection = &editor_state.tile_selection.tiles;
+
+    // Check if selection has changed
+    if *current_selection == selection_state.highlighted_tiles {
+        return;
+    }
+
+    // Find tiles to remove (in old selection but not in new)
+    let to_remove: Vec<_> = selection_state.highlighted_tiles
+        .difference(current_selection)
+        .cloned()
+        .collect();
+
+    // Find tiles to add (in new selection but not in old)
+    let to_add: Vec<_> = current_selection
+        .difference(&selection_state.highlighted_tiles)
+        .cloned()
+        .collect();
+
+    // Remove old highlights
+    for key in to_remove {
+        if let Some(entity) = selection_state.highlight_entities.remove(&key) {
+            commands.entity(entity).despawn();
+        }
+    }
+
+    // Get tile size for positioning
+    let tile_size = get_tile_size(&editor_state, &project);
+    let highlight_color = Color::srgba(0.2, 0.6, 1.0, 0.4); // Blue highlight
+
+    // Add new highlights
+    for (level_id, layer_idx, x, y) in to_add {
+        // Only render highlights for the currently selected level
+        if Some(level_id) != editor_state.selected_level {
+            continue;
+        }
+
+        // Calculate world position
+        let world_x = x as f32 * tile_size + tile_size / 2.0;
+        let world_y = -(y as f32 * tile_size) - tile_size / 2.0;
+
+        let entity = commands.spawn((
+            Sprite {
+                color: highlight_color,
+                custom_size: Some(Vec2::new(tile_size, tile_size)),
+                ..default()
+            },
+            Transform::from_xyz(world_x, world_y, 150.0), // Above tiles, below grid
+            TileSelectionHighlight,
+        )).id();
+
+        selection_state.highlight_entities.insert((level_id, layer_idx, x, y), entity);
+    }
+
+    // Update tracked state
+    selection_state.highlighted_tiles = current_selection.clone();
 }

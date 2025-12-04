@@ -7,6 +7,7 @@ pub mod autotile;
 pub mod automap;
 pub mod templates;
 pub mod render;
+pub mod commands;
 
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
@@ -17,6 +18,8 @@ use schema::default_schema;
 use ui::{DialogueEditorState, EditorTool, EditorUiPlugin, PendingAction, SchemaEditorState, Selection, SpriteEditorState, TilesetEditorState, TerrainPaintState, ToolMode};
 use render::MapRenderPlugin;
 use tools::EditorToolsPlugin;
+use commands::{CommandHistory, TileClipboard, handle_keyboard_shortcuts};
+use commands::clipboard::TileSelection;
 
 /// Resource storing the base assets path for converting absolute paths to relative
 #[derive(Resource, Default)]
@@ -57,7 +60,10 @@ impl Plugin for EditorPlugin {
         .add_plugins(MapRenderPlugin)
         .add_plugins(EditorToolsPlugin)
         .init_resource::<EditorState>()
-        .insert_resource(Project::new(default_schema()));
+        .init_resource::<CommandHistory>()
+        .init_resource::<TileClipboard>()
+        .insert_resource(Project::new(default_schema()))
+        .add_systems(Update, handle_keyboard_shortcuts);
     }
 }
 
@@ -142,6 +148,13 @@ pub struct EditorState {
 
     // Terrain painting palette
     pub terrain_paint_state: TerrainPaintState,
+
+    // Tile selection (for copy/paste/delete)
+    pub tile_selection: TileSelection,
+
+    // Clipboard/paste state
+    pub is_pasting: bool,
+    pub pending_delete_selection: bool,
 }
 
 impl Default for EditorState {
@@ -210,6 +223,10 @@ impl Default for EditorState {
             tileset_editor_state: TilesetEditorState::default(),
 
             terrain_paint_state: TerrainPaintState::new(),
+
+            tile_selection: TileSelection::default(),
+            is_pasting: false,
+            pending_delete_selection: false,
         }
     }
 }

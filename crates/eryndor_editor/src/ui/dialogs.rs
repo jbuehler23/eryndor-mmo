@@ -321,6 +321,12 @@ fn process_pending_actions(editor_state: &mut EditorState, project: &mut Project
             PendingAction::Export => {
                 editor_state.error_message = Some("Export not yet implemented.".to_string());
             }
+            // These are handled by the keyboard shortcuts system or have immediate effect
+            PendingAction::Undo | PendingAction::Redo |
+            PendingAction::Cut | PendingAction::Copy |
+            PendingAction::Paste | PendingAction::SelectAll => {
+                // Handled elsewhere
+            }
         }
     }
 }
