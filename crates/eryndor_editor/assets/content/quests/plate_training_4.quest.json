@@ -1,9 +1,0 @@
-{
-  "id": 211,
-  "name": "Plate Training: Unbreakable",
-  "description": "Learn the ultimate defensive technique.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 22 }],
-  "reward_exp": 150,
-  "proficiency_requirements": [],
-  "reward_abilities": [1111]
-}

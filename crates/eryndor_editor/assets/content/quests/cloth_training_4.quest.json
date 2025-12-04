@@ -1,9 +1,0 @@
-{
-  "id": 203,
-  "name": "Cloth Training: Transcendence",
-  "description": "Learn the ultimate cloth mastery technique.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 20 }],
-  "reward_exp": 150,
-  "proficiency_requirements": [],
-  "reward_abilities": [1103]
-}

@@ -41,7 +41,11 @@
       "WebFetch(domain:ldtk.io)",
       "WebFetch(domain:doc.mapeditor.org)",
       "WebFetch(domain:manual.gamemaker.io)",
-      "Bash(wslpath:*)"
+      "Bash(wslpath:*)",
+      "Bash(timeout 20 ./target/debug/server.exe:*)",
+      "Bash(timeout 30:*)",
+      "Bash(timeout 10:*)",
+      "WebFetch(domain:www.redblobgames.com)"
     ],
     "deny": [],
     "ask": []

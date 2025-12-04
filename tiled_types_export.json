@@ -1,0 +1,2019 @@
+[
+  {
+    "id": 108,
+    "name": "(bevy_ecs::entity::Entity, bevy_ecs_tilemap::tiles::TilePos, u32)",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "type": "object",
+        "value": null
+      },
+      {
+        "name": "1",
+        "propertyType": "bevy_ecs_tilemap::tiles::TilePos",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "2",
+        "type": "int",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 107,
+    "name": "(bevy_ecs::entity::Entity, u32)",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "type": "object",
+        "value": null
+      },
+      {
+        "name": "1",
+        "type": "int",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 1,
+    "name": "avian2d::ancestor_marker::AncestorMarker<avian2d::collision::collider::backend::ColliderMarker>",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 102,
+    "name": "bevy_asset::assets::AssetIndex",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "generation",
+        "type": "int",
+        "value": null
+      },
+      {
+        "name": "index",
+        "type": "int",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 196,
+    "name": "bevy_color::color::Color",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "type": "color",
+        "value": "#ffffffff"
+      }
+    ]
+  },
+  {
+    "id": 85,
+    "name": "bevy_ecs_tiled::tiled::event::LayerCreated",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 109,
+    "name": "bevy_ecs_tiled::tiled::event::MapCreated",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 124,
+    "name": "bevy_ecs_tiled::tiled::event::ObjectCreated",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 139,
+    "name": "bevy_ecs_tiled::tiled::event::TileCreated",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 4,
+    "name": "bevy_ecs_tiled::tiled::event::TiledEvent<bevy_ecs_tiled::tiled::event::LayerCreated>",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "entity",
+        "type": "object",
+        "value": null
+      },
+      {
+        "name": "origin",
+        "type": "object",
+        "value": null
+      },
+      {
+        "name": "event",
+        "propertyType": "bevy_ecs_tiled::tiled::event::LayerCreated",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "world",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_asset::id::AssetId<bevy_ecs_tiled::tiled::world::asset::TiledWorldAsset>)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "map",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_asset::id::AssetId<bevy_ecs_tiled::tiled::map::asset::TiledMapAsset>)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "layer",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "tilemap",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "tile",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_ecs_tilemap::tiles::TilePos, u32)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "object",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "bevy_ecs_tiled::tiled::event::TiledEvent<bevy_ecs_tiled::tiled::event::MapCreated>",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "entity",
+        "type": "object",
+        "value": null
+      },
+      {
+        "name": "origin",
+        "type": "object",
+        "value": null
+      },
+      {
+        "name": "event",
+        "propertyType": "bevy_ecs_tiled::tiled::event::MapCreated",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "world",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_asset::id::AssetId<bevy_ecs_tiled::tiled::world::asset::TiledWorldAsset>)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "map",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_asset::id::AssetId<bevy_ecs_tiled::tiled::map::asset::TiledMapAsset>)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "layer",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "tilemap",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "tile",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_ecs_tilemap::tiles::TilePos, u32)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "object",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "name": "bevy_ecs_tiled::tiled::event::TiledEvent<bevy_ecs_tiled::tiled::event::ObjectCreated>",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "entity",
+        "type": "object",
+        "value": null
+      },
+      {
+        "name": "origin",
+        "type": "object",
+        "value": null
+      },
+      {
+        "name": "event",
+        "propertyType": "bevy_ecs_tiled::tiled::event::ObjectCreated",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "world",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_asset::id::AssetId<bevy_ecs_tiled::tiled::world::asset::TiledWorldAsset>)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "map",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_asset::id::AssetId<bevy_ecs_tiled::tiled::map::asset::TiledMapAsset>)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "layer",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "tilemap",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "tile",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_ecs_tilemap::tiles::TilePos, u32)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "object",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "name": "bevy_ecs_tiled::tiled::event::TiledEvent<bevy_ecs_tiled::tiled::event::TileCreated>",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "entity",
+        "type": "object",
+        "value": null
+      },
+      {
+        "name": "origin",
+        "type": "object",
+        "value": null
+      },
+      {
+        "name": "event",
+        "propertyType": "bevy_ecs_tiled::tiled::event::TileCreated",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "world",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_asset::id::AssetId<bevy_ecs_tiled::tiled::world::asset::TiledWorldAsset>)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "map",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_asset::id::AssetId<bevy_ecs_tiled::tiled::map::asset::TiledMapAsset>)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "layer",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "tilemap",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "tile",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_ecs_tilemap::tiles::TilePos, u32)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "object",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "name": "bevy_ecs_tiled::tiled::event::TiledEvent<bevy_ecs_tiled::tiled::event::TilemapCreated>",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "entity",
+        "type": "object",
+        "value": null
+      },
+      {
+        "name": "origin",
+        "type": "object",
+        "value": null
+      },
+      {
+        "name": "event",
+        "propertyType": "bevy_ecs_tiled::tiled::event::TilemapCreated",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "world",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_asset::id::AssetId<bevy_ecs_tiled::tiled::world::asset::TiledWorldAsset>)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "map",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_asset::id::AssetId<bevy_ecs_tiled::tiled::map::asset::TiledMapAsset>)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "layer",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "tilemap",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "tile",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_ecs_tilemap::tiles::TilePos, u32)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "object",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "name": "bevy_ecs_tiled::tiled::event::TiledEvent<bevy_ecs_tiled::tiled::event::WorldCreated>",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "entity",
+        "type": "object",
+        "value": null
+      },
+      {
+        "name": "origin",
+        "type": "object",
+        "value": null
+      },
+      {
+        "name": "event",
+        "propertyType": "bevy_ecs_tiled::tiled::event::WorldCreated",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "world",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_asset::id::AssetId<bevy_ecs_tiled::tiled::world::asset::TiledWorldAsset>)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "map",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_asset::id::AssetId<bevy_ecs_tiled::tiled::map::asset::TiledMapAsset>)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "layer",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "tilemap",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "tile",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_ecs_tilemap::tiles::TilePos, u32)>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "object",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 154,
+    "name": "bevy_ecs_tiled::tiled::event::TilemapCreated",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 169,
+    "name": "bevy_ecs_tiled::tiled::event::WorldCreated",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 10,
+    "name": "bevy_ecs_tiled::tiled::image::TiledImage",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "base_position",
+        "propertyType": "glam::Vec2",
+        "type": "class",
+        "value": {
+          "x": 0.0,
+          "y": 0.0
+        }
+      },
+      {
+        "name": "base_size",
+        "propertyType": "glam::Vec2",
+        "type": "class",
+        "value": {
+          "x": 0.0,
+          "y": 0.0
+        }
+      }
+    ]
+  },
+  {
+    "id": 12,
+    "name": "bevy_ecs_tiled::tiled::layer::TiledLayer",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": ":variant",
+        "propertyType": "bevy_ecs_tiled::tiled::layer::TiledLayer:::Variant",
+        "type": "class",
+        "value": "Tiles"
+      }
+    ]
+  },
+  {
+    "id": 11,
+    "name": "bevy_ecs_tiled::tiled::layer::TiledLayer:::Variant",
+    "type": "enum",
+    "storageType": "string",
+    "values": [
+      "Tiles",
+      "Objects",
+      "Image",
+      "Group"
+    ],
+    "valuesAsFlags": false
+  },
+  {
+    "id": 13,
+    "name": "bevy_ecs_tiled::tiled::layer::TiledLayerParallax",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "parallax_x",
+        "type": "float",
+        "value": null
+      },
+      {
+        "name": "parallax_y",
+        "type": "float",
+        "value": null
+      },
+      {
+        "name": "base_position",
+        "propertyType": "glam::Vec2",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 14,
+    "name": "bevy_ecs_tiled::tiled::layer::TiledParallaxCamera",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 15,
+    "name": "bevy_ecs_tiled::tiled::map::RespawnTiledMap",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 16,
+    "name": "bevy_ecs_tiled::tiled::map::TiledMap",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "type": "file",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 17,
+    "name": "bevy_ecs_tiled::tiled::map::TiledMapImageRepeatMargin",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "type": "int",
+        "value": 1
+      }
+    ]
+  },
+  {
+    "id": 18,
+    "name": "bevy_ecs_tiled::tiled::map::TiledMapLayerZOffset",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "type": "float",
+        "value": 100.0
+      }
+    ]
+  },
+  {
+    "id": 19,
+    "name": "bevy_ecs_tiled::tiled::map::TiledMapReference",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "type": "object",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 25,
+    "name": "bevy_ecs_tiled::tiled::object::TiledObjectVisualOf",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "type": "object",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 27,
+    "name": "bevy_ecs_tiled::tiled::tile::TiledTile",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 28,
+    "name": "bevy_ecs_tiled::tiled::tile::TiledTilemap",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 29,
+    "name": "bevy_ecs_tiled::tiled::world::RespawnTiledWorld",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 30,
+    "name": "bevy_ecs_tiled::tiled::world::TiledWorld",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "type": "file",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 31,
+    "name": "bevy_ecs_tiled::tiled::world::chunking::TiledWorldChunking",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "propertyType": "core::option::Option<glam::Vec2>",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 33,
+    "name": "bevy_ecs_tilemap::FrustumCulling",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "type": "bool",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 36,
+    "name": "bevy_ecs_tilemap::anchor::TilemapAnchor",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": ":variant",
+        "propertyType": "bevy_ecs_tilemap::anchor::TilemapAnchor:::Variant",
+        "type": "class",
+        "value": "None"
+      },
+      {
+        "name": "Custom",
+        "propertyType": "bevy_ecs_tilemap::anchor::TilemapAnchor::Custom",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 34,
+    "name": "bevy_ecs_tilemap::anchor::TilemapAnchor:::Variant",
+    "type": "enum",
+    "storageType": "string",
+    "values": [
+      "None",
+      "Center",
+      "BottomLeft",
+      "BottomCenter",
+      "BottomRight",
+      "CenterLeft",
+      "CenterRight",
+      "TopLeft",
+      "TopCenter",
+      "TopRight",
+      "Custom"
+    ],
+    "valuesAsFlags": false
+  },
+  {
+    "id": 35,
+    "name": "bevy_ecs_tilemap::anchor::TilemapAnchor::Custom",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "propertyType": "glam::Vec2",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 193,
+    "name": "bevy_ecs_tilemap::map::HexCoordSystem",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": ":variant",
+        "propertyType": "bevy_ecs_tilemap::map::HexCoordSystem:::Variant",
+        "type": "class",
+        "value": "RowEven"
+      }
+    ]
+  },
+  {
+    "id": 192,
+    "name": "bevy_ecs_tilemap::map::HexCoordSystem:::Variant",
+    "type": "enum",
+    "storageType": "string",
+    "values": [
+      "RowEven",
+      "RowOdd",
+      "ColumnEven",
+      "ColumnOdd",
+      "Row",
+      "Column"
+    ],
+    "valuesAsFlags": false
+  },
+  {
+    "id": 195,
+    "name": "bevy_ecs_tilemap::map::IsoCoordSystem",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": ":variant",
+        "propertyType": "bevy_ecs_tilemap::map::IsoCoordSystem:::Variant",
+        "type": "class",
+        "value": "Diamond"
+      }
+    ]
+  },
+  {
+    "id": 194,
+    "name": "bevy_ecs_tilemap::map::IsoCoordSystem:::Variant",
+    "type": "enum",
+    "storageType": "string",
+    "values": [
+      "Diamond",
+      "Staggered"
+    ],
+    "valuesAsFlags": false
+  },
+  {
+    "id": 37,
+    "name": "bevy_ecs_tilemap::map::TilemapGridSize",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "x",
+        "type": "float",
+        "value": null
+      },
+      {
+        "name": "y",
+        "type": "float",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 38,
+    "name": "bevy_ecs_tilemap::map::TilemapId",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "type": "object",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 39,
+    "name": "bevy_ecs_tilemap::map::TilemapSize",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "x",
+        "type": "int",
+        "value": null
+      },
+      {
+        "name": "y",
+        "type": "int",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 40,
+    "name": "bevy_ecs_tilemap::map::TilemapSpacing",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "x",
+        "type": "float",
+        "value": null
+      },
+      {
+        "name": "y",
+        "type": "float",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 44,
+    "name": "bevy_ecs_tilemap::map::TilemapTextureSize",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "x",
+        "type": "float",
+        "value": null
+      },
+      {
+        "name": "y",
+        "type": "float",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 45,
+    "name": "bevy_ecs_tilemap::map::TilemapTileSize",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "x",
+        "type": "float",
+        "value": null
+      },
+      {
+        "name": "y",
+        "type": "float",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 49,
+    "name": "bevy_ecs_tilemap::map::TilemapType",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": ":variant",
+        "propertyType": "bevy_ecs_tilemap::map::TilemapType:::Variant",
+        "type": "class",
+        "value": "Square"
+      },
+      {
+        "name": "Hexagon",
+        "propertyType": "bevy_ecs_tilemap::map::TilemapType::Hexagon",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "Isometric",
+        "propertyType": "bevy_ecs_tilemap::map::TilemapType::Isometric",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 46,
+    "name": "bevy_ecs_tilemap::map::TilemapType:::Variant",
+    "type": "enum",
+    "storageType": "string",
+    "values": [
+      "Square",
+      "Hexagon",
+      "Isometric"
+    ],
+    "valuesAsFlags": false
+  },
+  {
+    "id": 47,
+    "name": "bevy_ecs_tilemap::map::TilemapType::Hexagon",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "propertyType": "bevy_ecs_tilemap::map::HexCoordSystem",
+        "type": "string",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 48,
+    "name": "bevy_ecs_tilemap::map::TilemapType::Isometric",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "propertyType": "bevy_ecs_tilemap::map::IsoCoordSystem",
+        "type": "string",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 50,
+    "name": "bevy_ecs_tilemap::tiles::TileColor",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "type": "color",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 51,
+    "name": "bevy_ecs_tilemap::tiles::TileFlip",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "x",
+        "type": "bool",
+        "value": null
+      },
+      {
+        "name": "y",
+        "type": "bool",
+        "value": null
+      },
+      {
+        "name": "d",
+        "type": "bool",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 52,
+    "name": "bevy_ecs_tilemap::tiles::TilePos",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "x",
+        "type": "int",
+        "value": null
+      },
+      {
+        "name": "y",
+        "type": "int",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 53,
+    "name": "bevy_ecs_tilemap::tiles::TilePosOld",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "propertyType": "bevy_ecs_tilemap::tiles::TilePos",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 54,
+    "name": "bevy_ecs_tilemap::tiles::TileTextureIndex",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "type": "int",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 55,
+    "name": "bevy_ecs_tilemap::tiles::TileVisible",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "type": "bool",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 57,
+    "name": "bevy_replicon::shared::replication::Replicated",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 84,
+    "name": "bevy_time::timer::TimerMode",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": ":variant",
+        "propertyType": "bevy_time::timer::TimerMode:::Variant",
+        "type": "class",
+        "value": "Once"
+      }
+    ]
+  },
+  {
+    "id": 83,
+    "name": "bevy_time::timer::TimerMode:::Variant",
+    "type": "enum",
+    "storageType": "string",
+    "values": [
+      "Once",
+      "Repeating"
+    ],
+    "valuesAsFlags": false
+  },
+  {
+    "id": 64,
+    "name": "bevy_transform_interpolation::NoRotationEasing",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 65,
+    "name": "bevy_transform_interpolation::NoScaleEasing",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 66,
+    "name": "bevy_transform_interpolation::NoTranslationEasing",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 67,
+    "name": "bevy_transform_interpolation::RotationEasingState",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "start",
+        "propertyType": "core::option::Option<glam::Quat>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "end",
+        "propertyType": "core::option::Option<glam::Quat>",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 68,
+    "name": "bevy_transform_interpolation::ScaleEasingState",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "start",
+        "propertyType": "core::option::Option<glam::Vec3>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "end",
+        "propertyType": "core::option::Option<glam::Vec3>",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 69,
+    "name": "bevy_transform_interpolation::TranslationEasingState",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "start",
+        "propertyType": "core::option::Option<glam::Vec3>",
+        "type": "class",
+        "value": null
+      },
+      {
+        "name": "end",
+        "propertyType": "core::option::Option<glam::Vec3>",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 70,
+    "name": "bevy_transform_interpolation::extrapolation::RotationExtrapolation",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 71,
+    "name": "bevy_transform_interpolation::extrapolation::TransformExtrapolation",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 72,
+    "name": "bevy_transform_interpolation::extrapolation::TranslationExtrapolation",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 73,
+    "name": "bevy_transform_interpolation::hermite::RotationHermiteEasing",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 74,
+    "name": "bevy_transform_interpolation::hermite::TransformHermiteEasing",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 75,
+    "name": "bevy_transform_interpolation::hermite::TranslationHermiteEasing",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 76,
+    "name": "bevy_transform_interpolation::interpolation::RotationInterpolation",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 77,
+    "name": "bevy_transform_interpolation::interpolation::ScaleInterpolation",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 78,
+    "name": "bevy_transform_interpolation::interpolation::TranslationInterpolation",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": []
+  },
+  {
+    "id": 97,
+    "name": "core::option::Option<(bevy_ecs::entity::Entity, bevy_ecs_tilemap::tiles::TilePos, u32)>",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": ":variant",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_ecs_tilemap::tiles::TilePos, u32)>:::Variant",
+        "type": "class",
+        "value": "None"
+      },
+      {
+        "name": "Some",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, bevy_ecs_tilemap::tiles::TilePos, u32)>::Some",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 95,
+    "name": "core::option::Option<(bevy_ecs::entity::Entity, bevy_ecs_tilemap::tiles::TilePos, u32)>:::Variant",
+    "type": "enum",
+    "storageType": "string",
+    "values": [
+      "None",
+      "Some"
+    ],
+    "valuesAsFlags": false
+  },
+  {
+    "id": 96,
+    "name": "core::option::Option<(bevy_ecs::entity::Entity, bevy_ecs_tilemap::tiles::TilePos, u32)>::Some",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "propertyType": "(bevy_ecs::entity::Entity, bevy_ecs_tilemap::tiles::TilePos, u32)",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 94,
+    "name": "core::option::Option<(bevy_ecs::entity::Entity, u32)>",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": ":variant",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>:::Variant",
+        "type": "class",
+        "value": "None"
+      },
+      {
+        "name": "Some",
+        "propertyType": "core::option::Option<(bevy_ecs::entity::Entity, u32)>::Some",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 92,
+    "name": "core::option::Option<(bevy_ecs::entity::Entity, u32)>:::Variant",
+    "type": "enum",
+    "storageType": "string",
+    "values": [
+      "None",
+      "Some"
+    ],
+    "valuesAsFlags": false
+  },
+  {
+    "id": 93,
+    "name": "core::option::Option<(bevy_ecs::entity::Entity, u32)>::Some",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "propertyType": "(bevy_ecs::entity::Entity, u32)",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 199,
+    "name": "core::option::Option<glam::Quat>",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": ":variant",
+        "propertyType": "core::option::Option<glam::Quat>:::Variant",
+        "type": "class",
+        "value": "None"
+      },
+      {
+        "name": "Some",
+        "propertyType": "core::option::Option<glam::Quat>::Some",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 197,
+    "name": "core::option::Option<glam::Quat>:::Variant",
+    "type": "enum",
+    "storageType": "string",
+    "values": [
+      "None",
+      "Some"
+    ],
+    "valuesAsFlags": false
+  },
+  {
+    "id": 198,
+    "name": "core::option::Option<glam::Quat>::Some",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "propertyType": "glam::Quat",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 191,
+    "name": "core::option::Option<glam::Vec2>",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": ":variant",
+        "propertyType": "core::option::Option<glam::Vec2>:::Variant",
+        "type": "class",
+        "value": "None"
+      },
+      {
+        "name": "Some",
+        "propertyType": "core::option::Option<glam::Vec2>::Some",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 189,
+    "name": "core::option::Option<glam::Vec2>:::Variant",
+    "type": "enum",
+    "storageType": "string",
+    "values": [
+      "None",
+      "Some"
+    ],
+    "valuesAsFlags": false
+  },
+  {
+    "id": 190,
+    "name": "core::option::Option<glam::Vec2>::Some",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "propertyType": "glam::Vec2",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 203,
+    "name": "core::option::Option<glam::Vec3>",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": ":variant",
+        "propertyType": "core::option::Option<glam::Vec3>:::Variant",
+        "type": "class",
+        "value": "None"
+      },
+      {
+        "name": "Some",
+        "propertyType": "core::option::Option<glam::Vec3>::Some",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 201,
+    "name": "core::option::Option<glam::Vec3>:::Variant",
+    "type": "enum",
+    "storageType": "string",
+    "values": [
+      "None",
+      "Some"
+    ],
+    "valuesAsFlags": false
+  },
+  {
+    "id": 202,
+    "name": "core::option::Option<glam::Vec3>::Some",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "0",
+        "propertyType": "glam::Vec3",
+        "type": "class",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": 200,
+    "name": "glam::Quat",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "x",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "y",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "z",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "w",
+        "type": "float",
+        "value": 1.0
+      }
+    ]
+  },
+  {
+    "id": 184,
+    "name": "glam::Vec2",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "x",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "y",
+        "type": "float",
+        "value": 0.0
+      }
+    ]
+  },
+  {
+    "id": 204,
+    "name": "glam::Vec3",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "x",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "y",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "z",
+        "type": "float",
+        "value": 0.0
+      }
+    ]
+  },
+  {
+    "id": 79,
+    "name": "server::tiled_spawner::TiledEnemy",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "name",
+        "type": "string",
+        "value": ""
+      },
+      {
+        "name": "max_health",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "attack_power",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "defense",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "move_speed",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "aggro_range",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "leash_range",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "respawn_delay",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "xp_reward",
+        "type": "int",
+        "value": 0
+      },
+      {
+        "name": "gold_min",
+        "type": "int",
+        "value": 0
+      },
+      {
+        "name": "gold_max",
+        "type": "int",
+        "value": 0
+      },
+      {
+        "name": "loot_table",
+        "type": "string",
+        "value": ""
+      },
+      {
+        "name": "visual_shape",
+        "type": "string",
+        "value": ""
+      },
+      {
+        "name": "visual_color_r",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "visual_color_g",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "visual_color_b",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "visual_size",
+        "type": "float",
+        "value": 0.0
+      }
+    ]
+  },
+  {
+    "id": 80,
+    "name": "server::tiled_spawner::TiledNpc",
+    "type": "class",
+    "useAs": [
+      "property"
+    ],
+    "color": "#000000",
+    "drawFill": true,
+    "members": [
+      {
+        "name": "display_name",
+        "type": "string",
+        "value": ""
+      },
+      {
+        "name": "role",
+        "type": "string",
+        "value": ""
+      },
+      {
+        "name": "quest_ids",
+        "type": "string",
+        "value": ""
+      },
+      {
+        "name": "trainer_items",
+        "type": "string",
+        "value": ""
+      },
+      {
+        "name": "visual_color_r",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "visual_color_g",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "visual_color_b",
+        "type": "float",
+        "value": 0.0
+      },
+      {
+        "name": "visual_size",
+        "type": "float",
+        "value": 0.0
+      }
+    ]
+  }
+]

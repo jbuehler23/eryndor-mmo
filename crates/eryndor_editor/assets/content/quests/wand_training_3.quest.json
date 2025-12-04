@@ -1,9 +1,0 @@
-{
-  "id": 114,
-  "name": "Wand Training: Mana Burn",
-  "description": "Master the technique of draining magical energy.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 13 }],
-  "reward_exp": 100,
-  "proficiency_requirements": [["Wand", 15]],
-  "reward_abilities": [1014]
-}

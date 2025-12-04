@@ -199,10 +199,17 @@ pub struct ZoneDatabase {
 pub struct ZoneDefinition {
     pub zone_id: String,
     pub zone_name: String,
-    /// Optional tilemap data for the zone (ground tiles, decorations, collision)
+    /// Optional tilemap data for the zone - legacy ZoneTilemap format (ground tiles, decorations, collision)
     #[serde(default)]
     pub tilemap: Option<ZoneTilemap>,
+    /// Optional tilemap data in new Tiled-compatible TilemapMap format (multiple layers, objects, tilesets)
+    #[serde(default)]
+    pub tilemap_map: Option<TilemapMap>,
+    /// DEPRECATED: Enemy spawns are now defined in Tiled map files (.tmj)
+    #[serde(default)]
     pub enemy_spawns: Vec<EnemySpawnRegion>,
+    /// DEPRECATED: NPC spawns are now defined in Tiled map files (.tmj)
+    #[serde(default)]
     pub npc_spawns: Vec<NpcSpawnDef>,
 }
 

@@ -2,9 +2,8 @@ use bevy::prelude::*;
 use bevy_replicon::prelude::*;
 use eryndor_shared::*;
 use avian2d::prelude::{RigidBody, Collider, CollisionLayers};
-use crate::{PhysicsPosition, PhysicsVelocity};
-use crate::game_data::{EnemyDatabase, ZoneDatabase};
-use crate::spawn::SpawnPoint;
+use crate::PhysicsPosition;
+use crate::game_data::ZoneDatabase;
 
 /// Marker resource indicating the world has been spawned
 #[derive(Resource, Default)]
@@ -119,170 +118,127 @@ pub fn spawn_world_boundaries(mut commands: Commands) {
 pub struct TilemapCollider;
 
 /// System to spawn world entities from zone data (runs when zone data is loaded)
+/// Note: Enemy and NPC spawning now handled by Tiled map via tiled_spawner module
 pub fn spawn_world(
     mut commands: Commands,
-    enemy_db: Res<EnemyDatabase>,
     zone_db: Res<ZoneDatabase>,
 ) {
-    info!("Zone data loaded, spawning world entities...");
+    info!("Zone data loaded, spawning tilemap collision...");
 
     // Mark world as spawned
     commands.insert_resource(WorldSpawned);
 
-    // Spawn from zone data
+    // Spawn collision from zone data (enemies/NPCs now come from Tiled map)
     if let Some(zone) = zone_db.zones.get("starter_zone") {
-        info!("Spawning world from zone: {}", zone.zone_name);
-        spawn_zone_npcs(&mut commands, zone);
-        spawn_zone_enemies(&mut commands, zone, &enemy_db);
         spawn_tilemap_collision(&mut commands, zone);
     }
 
     info!("World initialization complete!");
 }
 
-/// Spawn NPCs from zone definition
-fn spawn_zone_npcs(commands: &mut Commands, zone: &crate::game_data::ZoneDefinition) {
-    for npc in &zone.npc_spawns {
-        let position = Vec2::from(npc.position);
-
-        match npc.npc_type.as_str() {
-            "QuestGiver" => {
-                commands.spawn((
-                    Replicated,
-                    Npc,
-                    NpcName(npc.name.clone()),
-                    QuestGiver {
-                        available_quests: npc.quests.clone(),
-                    },
-                    Position(position),
-                    Interactable::npc(),
-                    VisualShape {
-                        shape_type: ShapeType::Circle,
-                        color: npc.visual.color,
-                        size: npc.visual.size,
-                    },
-                    PhysicsPosition(position),
-                    RigidBody::Static,
-                    Collider::circle(npc.visual.size / 2.0),
-                    CollisionLayers::new(GameLayer::Npc, [GameLayer::Player, GameLayer::Enemy]),
-                ));
-                info!("Spawned NPC Quest Giver: {}", npc.name);
-            }
-            "Trainer" => {
-                commands.spawn((
-                    Replicated,
-                    Npc,
-                    NpcName(npc.name.clone()),
-                    Trainer {
-                        items_for_sale: npc.trainer_items.iter().map(|ti| TrainerItem {
-                            item_id: ti.item_id,
-                            cost: ti.cost,
-                        }).collect(),
-                        trainer_type: npc.trainer_type,
-                        teaching_quests: npc.teaching_quests.clone(),
-                    },
-                    Position(position),
-                    Interactable::npc(),
-                    VisualShape {
-                        shape_type: ShapeType::Circle,
-                        color: npc.visual.color,
-                        size: npc.visual.size,
-                    },
-                    PhysicsPosition(position),
-                    RigidBody::Static,
-                    Collider::circle(npc.visual.size / 2.0),
-                    CollisionLayers::new(GameLayer::Npc, [GameLayer::Player, GameLayer::Enemy]),
-                ));
-                info!("Spawned NPC Trainer: {}", npc.name);
-            }
-            _ => {
-                warn!("Unknown NPC type: {}", npc.npc_type);
-            }
-        }
-    }
-}
-
-/// Spawn enemies from zone definition
-fn spawn_zone_enemies(
-    commands: &mut Commands,
-    zone: &crate::game_data::ZoneDefinition,
-    enemy_db: &EnemyDatabase,
-) {
-    for region in &zone.enemy_spawns {
-        if let Some(def) = enemy_db.enemies.get(&region.enemy_type) {
-            // Parse shape type from enemy definition
-            let shape_type = match def.visual.shape.as_str() {
-                "Square" | "Rectangle" => ShapeType::Square,
-                _ => ShapeType::Circle,
-            };
-
-            for spawn_point in &region.spawn_points {
-                let position = Vec2::from(*spawn_point);
-
-                let enemy_entity = commands.spawn((
-                    Replicated,
-                    Enemy,
-                    EnemyType(region.enemy_type),
-                    EnemyName(def.name.clone()),
-                    Position(position),
-                    Velocity::default(),
-                    MoveSpeed(def.move_speed),
-                    Health::new(def.max_health),
-                    CombatStats {
-                        attack_power: def.attack_power,
-                        defense: def.defense,
-                        crit_chance: 0.0,
-                    },
-                    BaseStats::new(def.attack_power, def.defense, def.move_speed),
-                    CurrentTarget::default(),
-                )).id();
-
-                commands.entity(enemy_entity).insert((
-                    AiState::default(),
-                    Interactable::enemy(),
-                    VisualShape {
-                        shape_type,
-                        color: def.visual.color,
-                        size: def.visual.size,
-                    },
-                    AbilityCooldowns::default(),
-                    SpawnPoint {
-                        position,
-                        respawn_delay: def.respawn_delay,
-                    },
-                    def.loot_table.clone(),
-                    AiActivationDelay::default(),
-                    AggroRange {
-                        aggro: def.aggro_range,
-                        leash: def.leash_range,
-                    },
-                ));
-
-                // Physics components
-                commands.entity(enemy_entity).insert((
-                    PhysicsPosition(position),
-                    PhysicsVelocity(Vec2::ZERO),
-                    RigidBody::Dynamic,
-                    Collider::circle(def.visual.size / 2.0),
-                    CollisionLayers::new(GameLayer::Enemy, [GameLayer::Player, GameLayer::Npc]),
-                ));
-            }
-            info!("Spawned {} {} enemies in region: {}",
-                region.spawn_points.len(), def.name, region.region_id);
-        } else {
-            warn!("Enemy type {} not found in database for region: {}",
-                region.enemy_type, region.region_id);
-        }
-    }
-}
 
 /// Spawn tilemap collision entities from zone tilemap data
+/// Supports both new TilemapMap format (priority) and legacy ZoneTilemap format
 fn spawn_tilemap_collision(commands: &mut Commands, zone: &crate::game_data::ZoneDefinition) {
-    let Some(tilemap) = &zone.tilemap else {
-        info!("No tilemap data for zone, skipping collision spawning");
+    // Try new TilemapMap format first
+    if let Some(tilemap) = &zone.tilemap_map {
+        spawn_tilemapmap_collision(commands, tilemap, &zone.zone_id);
+        return;
+    }
+
+    // Fall back to legacy ZoneTilemap format
+    if let Some(tilemap) = &zone.tilemap {
+        spawn_legacy_tilemap_collision(commands, tilemap, &zone.zone_id);
+        return;
+    }
+
+    info!("No tilemap data for zone {}, skipping collision spawning", zone.zone_id);
+}
+
+/// Spawn collision entities from new TilemapMap format
+/// Looks for a layer named "Collision" and treats any non-zero tile as a collision tile
+fn spawn_tilemapmap_collision(commands: &mut Commands, tilemap: &eryndor_shared::TilemapMap, zone_id: &str) {
+    let tile_size = tilemap.tile_width as f32;
+    let chunk_size = 16u32; // Default chunk size for infinite maps
+    let mut collision_count = 0;
+
+    // Find the collision layer (case-insensitive search)
+    let collision_layer = tilemap.layers.iter().find(|l| {
+        l.name.to_lowercase() == "collision" && l.is_tile_layer()
+    });
+
+    let Some(layer) = collision_layer else {
+        info!("No 'Collision' layer found in TilemapMap for zone {}", zone_id);
         return;
     };
 
+    // Get chunk data from the layer
+    if let Some(chunks) = &layer.chunks {
+        for chunk in chunks {
+            let chunk_world_x = chunk.x;
+            let chunk_world_y = chunk.y;
+            let chunk_width = chunk.width as i32;
+
+            // Iterate through tiles in this chunk
+            for (idx, &gid) in chunk.data.iter().enumerate() {
+                if gid == 0 {
+                    continue; // No collision for empty tiles
+                }
+
+                // Calculate tile position within chunk
+                let local_x = (idx as i32) % chunk_width;
+                let local_y = (idx as i32) / chunk_width;
+
+                // Calculate world position
+                let tile_x = chunk_world_x + local_x;
+                let tile_y = chunk_world_y + local_y;
+                let world_x = tile_x as f32 * tile_size + (tile_size / 2.0);
+                let world_y = tile_y as f32 * tile_size + (tile_size / 2.0);
+
+                // Spawn collision entity
+                commands.spawn((
+                    TilemapCollider,
+                    PhysicsPosition(Vec2::new(world_x, world_y)),
+                    RigidBody::Static,
+                    Collider::rectangle(tile_size, tile_size),
+                    CollisionLayers::new(GameLayer::Environment, [GameLayer::Player, GameLayer::Enemy]),
+                ));
+                collision_count += 1;
+            }
+        }
+    }
+
+    // Also check for finite map data (non-chunked)
+    if let Some(data) = &layer.data {
+        let map_width = tilemap.width as i32;
+        for (idx, &gid) in data.iter().enumerate() {
+            if gid == 0 {
+                continue;
+            }
+
+            let tile_x = (idx as i32) % map_width;
+            let tile_y = (idx as i32) / map_width;
+            let world_x = tile_x as f32 * tile_size + (tile_size / 2.0);
+            let world_y = tile_y as f32 * tile_size + (tile_size / 2.0);
+
+            commands.spawn((
+                TilemapCollider,
+                PhysicsPosition(Vec2::new(world_x, world_y)),
+                RigidBody::Static,
+                Collider::rectangle(tile_size, tile_size),
+                CollisionLayers::new(GameLayer::Environment, [GameLayer::Player, GameLayer::Enemy]),
+            ));
+            collision_count += 1;
+        }
+    }
+
+    if collision_count > 0 {
+        info!("Spawned {} TilemapMap collision entities for zone: {}", collision_count, zone_id);
+    }
+}
+
+/// Spawn collision entities from legacy ZoneTilemap format
+fn spawn_legacy_tilemap_collision(commands: &mut Commands, tilemap: &eryndor_shared::ZoneTilemap, zone_id: &str) {
     let tile_size = tilemap.tile_size as f32;
     let chunk_size = tilemap.chunk_size as i32;
     let mut collision_count = 0;
@@ -317,6 +273,6 @@ fn spawn_tilemap_collision(commands: &mut Commands, zone: &crate::game_data::Zon
     }
 
     if collision_count > 0 {
-        info!("Spawned {} tilemap collision entities for zone: {}", collision_count, zone.zone_id);
+        info!("Spawned {} legacy tilemap collision entities for zone: {}", collision_count, zone_id);
     }
 }

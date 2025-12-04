@@ -1,9 +1,0 @@
-{
-  "id": 305,
-  "name": "Mage Training: Time Warp",
-  "description": "Learn to manipulate time itself.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 31 }],
-  "reward_exp": 75,
-  "proficiency_requirements": [],
-  "reward_abilities": [1205]
-}

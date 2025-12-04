@@ -1,9 +1,0 @@
-{
-  "id": 122,
-  "name": "Bow Training: Entangling Shot",
-  "description": "Learn to fire ensnaring arrows that root targets.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 15 }],
-  "reward_exp": 100,
-  "proficiency_requirements": [["Bow", 15]],
-  "reward_abilities": [1022]
-}

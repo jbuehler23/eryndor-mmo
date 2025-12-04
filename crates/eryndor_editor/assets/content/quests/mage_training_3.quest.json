@@ -1,9 +1,0 @@
-{
-  "id": 306,
-  "name": "Mage Training: Mirror Image",
-  "description": "Master the art of creating illusory copies.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 31 }],
-  "reward_exp": 100,
-  "proficiency_requirements": [],
-  "reward_abilities": [1206]
-}

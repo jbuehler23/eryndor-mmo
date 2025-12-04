@@ -1,9 +1,0 @@
-{
-  "id": 104,
-  "name": "Dagger Training: Lacerate",
-  "description": "Learn to cause your enemies to bleed with precise cuts.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 11 }],
-  "reward_exp": 50,
-  "proficiency_requirements": [["Dagger", 5]],
-  "reward_abilities": [1004]
-}

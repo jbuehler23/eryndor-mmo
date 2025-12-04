@@ -105,6 +105,7 @@ fn main() {
     eprintln!("CONFIG_PATH env: {:?}", std::env::var("CONFIG_PATH"));
     eprintln!("DATABASE_PATH env: {:?}", std::env::var("DATABASE_PATH"));
     eprintln!("SERVER_ADDR env: {:?}", std::env::var("SERVER_ADDR"));
+    eprintln!("ASSETS_PATH env: {:?}", std::env::var("ASSETS_PATH"));
     eprintln!("====================================");
 
     // Load configuration from config.toml
@@ -127,7 +128,8 @@ fn main() {
             bevy::log::LogPlugin::default(),
             bevy::state::app::StatesPlugin,
             bevy::asset::AssetPlugin {
-                file_path: "../../assets".to_string(),  // Use workspace root assets folder
+                // Use ASSETS_PATH env var if set (Docker: "assets"), otherwise use workspace path for local dev
+                file_path: std::env::var("ASSETS_PATH").unwrap_or_else(|_| "../../assets".to_string()),
                 watch_for_changes_override: Some(true),  // Enable automatic hot-reload
                 ..Default::default()
             },
@@ -283,7 +285,7 @@ fn main() {
         ))
         // Spawn world boundaries at startup (doesn't depend on JSON data)
         .add_systems(Startup, world::spawn_world_boundaries)
-        // Spawn NPCs and enemies when zone data is loaded
+        // Spawn NPCs and enemies when zone data is loaded (legacy - will be removed)
         .add_systems(Update, world::spawn_world.run_if(world::zone_data_loaded))
         .add_systems(Update, (
             // Connection tracking (must run first to capture IPs)

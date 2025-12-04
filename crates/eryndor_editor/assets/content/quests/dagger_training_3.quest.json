@@ -1,9 +1,0 @@
-{
-  "id": 106,
-  "name": "Dagger Training: Kidney Shot",
-  "description": "Learn to strike vital organs to incapacitate your foes.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 11 }],
-  "reward_exp": 100,
-  "proficiency_requirements": [["Dagger", 15]],
-  "reward_abilities": [1006]
-}

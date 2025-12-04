@@ -1,9 +1,0 @@
-{
-  "id": 116,
-  "name": "Mace Training: Hammer Strike",
-  "description": "Learn powerful overhead smashing techniques.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 14 }],
-  "reward_exp": 50,
-  "proficiency_requirements": [["Mace", 5]],
-  "reward_abilities": [1016]
-}

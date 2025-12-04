@@ -15,6 +15,7 @@ pub mod components;
 pub mod protocol;
 pub mod constants;
 pub mod tilemap;
+pub mod sprite;
 
 pub use ability_effects::*;
 pub use ability_types::*;
@@ -22,3 +23,4 @@ pub use components::*;
 pub use protocol::*;
 pub use constants::*;
 pub use tilemap::*;
+pub use sprite::*;

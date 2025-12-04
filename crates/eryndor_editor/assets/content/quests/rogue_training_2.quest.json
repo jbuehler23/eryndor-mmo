@@ -1,9 +1,0 @@
-{
-  "id": 309,
-  "name": "Rogue Training: Blind",
-  "description": "Master the blinding technique.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 32 }],
-  "reward_exp": 75,
-  "proficiency_requirements": [],
-  "reward_abilities": [1209]
-}

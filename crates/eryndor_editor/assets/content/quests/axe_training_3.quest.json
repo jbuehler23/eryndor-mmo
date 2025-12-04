@@ -1,9 +1,0 @@
-{
-  "id": 126,
-  "name": "Axe Training: Berserker Rage",
-  "description": "Learn to channel your fury into raw power.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 16 }],
-  "reward_exp": 100,
-  "proficiency_requirements": [["Axe", 15]],
-  "reward_abilities": [1026]
-}

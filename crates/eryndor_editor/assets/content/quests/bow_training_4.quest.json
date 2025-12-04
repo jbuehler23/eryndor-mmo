@@ -1,9 +1,0 @@
-{
-  "id": 123,
-  "name": "Bow Training: Kill Shot",
-  "description": "Master the deadly precision shot technique.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 15 }],
-  "reward_exp": 150,
-  "proficiency_requirements": [["Bow", 20]],
-  "reward_abilities": [1023]
-}

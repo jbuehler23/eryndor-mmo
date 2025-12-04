@@ -1,9 +1,0 @@
-{
-  "id": 304,
-  "name": "Mage Training: Counterspell",
-  "description": "Learn to interrupt and damage your enemies.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 31 }],
-  "reward_exp": 50,
-  "proficiency_requirements": [],
-  "reward_abilities": [1204]
-}

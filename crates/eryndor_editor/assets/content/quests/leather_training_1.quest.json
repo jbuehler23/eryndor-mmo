@@ -1,9 +1,0 @@
-{
-  "id": 204,
-  "name": "Leather Training: Evasion",
-  "description": "Learn agile techniques to avoid incoming attacks.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 21 }],
-  "reward_exp": 50,
-  "proficiency_requirements": [],
-  "reward_abilities": [1104]
-}

@@ -16,6 +16,7 @@ mod game_state;
 mod item_cache;
 mod ability_cache;
 mod tilemap;
+mod tiled_map;
 
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
@@ -51,6 +52,7 @@ fn main() {
             RepliconRenetPlugins,
             ShapePlugin,
             EguiPlugin::default(),
+            tiled_map::ClientTiledMapPlugin,
         ))
         // Game state
         .init_state::<GameState>()
@@ -61,6 +63,7 @@ fn main() {
         .init_resource::<ability_cache::ClientAbilityDatabase>()
         .init_resource::<tilemap::TilePaletteResource>()
         .init_resource::<tilemap::CurrentZoneTilemap>()
+        .init_resource::<tilemap::CurrentTilemapMap>()
         .init_resource::<tilemap::LoadedTileChunks>()
         // Register replicated components (same as server)
         .replicate::<Player>()
@@ -197,6 +200,7 @@ fn main() {
             tilemap::load_tile_palette,
             tilemap::create_test_tilemap.run_if(in_state(GameState::InGame)),
             tilemap::spawn_tilemap_sprites.run_if(in_state(GameState::InGame)),
+            tilemap::spawn_tilemapmap_sprites.run_if(in_state(GameState::InGame)),
         ))
         // Entity rendering systems
         .add_systems(Update, (
@@ -251,6 +255,7 @@ fn start_app() {
             ShapePlugin,
             EguiPlugin::default(),
             WebKeepalivePlugin { wake_delay: 1000.0 },
+            tiled_map::ClientTiledMapPlugin,
         ))
         // Game state
         .init_state::<GameState>()
@@ -261,6 +266,7 @@ fn start_app() {
         .insert_resource(ability_cache::ClientAbilityDatabase::default())
         .init_resource::<tilemap::TilePaletteResource>()
         .init_resource::<tilemap::CurrentZoneTilemap>()
+        .init_resource::<tilemap::CurrentTilemapMap>()
         .init_resource::<tilemap::LoadedTileChunks>()
         // Register replicated components (same as server)
         .replicate::<Player>()
@@ -398,6 +404,7 @@ fn start_app() {
             tilemap::load_tile_palette,
             tilemap::create_test_tilemap.run_if(in_state(GameState::InGame)),
             tilemap::spawn_tilemap_sprites.run_if(in_state(GameState::InGame)),
+            tilemap::spawn_tilemapmap_sprites.run_if(in_state(GameState::InGame)),
         ))
         // Entity rendering systems
         .add_systems(Update, (

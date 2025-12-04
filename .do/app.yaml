@@ -28,7 +28,10 @@ static_sites:
 
       # Build WASM client
       cd crates/eryndor_client
-      SERVER_IP=165.227.217.144 bevy build --yes --release web --bundle
+      SERVER_IP=165.227.217.144 CERT_URL=https://ws.eryndor-online.com/cert bevy build --yes --release web --bundle
+
+      # Copy tile assets to the web build output
+      cp -r ../../assets/tiles ../../target/bevy_web/web-release/client/assets/
 
     output_dir: target/bevy_web/web-release/client
 

@@ -1,9 +1,0 @@
-{
-  "id": 208,
-  "name": "Plate Training: Shield Wall",
-  "description": "Learn to maximize your defensive stance.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 22 }],
-  "reward_exp": 50,
-  "proficiency_requirements": [],
-  "reward_abilities": [1108]
-}

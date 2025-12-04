@@ -1,9 +1,0 @@
-{
-  "id": 210,
-  "name": "Plate Training: Fortress",
-  "description": "Become an immovable fortress on the battlefield.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 22 }],
-  "reward_exp": 100,
-  "proficiency_requirements": [],
-  "reward_abilities": [1110]
-}

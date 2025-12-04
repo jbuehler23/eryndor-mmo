@@ -1,9 +1,0 @@
-{
-  "id": 302,
-  "name": "Warrior Training: Rallying Cry",
-  "description": "Master the inspiring rallying cry.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 30 }],
-  "reward_exp": 100,
-  "proficiency_requirements": [],
-  "reward_abilities": [1202]
-}

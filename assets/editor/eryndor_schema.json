@@ -1,0 +1,600 @@
+{
+  "version": 1,
+  "project": {
+    "name": "Eryndor Project",
+    "tile_size": 32,
+    "default_layer_types": [
+      "Ground",
+      "Collision",
+      "Objects"
+    ]
+  },
+  "enums": {
+    "AbilityType": [
+      "Attack",
+      "Heal",
+      "Buff",
+      "Debuff",
+      "Utility"
+    ],
+    "QuestType": [
+      "Main",
+      "Side",
+      "Daily",
+      "Repeatable"
+    ],
+    "NpcRole": [
+      "Vendor",
+      "QuestGiver",
+      "Trainer",
+      "Guard",
+      "Innkeeper"
+    ],
+    "ItemType": [
+      "Weapon",
+      "Armor",
+      "Consumable",
+      "Quest",
+      "Material"
+    ],
+    "Rarity": [
+      "Common",
+      "Uncommon",
+      "Rare",
+      "Epic",
+      "Legendary"
+    ],
+    "DamageType": [
+      "Physical",
+      "Fire",
+      "Ice",
+      "Lightning",
+      "Poison",
+      "Holy",
+      "Dark"
+    ],
+    "TargetType": [
+      "Self",
+      "SingleEnemy",
+      "SingleAlly",
+      "AllEnemies",
+      "AllAllies",
+      "Area"
+    ]
+  },
+  "data_types": {
+    "Ability": {
+      "color": "#2196F3",
+      "icon": null,
+      "placeable": false,
+      "properties": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "description",
+          "type": "multiline",
+          "required": false,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "abilityType",
+          "type": "enum",
+          "required": true,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": "AbilityType",
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "targetType",
+          "type": "enum",
+          "required": true,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": "TargetType",
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "damageType",
+          "type": "enum",
+          "required": false,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": "DamageType",
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "baseDamage",
+          "type": "int",
+          "required": false,
+          "default": null,
+          "min": 0.0,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "manaCost",
+          "type": "int",
+          "required": false,
+          "default": null,
+          "min": 0.0,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "cooldown",
+          "type": "float",
+          "required": false,
+          "default": null,
+          "min": 0.0,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "range",
+          "type": "float",
+          "required": false,
+          "default": null,
+          "min": 0.0,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "aoeRadius",
+          "type": "float",
+          "required": false,
+          "default": null,
+          "min": 0.0,
+          "max": null,
+          "showIf": "targetType == Area",
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        }
+      ]
+    },
+    "Enemy": {
+      "color": "#F44336",
+      "icon": null,
+      "placeable": false,
+      "properties": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "level",
+          "type": "int",
+          "required": true,
+          "default": null,
+          "min": 1.0,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "health",
+          "type": "int",
+          "required": false,
+          "default": null,
+          "min": 1.0,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "damage",
+          "type": "int",
+          "required": false,
+          "default": null,
+          "min": 0.0,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "xpReward",
+          "type": "int",
+          "required": false,
+          "default": null,
+          "min": 0.0,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "lootTable",
+          "type": "array",
+          "required": false,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": "ref",
+          "embeddedType": null
+        }
+      ]
+    },
+    "Item": {
+      "color": "#4CAF50",
+      "icon": null,
+      "placeable": false,
+      "properties": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "description",
+          "type": "multiline",
+          "required": false,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "itemType",
+          "type": "enum",
+          "required": true,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": "ItemType",
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "rarity",
+          "type": "enum",
+          "required": false,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": "Rarity",
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "value",
+          "type": "int",
+          "required": false,
+          "default": null,
+          "min": 0.0,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "stackable",
+          "type": "bool",
+          "required": false,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "maxStack",
+          "type": "int",
+          "required": false,
+          "default": null,
+          "min": 1.0,
+          "max": null,
+          "showIf": "stackable == true",
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        }
+      ]
+    },
+    "Quest": {
+      "color": "#FF9800",
+      "icon": null,
+      "placeable": false,
+      "properties": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "description",
+          "type": "multiline",
+          "required": false,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "questType",
+          "type": "enum",
+          "required": true,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": "QuestType",
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "level",
+          "type": "int",
+          "required": false,
+          "default": null,
+          "min": 1.0,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "xpReward",
+          "type": "int",
+          "required": false,
+          "default": null,
+          "min": 0.0,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "goldReward",
+          "type": "int",
+          "required": false,
+          "default": null,
+          "min": 0.0,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "prerequisiteQuest",
+          "type": "ref",
+          "required": false,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": "Quest",
+          "itemType": null,
+          "embeddedType": null
+        }
+      ]
+    }
+  },
+  "entity_types": {
+    "EnemySpawn": {
+      "color": "#f82727",
+      "icon": null,
+      "placeable": true,
+      "properties": [
+        {
+          "name": "enemy",
+          "type": "ref",
+          "required": true,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": "Enemy",
+          "itemType": null,
+          "embeddedType": null
+        }
+      ]
+    },
+    "Trigger": {
+      "color": "#00BCD4",
+      "icon": null,
+      "placeable": true,
+      "properties": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "width",
+          "type": "int",
+          "required": false,
+          "default": null,
+          "min": 1.0,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "height",
+          "type": "int",
+          "required": false,
+          "default": null,
+          "min": 1.0,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "onEnter",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        },
+        {
+          "name": "onExit",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        }
+      ]
+    },
+    "NPC": {
+      "color": "#9C27B0",
+      "icon": null,
+      "placeable": true,
+      "properties": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "min": null,
+          "max": null,
+          "showIf": null,
+          "enumType": null,
+          "refType": null,
+          "itemType": null,
+          "embeddedType": null
+        }
+      ]
+    }
+  },
+  "embedded_types": {}
+}

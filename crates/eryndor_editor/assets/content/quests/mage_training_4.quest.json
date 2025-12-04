@@ -1,9 +1,0 @@
-{
-  "id": 307,
-  "name": "Mage Training: Meteor Storm",
-  "description": "Learn the devastating meteor storm spell.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 31 }],
-  "reward_exp": 150,
-  "proficiency_requirements": [],
-  "reward_abilities": [1207]
-}

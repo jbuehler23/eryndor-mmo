@@ -1,9 +1,0 @@
-{
-  "id": 201,
-  "name": "Cloth Training: Spell Shield",
-  "description": "Learn to conjure protective magical barriers.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 20 }],
-  "reward_exp": 75,
-  "proficiency_requirements": [],
-  "reward_abilities": [1101]
-}

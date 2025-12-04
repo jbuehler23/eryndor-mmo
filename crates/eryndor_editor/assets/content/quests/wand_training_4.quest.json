@@ -1,9 +1,0 @@
-{
-  "id": 115,
-  "name": "Wand Training: Disintegrate",
-  "description": "Learn the devastating disintegration beam.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 13 }],
-  "reward_exp": 150,
-  "proficiency_requirements": [["Wand", 20]],
-  "reward_abilities": [1015]
-}

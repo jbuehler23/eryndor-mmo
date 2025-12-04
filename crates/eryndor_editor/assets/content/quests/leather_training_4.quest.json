@@ -1,9 +1,0 @@
-{
-  "id": 207,
-  "name": "Leather Training: Perfect Balance",
-  "description": "Achieve the ultimate state of combat readiness.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 21 }],
-  "reward_exp": 150,
-  "proficiency_requirements": [],
-  "reward_abilities": [1107]
-}

@@ -1,9 +1,0 @@
-{
-  "id": 206,
-  "name": "Leather Training: Heightened Agility",
-  "description": "Push your reflexes to superhuman levels.",
-  "objectives": [{ "type": "TalkToNpc", "npc_id": 21 }],
-  "reward_exp": 100,
-  "proficiency_requirements": [],
-  "reward_abilities": [1106]
-}

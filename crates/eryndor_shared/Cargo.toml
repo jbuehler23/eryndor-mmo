@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = { workspace = true, features = ["bevy_core_pipeline"] }
+bevy = { workspace = true, features = ["bevy_core_pipeline", "bevy_sprite"] }
 bevy_replicon = { workspace = true }
 avian2d = { workspace = true }
 serde = { workspace = true }
