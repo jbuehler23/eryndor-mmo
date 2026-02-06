@@ -169,6 +169,7 @@ pub fn spawn_character_components(
         position,
         Velocity::default(),
         MoveSpeed::default(),
+        AnimationState::idle(FacingDirection::Down),
         health,
         mana,
         health_regen,

@@ -28,17 +28,15 @@ COPY Cargo.toml Cargo.lock ./
 COPY crates/eryndor_server/Cargo.toml ./crates/eryndor_server/
 COPY crates/eryndor_shared/Cargo.toml ./crates/eryndor_shared/
 COPY crates/eryndor_client/Cargo.toml ./crates/eryndor_client/
-COPY crates/eryndor_editor/Cargo.toml ./crates/eryndor_editor/
 
 # Copy SQLx offline query cache for compile-time verification
 COPY .sqlx ./.sqlx
 
 # Create dummy source files to build dependencies
-RUN mkdir -p crates/eryndor_server/src crates/eryndor_shared/src crates/eryndor_client/src crates/eryndor_editor/src && \
+RUN mkdir -p crates/eryndor_server/src crates/eryndor_shared/src crates/eryndor_client/src && \
     echo "fn main() {}" > crates/eryndor_server/src/main.rs && \
     echo "" > crates/eryndor_shared/src/lib.rs && \
-    echo "fn main() {}" > crates/eryndor_client/src/main.rs && \
-    echo "fn main() {}" > crates/eryndor_editor/src/main.rs
+    echo "fn main() {}" > crates/eryndor_client/src/main.rs
 
 # Build dependencies (this layer will be cached)
 RUN cargo build --release --bin server

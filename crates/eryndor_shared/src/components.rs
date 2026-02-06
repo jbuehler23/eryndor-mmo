@@ -114,6 +114,82 @@ impl Default for MoveSpeed {
 }
 
 // ============================================================================
+// ANIMATION COMPONENTS
+// ============================================================================
+
+/// Direction the entity is facing (for sprite selection)
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum FacingDirection {
+    Up,
+    #[default]
+    Down,
+    Left,
+    Right,
+}
+
+impl FacingDirection {
+    /// Get direction from velocity vector
+    pub fn from_velocity(velocity: Vec2) -> Option<Self> {
+        if velocity.length_squared() < 0.01 {
+            return None; // Not moving, keep current direction
+        }
+
+        // Determine primary direction based on velocity
+        if velocity.x.abs() > velocity.y.abs() {
+            if velocity.x > 0.0 { Some(FacingDirection::Right) }
+            else { Some(FacingDirection::Left) }
+        } else {
+            if velocity.y > 0.0 { Some(FacingDirection::Up) }
+            else { Some(FacingDirection::Down) }
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            FacingDirection::Up => "up",
+            FacingDirection::Down => "down",
+            FacingDirection::Left => "left",
+            FacingDirection::Right => "right",
+        }
+    }
+}
+
+/// Current animation state (replicated from server to client)
+#[derive(Component, Serialize, Deserialize, Clone, Debug, Default)]
+pub struct AnimationState {
+    /// Name of the current animation (e.g., "idle", "walk", "attack")
+    pub animation_name: String,
+    /// Direction the entity is facing
+    pub facing: FacingDirection,
+}
+
+impl AnimationState {
+    pub fn new(animation_name: &str, facing: FacingDirection) -> Self {
+        Self {
+            animation_name: animation_name.to_string(),
+            facing,
+        }
+    }
+
+    pub fn idle(facing: FacingDirection) -> Self {
+        Self::new("idle", facing)
+    }
+
+    pub fn walk(facing: FacingDirection) -> Self {
+        Self::new("walk", facing)
+    }
+
+    pub fn attack(facing: FacingDirection) -> Self {
+        Self::new("attack", facing)
+    }
+
+    /// Get the full animation key (e.g., "walk_down", "idle_left")
+    pub fn animation_key(&self) -> String {
+        format!("{}_{}", self.animation_name, self.facing.as_str())
+    }
+}
+
+// ============================================================================
 // COMBAT COMPONENTS
 // ============================================================================
 
@@ -350,6 +426,15 @@ impl Inventory {
                 false
             }
         })
+    }
+
+    /// Count total quantity of a specific item across all inventory slots
+    pub fn count_item(&self, item_id: u32) -> u32 {
+        self.slots.iter()
+            .filter_map(|slot| slot.as_ref())
+            .filter(|stack| stack.item_id == item_id)
+            .map(|stack| stack.quantity)
+            .sum()
     }
 }
 

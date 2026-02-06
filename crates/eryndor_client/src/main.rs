@@ -15,8 +15,7 @@ mod input;
 mod game_state;
 mod item_cache;
 mod ability_cache;
-mod tilemap;
-mod tiled_map;
+mod sprite_loader;
 
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
@@ -52,7 +51,7 @@ fn main() {
             RepliconRenetPlugins,
             ShapePlugin,
             EguiPlugin::default(),
-            tiled_map::ClientTiledMapPlugin,
+            sprite_loader::SpriteLoaderPlugin,
         ))
         // Game state
         .init_state::<GameState>()
@@ -61,10 +60,6 @@ fn main() {
         .init_resource::<ui::UiState>()
         .init_resource::<item_cache::ClientItemDatabase>()
         .init_resource::<ability_cache::ClientAbilityDatabase>()
-        .init_resource::<tilemap::TilePaletteResource>()
-        .init_resource::<tilemap::CurrentZoneTilemap>()
-        .init_resource::<tilemap::CurrentTilemapMap>()
-        .init_resource::<tilemap::LoadedTileChunks>()
         // Register replicated components (same as server)
         .replicate::<Player>()
         .replicate::<Character>()
@@ -77,6 +72,7 @@ fn main() {
         .replicate::<UnlockedArmorPassives>()
         .replicate::<Velocity>()
         .replicate::<MoveSpeed>()
+        .replicate::<AnimationState>()
         .replicate::<Health>()
         .replicate::<Mana>()
         .replicate::<HealthRegen>()
@@ -195,13 +191,8 @@ fn main() {
             game_state::detect_player_entity.run_if(in_state(GameState::InGame)),
             game_state::handle_character_despawn.run_if(in_state(GameState::InGame)),
         ))
-        // Tilemap rendering systems
-        .add_systems(Update, (
-            tilemap::load_tile_palette,
-            tilemap::create_test_tilemap.run_if(in_state(GameState::InGame)),
-            tilemap::spawn_tilemap_sprites.run_if(in_state(GameState::InGame)),
-            tilemap::spawn_tilemapmap_sprites.run_if(in_state(GameState::InGame)),
-        ))
+        // Tilemap rendering systems (bevy_map integration pending)
+        // TODO: Add bevy_map_runtime plugin when ready
         // Entity rendering systems
         .add_systems(Update, (
             rendering::spawn_visual_entities,
@@ -255,7 +246,7 @@ fn start_app() {
             ShapePlugin,
             EguiPlugin::default(),
             WebKeepalivePlugin { wake_delay: 1000.0 },
-            tiled_map::ClientTiledMapPlugin,
+            sprite_loader::SpriteLoaderPlugin,
         ))
         // Game state
         .init_state::<GameState>()
@@ -264,10 +255,6 @@ fn start_app() {
         .init_resource::<ui::UiState>()
         .init_resource::<item_cache::ClientItemDatabase>()
         .insert_resource(ability_cache::ClientAbilityDatabase::default())
-        .init_resource::<tilemap::TilePaletteResource>()
-        .init_resource::<tilemap::CurrentZoneTilemap>()
-        .init_resource::<tilemap::CurrentTilemapMap>()
-        .init_resource::<tilemap::LoadedTileChunks>()
         // Register replicated components (same as server)
         .replicate::<Player>()
         .replicate::<Character>()
@@ -280,6 +267,7 @@ fn start_app() {
         .replicate::<UnlockedArmorPassives>()
         .replicate::<Velocity>()
         .replicate::<MoveSpeed>()
+        .replicate::<AnimationState>()
         .replicate::<Health>()
         .replicate::<Mana>()
         .replicate::<HealthRegen>()
@@ -399,13 +387,8 @@ fn start_app() {
             game_state::detect_player_entity.run_if(in_state(GameState::InGame)),
             game_state::handle_character_despawn.run_if(in_state(GameState::InGame)),
         ))
-        // Tilemap rendering systems
-        .add_systems(Update, (
-            tilemap::load_tile_palette,
-            tilemap::create_test_tilemap.run_if(in_state(GameState::InGame)),
-            tilemap::spawn_tilemap_sprites.run_if(in_state(GameState::InGame)),
-            tilemap::spawn_tilemapmap_sprites.run_if(in_state(GameState::InGame)),
-        ))
+        // Tilemap rendering systems (bevy_map integration pending)
+        // TODO: Add bevy_map_runtime plugin when ready
         // Entity rendering systems
         .add_systems(Update, (
             rendering::spawn_visual_entities,

@@ -62,16 +62,24 @@ pub fn process_auto_attacks(
         &Equipment,
         &mut WeaponProficiencyExp,
         &WeaponProficiency,
+        Option<&ActiveDebuffs>,
     ), With<Player>>,
     mut targets: Query<(&Position, &mut Health, &CombatStats), (With<Enemy>, Without<AiActivationDelay>)>,
     all_enemies: Query<Entity, With<Enemy>>,
     item_db: Res<crate::game_data::ItemDatabase>,
     time: Res<Time>,
 ) {
-    for (attacker_entity, attacker_pos, current_target, attacker_stats, mut auto_attack, equipment, mut weapon_exp, weapon_prof) in &mut attackers {
+    for (attacker_entity, attacker_pos, current_target, attacker_stats, mut auto_attack, equipment, mut weapon_exp, weapon_prof, active_debuffs) in &mut attackers {
         // Skip if auto-attack is disabled
         if !auto_attack.enabled {
             continue;
+        }
+
+        // Skip if stunned (cannot attack while stunned)
+        if let Some(debuffs) = active_debuffs {
+            if debuffs.debuffs.iter().any(|d| matches!(d.effect, DebuffType::Stun)) {
+                continue;
+            }
         }
 
         // Debug: Log that we're processing auto-attack
@@ -241,6 +249,7 @@ pub fn handle_use_ability(
         &mut AbilityCooldowns,
         &LearnedAbilities,
         &Equipment,
+        Option<&ActiveDebuffs>,
     ), Without<Enemy>>,
     mut targets: Query<(Entity, &Position, &mut Health, &CombatStats), (With<Enemy>, Without<AiActivationDelay>)>,
     ability_db: Res<AbilityDatabase>,
@@ -267,12 +276,27 @@ pub fn handle_use_ability(
     info!("Found ability: {} ({})", ability.name, ability.id);
 
     // Get attacker data
-    let Ok((attacker_entity, attacker_pos, current_target, stats, mut mana, mut attacker_health, mut cooldowns, learned, equipment)) =
+    let Ok((attacker_entity, attacker_pos, current_target, stats, mut mana, mut attacker_health, mut cooldowns, learned, equipment, active_debuffs)) =
         attackers.get_mut(char_entity) else {
             warn!("Could not get attacker components for {:?}", char_entity);
             return
         };
     info!("Got attacker components");
+
+    // Check if stunned (cannot use abilities while stunned)
+    if let Some(debuffs) = active_debuffs {
+        if debuffs.debuffs.iter().any(|d| matches!(d.effect, DebuffType::Stun)) {
+            warn!("Player {:?} is stunned, cannot use abilities", char_entity);
+            commands.server_trigger(ToClients {
+                mode: SendMode::Direct(ClientId::Client(client_entity)),
+                message: NotificationEvent {
+                    message: "You are stunned!".to_string(),
+                    notification_type: NotificationType::Warning,
+                },
+            });
+            return;
+        }
+    }
 
     // Store attacker position for later use (after mutable borrow ends)
     let attacker_position = attacker_pos.0;
@@ -535,6 +559,29 @@ pub fn handle_use_ability(
                         damage: -actual_heal, // Negative damage = heal
                         ability_id: ability.id,
                         is_crit: false,
+                    },
+                });
+            }
+            AbilityType::ManaShield { duration, mana_per_damage } => {
+                // Apply Mana Shield to caster
+                let mana_shield = ActiveManaShield {
+                    ability_id: ability.id,
+                    mana_per_damage: *mana_per_damage,
+                    expires_at: current_time + duration,
+                };
+
+                if let Ok(mut caster) = commands.get_entity(char_entity) {
+                    caster.insert(mana_shield);
+                    info!("Applied Mana Shield to caster (duration: {:.1}s, mana/damage: {:.1})",
+                        duration, mana_per_damage);
+                }
+
+                // Notify player
+                commands.server_trigger(ToClients {
+                    mode: SendMode::Direct(ClientId::Client(client_entity)),
+                    message: NotificationEvent {
+                        message: format!("Mana Shield active for {:.0}s!", duration),
+                        notification_type: NotificationType::Info,
                     },
                 });
             }
@@ -878,6 +925,7 @@ pub fn check_weapon_proficiency_level_ups(
 }
 
 pub fn enemy_ai(
+    mut commands: Commands,
     mut enemies: Query<(
         &mut AiState,
         &mut Position,
@@ -889,14 +937,24 @@ pub fn enemy_ai(
         &EnemyType,
         &AggroRange,
     ), (With<Enemy>, Without<Player>, Without<AiActivationDelay>)>,
-    mut players: Query<(Entity, &Position, &mut Health), (With<Player>, Without<Enemy>)>,
+    mut players: Query<(
+        Entity,
+        &Position,
+        &mut Health,
+        &mut Mana,
+        &CombatStats,
+        &Equipment,
+        &ArmorProficiency,
+        Option<&ActiveManaShield>,
+    ), (With<Player>, Without<Enemy>)>,
+    item_db: Res<crate::game_data::ItemDatabase>,
     time: Res<Time>,
 ) {
     for (mut ai_state, enemy_pos, mut velocity, mut physics_velocity, mut current_target, move_speed, stats, _enemy_type, aggro_range) in &mut enemies {
         match *ai_state {
             AiState::Idle => {
                 // Look for nearby players
-                for (player_entity, player_pos, _) in &players {
+                for (player_entity, player_pos, _, _, _, _, _, _) in &players {
                     let distance = enemy_pos.0.distance(player_pos.0);
                     if distance < aggro_range.aggro {
                         *ai_state = AiState::Chasing(player_entity);
@@ -907,7 +965,7 @@ pub fn enemy_ai(
             }
             AiState::Chasing(target_entity) => {
                 // Check if target still exists
-                if let Ok((_, target_pos, _)) = players.get(target_entity) {
+                if let Ok((_, target_pos, _, _, _, _, _, _)) = players.get(target_entity) {
                     let distance = enemy_pos.0.distance(target_pos.0);
 
                     // Check leash range
@@ -938,7 +996,7 @@ pub fn enemy_ai(
             }
             AiState::Attacking(target_entity) => {
                 // Check if target still exists and in range
-                if let Ok((_, target_pos, mut target_health)) = players.get_mut(target_entity) {
+                if let Ok((player_entity, target_pos, mut target_health, mut target_mana, player_stats, equipment, armor_prof, mana_shield)) = players.get_mut(target_entity) {
                     let distance = enemy_pos.0.distance(target_pos.0);
 
                     if distance > MELEE_RANGE {
@@ -946,8 +1004,39 @@ pub fn enemy_ai(
                     } else {
                         // Simple auto-attack every second
                         // TODO: Add attack cooldown timer
-                        let damage = stats.attack_power;
-                        target_health.current = (target_health.current - damage * time.delta_secs()).max(0.0);
+                        let base_damage = stats.attack_power;
+
+                        // Calculate player's total defense including equipment and armor proficiency
+                        let equipment_bonuses = item_db.calculate_equipment_bonuses(equipment);
+                        let armor_prof_bonus = item_db.calculate_armor_proficiency_bonus(equipment, armor_prof);
+                        let total_defense = player_stats.defense + equipment_bonuses.defense + armor_prof_bonus;
+
+                        // Apply defense mitigation
+                        let mitigation = total_defense / (total_defense + 100.0);
+                        let mut damage = base_damage * (1.0 - mitigation) * time.delta_secs();
+
+                        // Check for Mana Shield - absorb damage using mana
+                        if let Some(shield) = mana_shield {
+                            let current_time = time.elapsed().as_secs_f32();
+                            if current_time < shield.expires_at {
+                                let mana_cost = damage * shield.mana_per_damage;
+                                if target_mana.current >= mana_cost {
+                                    // Full absorption - deduct mana, no health damage
+                                    target_mana.current -= mana_cost;
+                                    damage = 0.0;
+                                } else if target_mana.current > 0.0 {
+                                    // Partial absorption - use remaining mana
+                                    let absorbed = target_mana.current / shield.mana_per_damage;
+                                    damage -= absorbed;
+                                    target_mana.current = 0.0;
+                                }
+                            } else {
+                                // Shield expired - remove component
+                                commands.entity(player_entity).remove::<ActiveManaShield>();
+                            }
+                        }
+
+                        target_health.current = (target_health.current - damage).max(0.0);
                     }
                 } else {
                     *ai_state = AiState::Idle;

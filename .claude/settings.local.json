@@ -45,7 +45,12 @@
       "Bash(timeout 20 ./target/debug/server.exe:*)",
       "Bash(timeout 30:*)",
       "Bash(timeout 10:*)",
-      "WebFetch(domain:www.redblobgames.com)"
+      "WebFetch(domain:www.redblobgames.com)",
+      "Bash(cargo test:*)",
+      "Bash(timeout 60 cargo run:*)",
+      "Bash(wc:*)",
+      "Bash(cargo check-all:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []

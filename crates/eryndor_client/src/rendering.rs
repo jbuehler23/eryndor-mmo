@@ -35,7 +35,8 @@ pub fn spawn_visual_entities(
             continue;
         }
 
-        // Create visual entity with the new API
+        // Create visual entity with shape rendering
+        // TODO: Once sprite sheets are added to .map.json, use bevy_map sprites instead
         let color = Color::srgba(
             visual_shape.color[0],
             visual_shape.color[1],
@@ -449,3 +450,4 @@ pub fn update_damage_numbers(
         }
     }
 }
+

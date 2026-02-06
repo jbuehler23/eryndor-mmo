@@ -67,6 +67,12 @@ pub enum AbilityType {
         amount: f32,
         is_percent: bool,  // If true, amount is % of max HP
     },
+    /// Mana Shield - absorbs damage by consuming mana
+    ManaShield {
+        duration: f32,
+        /// Mana cost per point of damage absorbed (e.g., 2.0 means 2 mana per 1 damage)
+        mana_per_damage: f32,
+    },
 }
 
 /// Types of debuffs that can be applied

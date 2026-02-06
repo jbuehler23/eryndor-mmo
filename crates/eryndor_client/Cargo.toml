@@ -22,8 +22,8 @@ bevy_prototype_lyon = "0.15"
 
 eryndor_shared = { path = "../eryndor_shared" }
 
-# Tiled map loading (render enabled by default)
-bevy_ecs_tiled = { version = "0.10", default-features = true, features = ["user_properties"] }
+# bevy_map for tilemap and sprite loading
+bevy_map = { version = "0.1", default-features = true }
 
 # Native transport (UDP)
 [target.'cfg(not(target_family = "wasm"))'.dependencies]

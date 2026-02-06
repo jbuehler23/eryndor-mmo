@@ -26,6 +26,9 @@ pub struct ItemDefinition {
     pub item_type: ItemType,
     pub grants_ability: Option<u32>,
     pub stat_bonuses: ItemStatBonuses,
+    /// Armor weight class for armor pieces (determines proficiency bonus)
+    #[serde(default)]
+    pub armor_class: Option<ArmorClass>,
 }
 
 /// Stat bonuses provided by an item when equipped
@@ -83,6 +86,43 @@ impl ItemDatabase {
 
         total
     }
+
+    /// Calculate armor proficiency defense bonus from equipped armor
+    /// Each proficiency level adds defense based on armor class:
+    /// - Light: +0.5 defense per level
+    /// - Medium: +0.75 defense per level
+    /// - Heavy: +1.0 defense per level
+    pub fn calculate_armor_proficiency_bonus(
+        &self,
+        equipment: &Equipment,
+        armor_prof: &ArmorProficiency,
+    ) -> f32 {
+        let mut total_bonus = 0.0;
+
+        // Check each armor slot
+        let armor_slots = [
+            equipment.helmet,
+            equipment.chest,
+            equipment.legs,
+            equipment.boots,
+        ];
+
+        for slot in armor_slots.iter().flatten() {
+            if let Some(item) = self.items.get(slot) {
+                if let Some(armor_class) = item.armor_class {
+                    let (prof_level, bonus_per_level) = match armor_class {
+                        ArmorClass::Light => (armor_prof.light, 0.5),
+                        ArmorClass::Medium => (armor_prof.medium, 0.75),
+                        ArmorClass::Heavy => (armor_prof.heavy, 1.0),
+                    };
+                    // Proficiency starts at level 1, so subtract 1 for bonus calculation
+                    total_bonus += (prof_level.saturating_sub(1)) as f32 * bonus_per_level;
+                }
+            }
+        }
+
+        total_bonus
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
@@ -94,6 +134,14 @@ pub enum ItemType {
     Boots,
     Consumable,
     QuestItem,
+}
+
+/// Armor weight class - determines which proficiency applies
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ArmorClass {
+    Light,  // Cloth, Leather
+    Medium, // Chain, Scale
+    Heavy,  // Plate
 }
 
 // ============================================================================

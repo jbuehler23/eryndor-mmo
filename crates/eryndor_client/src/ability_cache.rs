@@ -104,6 +104,9 @@ fn generate_effect_summary(ability_types: &[AbilityType]) -> String {
             AbilityType::Mobility { distance, .. } => {
                 parts.push(format!("Dash ({:.1} distance)", distance));
             }
+            AbilityType::ManaShield { duration, mana_per_damage } => {
+                parts.push(format!("Mana Shield ({:.1}s, {:.1} mana/dmg)", duration, mana_per_damage));
+            }
         }
     }
 

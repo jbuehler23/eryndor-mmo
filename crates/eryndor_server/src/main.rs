@@ -13,6 +13,7 @@
 #![allow(clippy::unnecessary_unwrap)]
 
 mod abilities;
+mod animation;
 mod admin;
 mod admin_cli;
 mod assets;
@@ -166,6 +167,7 @@ fn main() {
         .replicate::<UnlockedArmorPassives>()
         .replicate::<Velocity>()
         .replicate::<MoveSpeed>()
+        .replicate::<AnimationState>()
         .replicate::<Health>()
         .replicate::<Mana>()
         .replicate::<HealthRegen>()
@@ -294,6 +296,9 @@ fn main() {
             auth::handle_client_disconnect,
             // Movement
             movement::update_positions,
+            // Animation state updates
+            animation::update_animation_states,
+            animation::update_enemy_animation_states,
             // Combat
             combat::update_ai_activation_delays,
             combat::process_auto_attacks,

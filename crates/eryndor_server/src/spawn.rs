@@ -94,6 +94,7 @@ impl EntityTemplate {
                     Position(position),
                     Velocity::default(),
                     MoveSpeed(template.move_speed),
+                    AnimationState::idle(FacingDirection::Down),
                     Health::new(template.health),
                     CombatStats {
                         attack_power: template.attack_power,

@@ -47,7 +47,6 @@ Create different accounts for each client and verify players see each other.
 - `crates/eryndor_shared/` - Shared components (`components.rs`) and network protocol (`protocol.rs`)
 - `crates/eryndor_server/` - Headless server with auth, combat, movement, inventory, quest systems
 - `crates/eryndor_client/` - Native + WASM client with input, UI, rendering
-- `crates/eryndor_editor/` - World editor web app
 
 ### Server-Authoritative Flow
 1. Client sends input events (movement, ability use, interact)

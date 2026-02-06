@@ -49,3 +49,23 @@ pub struct ActiveDoT {
     pub ticks_remaining: u32,
     pub next_tick_at: f32,  // Game time in seconds
 }
+
+/// Active Mana Shield effect - absorbs damage by consuming mana
+#[derive(Component, Serialize, Deserialize, Clone)]
+pub struct ActiveManaShield {
+    pub ability_id: u32,
+    /// Mana cost per point of damage absorbed
+    pub mana_per_damage: f32,
+    /// When this effect expires (game time in seconds)
+    pub expires_at: f32,
+}
+
+impl Default for ActiveManaShield {
+    fn default() -> Self {
+        Self {
+            ability_id: 0,
+            mana_per_damage: 2.0,
+            expires_at: 0.0,
+        }
+    }
+}

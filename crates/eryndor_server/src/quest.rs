@@ -413,10 +413,11 @@ pub fn handle_complete_quest(
 }
 
 pub fn update_quest_progress(
-    mut players: Query<(&mut QuestLog, &Inventory), Changed<Inventory>>,
+    mut commands: Commands,
+    mut players: Query<(Entity, &mut QuestLog, &Inventory, &OwnedBy), Changed<Inventory>>,
     quest_db: Res<QuestDatabase>,
 ) {
-    for (mut quest_log, inventory) in &mut players {
+    for (_entity, mut quest_log, inventory, owned_by) in &mut players {
         for active_quest in &mut quest_log.active_quests {
             let Some(quest_def) = quest_db.quests.get(&active_quest.quest_id) else {
                 continue;
@@ -425,21 +426,37 @@ pub fn update_quest_progress(
             for (i, objective) in quest_def.objectives.iter().enumerate() {
                 match objective {
                     crate::game_data::QuestObjective::ObtainItem { item_id, count } => {
-                        // For "any weapon" quest, check for any weapon
-                        if *item_id == 0 {
-                            // Check for any weapon item
+                        let old_progress = active_quest.progress[i];
+
+                        // For "any weapon" quest (item_id == 0), check for any weapon
+                        let new_progress = if *item_id == 0 {
                             let has_weapon = inventory.has_item(ITEM_DAGGER)
                                 || inventory.has_item(ITEM_WAND)
-                                || inventory.has_item(ITEM_SWORD);
+                                || inventory.has_item(ITEM_SWORD)
+                                || inventory.has_item(ITEM_STAFF)
+                                || inventory.has_item(ITEM_MACE)
+                                || inventory.has_item(ITEM_BOW)
+                                || inventory.has_item(ITEM_AXE);
 
-                            if has_weapon {
-                                active_quest.progress[i] = 1;
-                            }
+                            if has_weapon { 1 } else { 0 }
                         } else {
-                            // Check for specific item
-                            if inventory.has_item(*item_id) {
-                                active_quest.progress[i] = *count;
-                            }
+                            // Count specific item quantity
+                            inventory.count_item(*item_id).min(*count)
+                        };
+
+                        // Update progress if it changed
+                        if new_progress > old_progress {
+                            active_quest.progress[i] = new_progress;
+                            info!("Quest {} ObtainItem progress: {}/{}", quest_def.name, new_progress, count);
+
+                            // Send notification to player
+                            commands.server_trigger(ToClients {
+                                mode: SendMode::Direct(ClientId::Client(owned_by.0)),
+                                message: QuestUpdateEvent {
+                                    quest_id: active_quest.quest_id,
+                                    message: format!("{}: {}/{}", quest_def.name, new_progress, count),
+                                },
+                            });
                         }
                     }
                     _ => {}
