@@ -12,13 +12,16 @@ members = [
     "crates/bevy_editor_assets",
     "crates/bevy_editor_frontend_api",
     "crates/bevy_editor_ui_egui",
+    "crates/bevy_editor_ui_widgets",
+    "crates/bevy_editor_ui_feathers",
     "crates/bevy_editor_runtime",
     "crates/bevy_editor_templates",
+    "crates/bevy_editor_play_mode",
 ]
 resolver = "2"
 
 [workspace.dependencies]
-bevy = { version = "0.16.0", default-features = false, features = [
+bevy = { version = "0.17.2", default-features = false, features = [
   "std",
   "bevy_log",
   "dynamic_linking",
@@ -37,7 +40,9 @@ bevy = { version = "0.16.0", default-features = false, features = [
   "bevy_gizmos",
   "bevy_scene",
   "bevy_audio",
+  "bevy_picking",
   "png",
+  "experimental_bevy_feathers",
 ] }
 
 [workspace.metadata.bevy_cli.release]

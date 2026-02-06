@@ -220,8 +220,8 @@ pub fn load_scene_into_open_scenes<P: AsRef<Path>>(
     Ok(())
 }
 
-/// Event triggered when a scene tab changes.
-#[derive(Event)]
+/// Message triggered when a scene tab changes.
+#[derive(Event, Message)]
 pub struct SceneTabChanged {
     pub new_index: usize,
 }
@@ -269,7 +269,7 @@ pub fn sync_active_scene(
     if let Some(scene) = open_scenes.scenes.get(new_index) {
         editor_scene.is_modified = scene.is_modified;
         if let Some(file_path) = &scene.file_path {
-            let scene_handle = asset_server.load::<DynamicScene>(file_path.clone());
+            let scene_handle = asset_server.load::<DynamicScene>(file_path.to_string());
             let root = commands
                 .spawn((
                     DynamicSceneRoot(scene_handle),
@@ -428,7 +428,7 @@ pub fn save_editor_scene_to_file(
     // (contains TypeId which can't be serialized)
     for &entity in &scene_entities {
         if let Ok(mut entity_mut) = world.get_entity_mut(entity) {
-            entity_mut.remove::<bevy::render::view::visibility::VisibilityClass>();
+            entity_mut.remove::<bevy::camera::visibility::VisibilityClass>();
         }
     }
 
@@ -457,7 +457,7 @@ pub fn capture_editor_scene_runtime(world: &mut World) -> DynamicScene {
     }
 
     DynamicSceneBuilder::from_world(world)
-        .deny_component::<bevy::render::view::visibility::VisibilityClass>()
+        .deny_component::<bevy::camera::visibility::VisibilityClass>()
         .extract_entities(scene_entities.into_iter())
         .build()
 }
@@ -530,7 +530,7 @@ pub fn load_editor_scene_from_file(
     info!("Loading scene from: {}", scene_path);
 
     // Load scene using Bevy's asset system
-    let scene_handle: Handle<DynamicScene> = asset_server.load(scene_path);
+    let scene_handle: Handle<DynamicScene> = asset_server.load(scene_path.to_string());
 
     // Spawn scene into world with marker
     commands.spawn((
@@ -575,8 +575,8 @@ pub fn setup_editor_scene(mut commands: Commands) {
     commands.insert_resource(editor_scene);
 }
 
-/// Event for editing entity transforms
-#[derive(Event, Debug, Clone)]
+/// Message for editing entity transforms
+#[derive(Event, Message, Debug, Clone)]
 pub enum TransformEditEvent {
     /// Set position (replaces current position)
     SetPosition { entity: Entity, position: Vec2 },
@@ -588,23 +588,37 @@ pub enum TransformEditEvent {
     SetScale { entity: Entity, scale: Vec2 },
 }
 
-/// Event for editing entity name
-#[derive(Event, Debug, Clone)]
+/// Message for editing entity name
+#[derive(Event, Message, Debug, Clone)]
 pub struct NameEditEvent {
     pub entity: Entity,
     pub new_name: String,
 }
 
-/// Event for assigning texture to sprite
-#[derive(Event, Debug, Clone)]
+/// Message for assigning texture to sprite
+#[derive(Event, Message, Debug, Clone)]
 pub struct SpriteTextureEvent {
     pub entity: Entity,
     pub texture_handle: Handle<Image>,
 }
 
-/// System to handle transform edit events
+/// Message for adding a component to an entity
+#[derive(Event, Message, Debug, Clone)]
+pub struct AddComponentEvent {
+    pub entity: Entity,
+    pub component_name: String,
+}
+
+/// Message for removing a component from an entity
+#[derive(Event, Message, Debug, Clone)]
+pub struct RemoveComponentEvent {
+    pub entity: Entity,
+    pub component_name: String,
+}
+
+/// System to handle transform edit messages
 pub fn handle_transform_edit_events(
-    mut events: EventReader<TransformEditEvent>,
+    mut events: MessageReader<TransformEditEvent>,
     mut entity_query: Query<&mut Transform, With<EditorSceneEntity>>,
     mut editor_scene: ResMut<EditorScene>,
 ) {
@@ -645,9 +659,9 @@ pub fn handle_transform_edit_events(
     }
 }
 
-/// System to handle name edit events
+/// System to handle name edit messages
 pub fn handle_name_edit_events(
-    mut events: EventReader<NameEditEvent>,
+    mut events: MessageReader<NameEditEvent>,
     mut entity_query: Query<&mut Name, With<EditorSceneEntity>>,
     mut editor_scene: ResMut<EditorScene>,
 ) {
@@ -660,9 +674,9 @@ pub fn handle_name_edit_events(
     }
 }
 
-/// System to handle sprite texture assignment events
+/// System to handle sprite texture assignment messages
 pub fn handle_sprite_texture_events(
-    mut events: EventReader<SpriteTextureEvent>,
+    mut events: MessageReader<SpriteTextureEvent>,
     mut sprite_query: Query<&mut Sprite, With<EditorSceneEntity>>,
     mut editor_scene: ResMut<EditorScene>,
     images: Res<Assets<Image>>,
@@ -715,9 +729,11 @@ impl Plugin for SceneEditorPlugin {
             // Register rendering components
             .register_type::<Sprite>()
             // Events
-            .add_event::<TransformEditEvent>()
-            .add_event::<NameEditEvent>()
-            .add_event::<SpriteTextureEvent>()
+            .add_message::<TransformEditEvent>()
+            .add_message::<NameEditEvent>()
+            .add_message::<SpriteTextureEvent>()
+            .add_message::<AddComponentEvent>()
+            .add_message::<RemoveComponentEvent>()
             // Systems
             .add_systems(Startup, setup_editor_scene)
             .add_systems(

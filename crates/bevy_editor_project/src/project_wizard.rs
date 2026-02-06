@@ -48,7 +48,7 @@ pub fn project_wizard_ui(
         .collapsible(false)
         .resizable(false)
         .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-        .show(contexts.ctx_mut(), |ui| {
+        .show(contexts.ctx_mut().unwrap(), |ui| {
             ui.heading("New Bevy Project");
             ui.add_space(10.0);
 

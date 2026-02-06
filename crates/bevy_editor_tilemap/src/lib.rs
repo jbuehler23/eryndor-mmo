@@ -70,8 +70,8 @@ impl Plugin for TilemapEditorPlugin {
             .init_resource::<MapDimensions>()
             .init_resource::<CollisionEditor>()
             // Events
-            .add_event::<LoadTilesetEvent>()
-            .add_event::<PaintTileEvent>()
+            .add_message::<LoadTilesetEvent>()
+            .add_message::<PaintTileEvent>()
             // Systems
             .add_systems(Startup, ensure_default_layer_system)
             .add_systems(
@@ -110,8 +110,8 @@ impl Plugin for TilemapCorePlugin {
             .init_resource::<TilePainter>()
             .init_resource::<MapDimensions>()
             // Events
-            .add_event::<LoadTilesetEvent>()
-            .add_event::<PaintTileEvent>()
+            .add_message::<LoadTilesetEvent>()
+            .add_message::<PaintTileEvent>()
             // Systems
             .add_systems(Startup, ensure_default_layer_system)
             .add_systems(

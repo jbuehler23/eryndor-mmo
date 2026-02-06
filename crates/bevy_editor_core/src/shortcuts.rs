@@ -56,7 +56,7 @@ impl KeyboardShortcut {
 }
 
 /// Event emitted when a registered shortcut is triggered
-#[derive(Event, Debug, Clone)]
+#[derive(Event, Message, Debug, Clone)]
 pub struct ShortcutEvent {
     pub id: String,
 }
@@ -89,7 +89,7 @@ impl ShortcutRegistry {
 pub fn process_shortcuts_system(
     keyboard: Res<ButtonInput<KeyCode>>,
     registry: Res<ShortcutRegistry>,
-    mut events: EventWriter<ShortcutEvent>,
+    mut events: MessageWriter<ShortcutEvent>,
 ) {
     for (id, shortcut) in registry.iter() {
         if shortcut.matches(&keyboard) {
@@ -116,7 +116,7 @@ pub struct ShortcutPlugin;
 impl Plugin for ShortcutPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ShortcutRegistry>()
-            .add_event::<ShortcutEvent>()
+            .add_message::<ShortcutEvent>()
             .add_systems(Update, process_shortcuts_system);
     }
 }

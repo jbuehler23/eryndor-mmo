@@ -519,7 +519,7 @@ fn draw_scene_move_handles(gizmos: &mut Gizmos, position: Vec2) {
 
 /// Draw gizmo mode indicator overlay in viewport
 pub fn draw_gizmo_mode_indicator(mut contexts: EguiContexts, gizmo_state: Res<GizmoState>) {
-    let Some(ctx) = contexts.try_ctx_mut() else {
+    let Some(ctx) = contexts.ctx_mut().ok() else {
         return;
     };
 

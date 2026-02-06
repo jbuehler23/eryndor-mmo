@@ -14,14 +14,15 @@ pub fn render_inspector_panel(
     editor_scene: &EditorScene,
     component_data: Option<&EntityComponentData>,
     component_registry: &ComponentRegistry,
-    transform_events: &mut EventWriter<TransformEditEvent>,
-    name_events: &mut EventWriter<NameEditEvent>,
+    transform_events: &mut MessageWriter<TransformEditEvent>,
+    name_events: &mut MessageWriter<NameEditEvent>,
     name_edit_buffer: &mut String,
     project_root: Option<&std::path::PathBuf>,
     asset_server: &AssetServer,
-    texture_events: &mut EventWriter<SpriteTextureEvent>,
+    texture_events: &mut MessageWriter<SpriteTextureEvent>,
     sprite_texture_id: Option<egui::TextureId>,
     images: &Assets<Image>,
+    add_component_events: &mut MessageWriter<bevy_editor_scene::AddComponentEvent>,
 ) {
     ui.heading("Inspector");
     ui.separator();
@@ -81,7 +82,7 @@ pub fn render_inspector_panel(
             ui.separator();
 
             // Add Component button
-            render_add_component_menu(ui, component_registry);
+            render_add_component_menu(ui, component_registry, selected_entity, add_component_events);
         });
 }
 
@@ -90,10 +91,10 @@ fn render_existing_components(
     ui: &mut egui::Ui,
     data: &EntityComponentData,
     entity: Entity,
-    transform_events: &mut EventWriter<TransformEditEvent>,
+    transform_events: &mut MessageWriter<TransformEditEvent>,
     project_root: Option<&std::path::PathBuf>,
     asset_server: &AssetServer,
-    texture_events: &mut EventWriter<SpriteTextureEvent>,
+    texture_events: &mut MessageWriter<SpriteTextureEvent>,
     sprite_texture_id: Option<egui::TextureId>,
     images: &Assets<Image>,
 ) {
@@ -151,7 +152,7 @@ fn render_transform_component(
     ui: &mut egui::Ui,
     transform: &Transform,
     entity: Entity,
-    transform_events: &mut EventWriter<TransformEditEvent>,
+    transform_events: &mut MessageWriter<TransformEditEvent>,
 ) {
     egui::CollapsingHeader::new(Icons::TRANSFORM.with_icon("Transform"))
         .default_open(true)
@@ -241,7 +242,7 @@ fn render_sprite_component(
     entity: Entity,
     project_root: Option<&std::path::PathBuf>,
     asset_server: &AssetServer,
-    texture_events: &mut EventWriter<SpriteTextureEvent>,
+    texture_events: &mut MessageWriter<SpriteTextureEvent>,
     sprite_texture_id: Option<egui::TextureId>,
     _images: &Assets<Image>,
 ) {
@@ -327,7 +328,12 @@ fn render_text_component(ui: &mut egui::Ui, text: &Text) {
 }
 
 /// Render "Add Component" menu
-fn render_add_component_menu(ui: &mut egui::Ui, component_registry: &ComponentRegistry) {
+fn render_add_component_menu(
+    ui: &mut egui::Ui,
+    component_registry: &ComponentRegistry,
+    selected_entity: Entity,
+    add_component_events: &mut MessageWriter<bevy_editor_scene::AddComponentEvent>,
+) {
     ui.menu_button(format!("{} Add Component", Icons::NEW), |ui| {
         for category in component_registry.categories() {
             let components = component_registry.get_by_category(category);
@@ -338,8 +344,12 @@ fn render_add_component_menu(ui: &mut egui::Ui, component_registry: &ComponentRe
             ui.menu_button(ComponentRegistry::category_name(category), |ui| {
                 for component_info in components {
                     if ui.button(component_info.name).clicked() {
-                        info!("Add component: {}", component_info.name);
-                        ui.close_menu();
+                        add_component_events.write(bevy_editor_scene::AddComponentEvent {
+                            entity: selected_entity,
+                            component_name: component_info.name.to_string(),
+                        });
+                        info!("Adding component: {} to entity {:?}", component_info.name, selected_entity);
+                        ui.close();
                     }
                 }
             });

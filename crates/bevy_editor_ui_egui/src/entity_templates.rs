@@ -1,7 +1,6 @@
 //! Entity templates for creating pre-configured entities.
 
 use bevy::prelude::*;
-use bevy::sprite::Anchor;
 use bevy_editor_frontend_api::scene_tree::SceneEntityTemplate;
 use bevy_editor_scene::EditorSceneEntity;
 
@@ -35,8 +34,7 @@ fn spawn_empty(commands: &mut Commands, parent: Option<Entity>) -> Entity {
 }
 
 fn spawn_sprite(commands: &mut Commands, parent: Option<Entity>) -> Entity {
-    let mut sprite = Sprite::from_color(Color::srgba(0.7, 0.7, 0.7, 0.8), Vec2::splat(64.0));
-    sprite.anchor = Anchor::Center;
+    let sprite = Sprite::from_color(Color::srgba(0.7, 0.7, 0.7, 0.8), Vec2::splat(64.0));
 
     spawn_with_parent(
         commands,

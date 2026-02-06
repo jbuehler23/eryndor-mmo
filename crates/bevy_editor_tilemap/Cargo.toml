@@ -12,7 +12,7 @@ categories = ["game-development", "game-engines"]
 bevy = { workspace = true }
 bevy_editor_foundation = { path = "../bevy_editor_foundation" }
 bevy_editor_formats = { path = "../bevy_editor_formats" }
-bevy_ecs_tilemap = { version = "0.16", optional = true }
+bevy_ecs_tilemap = { version = "0.17", optional = true }
 image = { version = "0.25", optional = true }
 
 [features]

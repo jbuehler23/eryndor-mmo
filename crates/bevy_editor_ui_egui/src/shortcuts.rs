@@ -13,7 +13,7 @@ pub fn handle_global_shortcuts(
     mut editor_actions: EventWriter<EditorAction>,
 ) {
     // Don't process shortcuts if typing in a text field
-    let Some(ctx) = contexts.try_ctx_mut() else {
+    let Some(ctx) = contexts.ctx_mut().ok() else {
         return;
     };
     if ctx.wants_keyboard_input() {

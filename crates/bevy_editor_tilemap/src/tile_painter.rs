@@ -47,7 +47,7 @@ pub fn paint_single_tile(
     flip_x: bool,
     flip_y: bool,
     layer_manager: &mut LayerManager,
-    paint_events: &mut EventWriter<PaintTileEvent>,
+    paint_events: &mut MessageWriter<PaintTileEvent>,
 ) {
     let tile = TileData {
         x,
@@ -74,7 +74,7 @@ pub fn bucket_fill(
     flip_x: bool,
     flip_y: bool,
     layer_manager: &mut LayerManager,
-    paint_events: &mut EventWriter<PaintTileEvent>,
+    paint_events: &mut MessageWriter<PaintTileEvent>,
 ) {
     let target_tile = layer_manager.get_tile_at(start_x, start_y).copied();
     let target_tile_id = target_tile.map(|t| t.tile_id);
@@ -131,7 +131,7 @@ pub fn paint_rectangle(
     flip_x: bool,
     flip_y: bool,
     layer_manager: &mut LayerManager,
-    paint_events: &mut EventWriter<PaintTileEvent>,
+    paint_events: &mut MessageWriter<PaintTileEvent>,
 ) {
     let min_x = start_x.min(end_x);
     let max_x = start_x.max(end_x);
@@ -155,7 +155,7 @@ pub fn paint_line(
     flip_x: bool,
     flip_y: bool,
     layer_manager: &mut LayerManager,
-    paint_events: &mut EventWriter<PaintTileEvent>,
+    paint_events: &mut MessageWriter<PaintTileEvent>,
 ) {
     let dx = (end_x as i32 - start_x as i32).abs();
     let dy = (end_y as i32 - start_y as i32).abs();
@@ -201,7 +201,7 @@ pub fn paint_stamp(
     flip_x: bool,
     flip_y: bool,
     layer_manager: &mut LayerManager,
-    paint_events: &mut EventWriter<PaintTileEvent>,
+    paint_events: &mut MessageWriter<PaintTileEvent>,
 ) {
     let Some((stamp_width, stamp_height)) = tileset_manager.get_selection_dimensions() else {
         return;

@@ -10,7 +10,7 @@ use bevy_egui::egui;
 pub fn render_scene_tabs_content(
     ui: &mut egui::Ui,
     open_scenes: &mut OpenScenes,
-    tab_changed_events: &mut EventWriter<SceneTabChanged>,
+    tab_changed_events: &mut MessageWriter<SceneTabChanged>,
 ) {
     ui.horizontal(|ui| {
         let mut scene_to_close: Option<usize> = None;
@@ -74,7 +74,7 @@ pub fn render_scene_tabs_content(
 
 /// System to sync [`EditorScene`] with [`OpenScenes`] when tabs change.
 pub fn sync_editor_scene_on_tab_change(
-    mut tab_events: EventReader<SceneTabChanged>,
+    mut tab_events: MessageReader<SceneTabChanged>,
     mut commands: Commands,
     mut editor_scene: ResMut<EditorScene>,
     scene_entities: Query<(Entity, Option<&ChildOf>), With<EditorSceneEntity>>,

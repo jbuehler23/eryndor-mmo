@@ -3,7 +3,7 @@ use bevy_editor_project::CurrentProject;
 use bevy_editor_scene::{load_scene_into_open_scenes, OpenScenes, SceneAutoLoader};
 
 /// Event to trigger scene loading
-#[derive(Event)]
+#[derive(Event, Message)]
 pub struct LoadSceneEvent {
     pub scene_path: String,
 }

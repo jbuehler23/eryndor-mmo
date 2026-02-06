@@ -7,7 +7,6 @@
 
 use bevy::input::mouse::{MouseScrollUnit, MouseWheel};
 use bevy::prelude::*;
-use bevy::render::camera::Projection;
 
 /// Marker component for the editor camera
 #[derive(Component)]
@@ -30,17 +29,10 @@ impl Default for EditorCamera {
 /// System to handle editor camera panning with middle mouse button
 pub fn camera_pan_system(
     mouse_button: Res<ButtonInput<MouseButton>>,
-    mut mouse_motion: EventReader<bevy::input::mouse::MouseMotion>,
-    mut camera_query: Query<(&mut Transform, &Projection), With<EditorCamera>>,
-    mut egui_context: bevy_egui::EguiContexts,
+    mut mouse_motion: MessageReader<bevy::input::mouse::MouseMotion>,
+    mut camera_query: Query<(&mut Transform, &mut EditorCamera)>,
 ) {
-    // Don't pan if egui is using the mouse
-    let Some(ctx) = egui_context.try_ctx_mut() else {
-        return;
-    };
-    if ctx.is_pointer_over_area() {
-        return;
-    }
+    // TODO: Add UI interaction blocking when bevy_feathers UI is active
 
     // Only pan when middle mouse button is held
     if !mouse_button.pressed(MouseButton::Middle) {
@@ -48,7 +40,7 @@ pub fn camera_pan_system(
     }
 
     let mut cameras = camera_query.iter_mut();
-    let Some((mut transform, projection)) = cameras.next() else {
+    let Some((mut transform, editor_camera)) = cameras.next() else {
         return;
     };
 
@@ -59,11 +51,8 @@ pub fn camera_pan_system(
     }
 
     if delta != Vec2::ZERO {
-        // Get scale from projection
-        let scale = match projection {
-            Projection::Orthographic(ortho) => ortho.scale,
-            _ => 1.0,
-        };
+        // Use the editor camera's zoom as scale
+        let scale = editor_camera.zoom;
 
         // Pan camera (inverted for natural feel)
         transform.translation.x -= delta.x * scale;
@@ -73,20 +62,13 @@ pub fn camera_pan_system(
 
 /// System to handle editor camera zoom with mouse wheel
 pub fn camera_zoom_system(
-    mut scroll_events: EventReader<MouseWheel>,
-    mut camera_query: Query<(&mut Projection, &mut EditorCamera)>,
-    mut egui_context: bevy_egui::EguiContexts,
+    mut scroll_events: MessageReader<MouseWheel>,
+    mut camera_query: Query<&mut EditorCamera>,
 ) {
-    // Don't zoom if egui is using the mouse
-    let Some(ctx) = egui_context.try_ctx_mut() else {
-        return;
-    };
-    if ctx.is_pointer_over_area() {
-        return;
-    }
+    // TODO: Add UI interaction blocking when bevy_feathers UI is active
 
     let mut cameras = camera_query.iter_mut();
-    let Some((mut projection, mut editor_camera)) = cameras.next() else {
+    let Some(mut editor_camera) = cameras.next() else {
         return;
     };
 
@@ -96,15 +78,10 @@ pub fn camera_zoom_system(
             MouseScrollUnit::Pixel => event.y * 0.01,
         };
 
-        // Update zoom
+        // Update zoom (stored in EditorCamera for use in pan system)
         editor_camera.zoom *= 1.0 - zoom_delta;
         editor_camera.zoom = editor_camera
             .zoom
             .clamp(editor_camera.min_zoom, editor_camera.max_zoom);
-
-        // Apply to projection
-        if let Projection::Orthographic(ref mut ortho) = projection.as_mut() {
-            ortho.scale = editor_camera.zoom;
-        }
     }
 }

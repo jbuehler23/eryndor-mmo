@@ -13,10 +13,11 @@ bevy_editor_commands = { path = "../bevy_editor_commands" }
 bevy_editor_scene = { path = "../bevy_editor_scene" }
 bevy_editor_foundation = { path = "../bevy_editor_foundation" }
 bevy_editor_tilemap = { path = "../bevy_editor_tilemap" }
-bevy_editor_project = { path = "../bevy_editor_project", features = ["cli"] }
+bevy_editor_project = { path = "../bevy_editor_project", default-features = false, features = ["workspace", "cli"] }
 bevy_editor_assets = { path = "../bevy_editor_assets" }
 bevy_editor_frontend_api = { path = "../bevy_editor_frontend_api" }
-bevy_ecs_tilemap = "0.16"
+bevy_editor_play_mode = { path = "../bevy_editor_play_mode" }
+bevy_ecs_tilemap = "0.17"
 rfd = "0.15"
 
 [lints]

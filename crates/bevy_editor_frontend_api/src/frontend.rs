@@ -61,7 +61,7 @@ pub trait EditorFrontend: Send + Sync + 'static {
 }
 
 /// Actions emitted by frontends to request work from backend crates.
-#[derive(Event, Debug, Clone, PartialEq)]
+#[derive(Event, Message, Debug, Clone, PartialEq)]
 pub enum EditorAction {
     /// Request that the backend open a project (None = show dialog).
     RequestOpenProject { path: Option<PathBuf> },
@@ -86,7 +86,7 @@ pub enum EditorAction {
 }
 
 /// Notifications sent from backend crates to frontends.
-#[derive(Event, Debug, Clone, PartialEq, Eq)]
+#[derive(Event, Message, Debug, Clone, PartialEq, Eq)]
 pub enum EditorEvent {
     ProjectOpened {
         path: PathBuf,

@@ -35,7 +35,7 @@ pub fn render_scene_tree_panel(
                         parent: editor_scene.selected_entity,
                     });
                     info!("Add {} entity command sent", template.display_name());
-                    ui.close_menu();
+                    ui.close();
                 }
             }
         });

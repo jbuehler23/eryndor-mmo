@@ -61,7 +61,7 @@ impl Selection {
 }
 
 /// Event for selection changes
-#[derive(Event, Debug, Clone)]
+#[derive(Event, Message, Debug, Clone)]
 pub enum SelectionEvent {
     /// An entity was selected (replacing previous selection)
     Selected(Entity),
@@ -77,7 +77,7 @@ pub enum SelectionEvent {
 pub fn emit_selection_events(
     selection: Res<Selection>,
     mut last_selection: Local<HashSet<Entity>>,
-    mut events: EventWriter<SelectionEvent>,
+    mut events: MessageWriter<SelectionEvent>,
 ) {
     if selection.is_changed() {
         // Check what changed
@@ -177,7 +177,7 @@ pub struct SelectionPlugin;
 impl Plugin for SelectionPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Selection>()
-            .add_event::<SelectionEvent>()
+            .add_message::<SelectionEvent>()
             .add_systems(Update, emit_selection_events);
     }
 }

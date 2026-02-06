@@ -7,14 +7,14 @@
 pub mod scene_loader;
 pub mod systems;
 
-use bevy::core_pipeline::core_2d::Camera2d;
 use bevy::prelude::*;
-use bevy::render::camera::ClearColorConfig;
+use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy_editor_assets::AssetBrowserPlugin;
 use bevy_editor_commands::EditorHistory;
 use bevy_editor_core::{handle_gizmo_mode_shortcuts, EditorCameraPlugin, EditorCorePlugin};
 use bevy_editor_foundation::{EditorState, EditorStatePlugin};
 use bevy_editor_frontend_api::{EditorAction, EditorEvent, EditorFrontend, ProjectCommand};
+use bevy_editor_play_mode::PlayModePlugin;
 use bevy_editor_project::{BevyCLIRunner, CLICommand, ProjectManagerPlugin, ProjectManagerSet};
 use bevy_editor_scene::{mark_loaded_scene_entities, SceneAutoLoader, SceneEditorPlugin};
 use bevy_editor_tilemap::TilemapEditorPlugin;
@@ -45,10 +45,10 @@ impl<F: EditorFrontend + Clone> EditorAppPlugin<F> {
 
 impl<F: EditorFrontend + Clone> Plugin for EditorAppPlugin<F> {
     fn build(&self, app: &mut App) {
-        app.add_event::<EditorAction>()
-            .add_event::<EditorEvent>()
-            .add_event::<LoadSceneEvent>()
-            .add_event::<bevy_editor_scene::SceneTabChanged>()
+        app.add_message::<EditorAction>()
+            .add_message::<EditorEvent>()
+            .add_message::<LoadSceneEvent>()
+            .add_message::<bevy_editor_scene::SceneTabChanged>()
             .init_resource::<ActiveProjectCommand>()
             .init_resource::<EditorHistory>()
             .init_resource::<PendingTilemapRestore>()
@@ -64,6 +64,8 @@ impl<F: EditorFrontend + Clone> Plugin for EditorAppPlugin<F> {
                 SceneEditorPlugin,
                 TilemapEditorPlugin,
                 bevy_ecs_tilemap::TilemapPlugin,
+                FrameTimeDiagnosticsPlugin::default(),
+                PlayModePlugin,
             ))
             .add_systems(Startup, setup_editor_camera)
             // Core systems
@@ -111,11 +113,11 @@ fn to_cli_command(command: ProjectCommand) -> CLICommand {
 
 /// Handle frontend-driven actions and bridge them to backend resources.
 fn handle_editor_actions(
-    mut actions: EventReader<EditorAction>,
+    mut actions: MessageReader<EditorAction>,
     mut editor_state: ResMut<EditorState>,
     mut cli_runner: ResMut<BevyCLIRunner>,
     mut active_command: ResMut<ActiveProjectCommand>,
-    mut editor_events: EventWriter<EditorEvent>,
+    mut editor_events: MessageWriter<EditorEvent>,
     open_scenes: Res<bevy_editor_scene::OpenScenes>,
 ) {
     for action in actions.read() {
@@ -183,7 +185,7 @@ fn handle_editor_actions(
 fn monitor_cli_runner(
     cli_runner: Res<BevyCLIRunner>,
     mut active_command: ResMut<ActiveProjectCommand>,
-    mut editor_events: EventWriter<EditorEvent>,
+    mut editor_events: MessageWriter<EditorEvent>,
 ) {
     let running = cli_runner.is_running();
 
@@ -208,19 +210,13 @@ fn monitor_cli_runner(
 }
 
 fn setup_editor_camera(mut commands: Commands) {
-    commands.spawn((
-        Camera {
-            clear_color: ClearColorConfig::Custom(Color::srgb(0.2, 0.2, 0.25)),
-            ..default()
-        },
-        Camera2d,
-        Transform::default(),
-        GlobalTransform::default(),
-        Visibility::default(),
-        InheritedVisibility::default(),
-        ViewVisibility::default(),
-        bevy_editor_core::EditorCamera::default(),
-    ));
+    // Camera2d automatically includes Camera as a required component with correct settings for UI
+    // DON'T override the Camera component or UI won't render!
+    // Temporarily removed EditorCamera to test if it's interfering with UI rendering
+    commands.spawn(Camera2d);
+
+    // TODO: Add back EditorCamera once UI is working:
+    // commands.spawn((Camera2d, bevy_editor_core::EditorCamera::default()));
 }
 
 #[cfg(test)]
@@ -245,7 +241,7 @@ mod tests {
     fn run_command_without_project_emits_error_event() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.add_event::<EditorAction>();
+        app.add_message::<EditorAction>();
         app.add_event::<EditorEvent>();
         app.insert_resource(EditorState::default());
         app.insert_resource(BevyCLIRunner::default());

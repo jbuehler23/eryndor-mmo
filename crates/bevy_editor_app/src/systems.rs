@@ -297,7 +297,7 @@ pub fn restore_tilemap_from_level(
     open_scenes: Res<bevy_editor_scene::OpenScenes>, // Changed from CurrentLevel
     mut editor_state: ResMut<EditorState>,
     mut map_dimensions: ResMut<bevy_editor_tilemap::MapDimensions>,
-    mut load_tileset_events: EventWriter<bevy_editor_tilemap::LoadTilesetEvent>,
+    mut load_tileset_events: MessageWriter<bevy_editor_tilemap::LoadTilesetEvent>,
     tilemap_query: Query<
         &bevy_ecs_tilemap::prelude::TileStorage,
         (

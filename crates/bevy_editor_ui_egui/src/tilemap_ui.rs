@@ -26,7 +26,7 @@ pub fn handle_tile_painting(
         return;
     }
 
-    let Some(ctx) = contexts.try_ctx_mut() else {
+    let Some(ctx) = contexts.ctx_mut().ok() else {
         tile_painter.current_pos = None;
         return;
     };
@@ -190,7 +190,7 @@ pub fn handle_eyedropper(
         return;
     }
 
-    let Some(ctx) = contexts.try_ctx_mut() else {
+    let Some(ctx) = contexts.ctx_mut().ok() else {
         return;
     };
     if ctx.is_pointer_over_area() {

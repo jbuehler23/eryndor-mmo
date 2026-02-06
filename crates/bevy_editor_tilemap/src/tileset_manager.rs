@@ -238,7 +238,7 @@ pub fn load_tileset(
     tile_height: u32,
     asset_server: &AssetServer,
 ) -> (TilesetData, Handle<Image>) {
-    let texture_handle = asset_server.load(path);
+    let texture_handle = asset_server.load(path.to_string());
 
     // Calculate columns and rows from image dimensions
     // Note: In a real implementation, you'd need to load the image first to get dimensions
@@ -269,7 +269,7 @@ pub fn handle_tileset_load_requests(
     asset_server: Res<AssetServer>,
     mut tileset_manager: ResMut<TilesetManager>,
     mut images: ResMut<Assets<Image>>,
-    mut load_requests: EventReader<LoadTilesetEvent>,
+    mut load_requests: MessageReader<LoadTilesetEvent>,
 ) {
     for event in load_requests.read() {
         // Load the texture handle
@@ -395,7 +395,7 @@ pub fn update_tileset_dimensions(
 }
 
 /// Event to request loading a tileset
-#[derive(Event)]
+#[derive(Event, Message)]
 pub struct LoadTilesetEvent {
     pub path: String,
     pub identifier: String,

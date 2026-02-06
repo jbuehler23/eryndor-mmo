@@ -5,7 +5,7 @@ use bevy_egui::{egui, EguiContexts};
 
 /// Layer panel system - shows layer list with controls
 pub fn layer_panel_ui(mut contexts: EguiContexts, mut layer_manager: ResMut<LayerManager>) {
-    let Some(ctx) = contexts.try_ctx_mut() else {
+    let Some(ctx) = contexts.ctx_mut().ok() else {
         return;
     };
 

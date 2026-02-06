@@ -2,6 +2,7 @@ pub mod asset_browser_panel;
 pub mod build_progress_ui;
 pub mod cli_output_panel;
 pub mod collision_editor;
+pub mod component_commands;
 pub mod component_registry;
 pub mod current_level;
 pub mod editor_commands;
@@ -27,6 +28,7 @@ use bevy::prelude::*;
 use bevy_editor_assets::AssetBrowserSet;
 use bevy_editor_project::ProjectManagerSet;
 use bevy_editor_scene::SceneTabSystemSet;
+use bevy_egui::EguiPrimaryContextPass;
 
 pub use asset_browser_panel::asset_browser_panel_ui;
 pub use bevy_editor_core::{GizmoMode, GizmoState};
@@ -96,9 +98,9 @@ impl Plugin for EditorUiEguiPlugin {
             .init_resource::<InspectorPanelState>()
             .init_resource::<GizmoDragState>()
             .init_resource::<CurrentLevel>()
-            .add_event::<SceneTreeCommand>()
-            .add_event::<SelectTileEvent>()
-            .add_event::<SelectTilesetEvent>()
+            .add_message::<SceneTreeCommand>()
+            .add_message::<SelectTileEvent>()
+            .add_message::<SelectTilesetEvent>()
             .configure_sets(
                 PostUpdate,
                 (SceneTabSystemSet::Cache, SceneTabSystemSet::Apply).chain(),
@@ -112,14 +114,14 @@ impl Plugin for EditorUiEguiPlugin {
                 )
                     .chain(),
             )
-            // Input
+            // Input - runs in Update before egui rendering
             .add_systems(
                 Update,
                 handle_global_shortcuts
                     .in_set(EditorUiSet::Input)
                     .before(ProjectManagerSet),
             )
-            // Panel layout and egui rendering
+            // Non-egui state preparation - runs in Update
             .add_systems(
                 Update,
                 (
@@ -129,15 +131,21 @@ impl Plugin for EditorUiEguiPlugin {
                         .after(ProjectManagerSet)
                         .before(AssetBrowserSet),
                     refresh_project_browser_system.after(ProjectManagerSet),
-                    build_progress_overlay_ui.after(ProjectManagerSet),
-                    (ui_system, render_left_panel, render_right_panel)
-                        .chain()
-                        .after(ProjectManagerSet)
-                        .after(AssetBrowserSet),
                 )
                     .in_set(EditorUiSet::Panels),
             )
-            // Interaction and gizmo drawing
+            // CRITICAL: Egui UI rendering must run in EguiPrimaryContextPass schedule
+            // to ensure the egui context is properly initialized before use
+            .add_systems(
+                EguiPrimaryContextPass,
+                (
+                    build_progress_overlay_ui,
+                    (ui_system, render_left_panel, render_right_panel).chain(),
+                    collision_editor_ui,
+                    draw_gizmo_mode_indicator,
+                ),
+            )
+            // Non-egui interaction systems - runs in Update
             .add_systems(
                 Update,
                 (
@@ -148,16 +156,17 @@ impl Plugin for EditorUiEguiPlugin {
                     handle_scene_tree_commands,
                     handle_tile_painting,
                     handle_eyedropper,
-                    collision_editor_ui,
                     handle_collision_input,
                     render_collision_shapes,
                     draw_grid,
                     draw_selection_gizmos,
-                    draw_gizmo_mode_indicator,
+                    component_commands::handle_remove_component_events,
                 )
                     .in_set(EditorUiSet::Interaction)
                     .after(EditorUiSet::Panels),
             )
+            // Add component handler needs exclusive world access, runs separately
+            .add_systems(Update, component_commands::handle_add_component_events)
             .add_systems(
                 PostUpdate,
                 scene_tabs::sync_editor_scene_on_tab_change

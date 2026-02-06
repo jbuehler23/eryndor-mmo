@@ -14,7 +14,7 @@ pub fn project_browser_panel_ui(
     panel: &mut ProjectBrowserPanelState,
     editor_scene: &EditorScene,
     asset_server: &AssetServer,
-    texture_events: &mut bevy::ecs::event::EventWriter<SpriteTextureEvent>,
+    texture_events: &mut bevy::ecs::message::MessageWriter<SpriteTextureEvent>,
 ) {
     ui.heading(format!("{} Project", Icons::FOLDER_OPEN));
     ui.separator();
@@ -114,7 +114,7 @@ fn render_file_tree(
     depth: usize,
     editor_scene: &EditorScene,
     asset_server: &AssetServer,
-    texture_events: &mut bevy::ecs::event::EventWriter<SpriteTextureEvent>,
+    texture_events: &mut bevy::ecs::message::MessageWriter<SpriteTextureEvent>,
 ) {
     for entry in entries {
         render_file_entry(
@@ -137,7 +137,7 @@ fn render_file_entry(
     depth: usize,
     editor_scene: &EditorScene,
     asset_server: &AssetServer,
-    texture_events: &mut bevy::ecs::event::EventWriter<SpriteTextureEvent>,
+    texture_events: &mut bevy::ecs::message::MessageWriter<SpriteTextureEvent>,
 ) {
     let indent = depth as f32 * 16.0;
     let is_selected = browser
@@ -256,7 +256,7 @@ fn render_context_menu(ui: &mut egui::Ui, browser: &mut ProjectBrowser, entry: &
     if entry.is_directory {
         if ui.button(format!("{} New Folder", Icons::NEW)).clicked() {
             // TODO: Show new folder dialog with this as parent
-            ui.close_menu();
+            ui.close();
         }
 
         if ui
@@ -279,7 +279,7 @@ fn render_context_menu(ui: &mut egui::Ui, browser: &mut ProjectBrowser, entry: &
                     .arg(&entry.path)
                     .spawn();
             }
-            ui.close_menu();
+            ui.close();
         }
     } else {
         // File-specific actions
@@ -291,13 +291,13 @@ fn render_context_menu(ui: &mut egui::Ui, browser: &mut ProjectBrowser, entry: &
                 {
                     // TODO: Send event to load scene
                     info!("Open scene: {:?}", entry.path);
-                    ui.close_menu();
+                    ui.close();
                 }
             }
             FileType::Image => {
                 if ui.button(format!("{} Preview", Icons::EYE)).clicked() {
                     // TODO: Show image preview
-                    ui.close_menu();
+                    ui.close();
                 }
             }
             _ => {}
@@ -316,7 +316,7 @@ fn render_context_menu(ui: &mut egui::Ui, browser: &mut ProjectBrowser, entry: &
                         .spawn();
                 }
             }
-            ui.close_menu();
+            ui.close();
         }
     }
 
@@ -334,6 +334,6 @@ fn render_context_menu(ui: &mut egui::Ui, browser: &mut ProjectBrowser, entry: &
                 error!("Failed to delete: {}", e);
             }
         }
-        ui.close_menu();
+        ui.close();
     }
 }

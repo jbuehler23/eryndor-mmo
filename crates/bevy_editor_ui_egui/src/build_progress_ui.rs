@@ -4,7 +4,7 @@ use bevy_egui::{egui, EguiContexts};
 
 /// System to render build progress overlay
 pub fn build_progress_overlay_ui(mut contexts: EguiContexts, selection: Res<ProjectSelection>) {
-    let Some(ctx) = contexts.try_ctx_mut() else {
+    let Some(ctx) = contexts.ctx_mut().ok() else {
         return;
     };
 

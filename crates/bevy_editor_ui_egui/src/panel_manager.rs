@@ -60,10 +60,10 @@ pub fn render_left_panel(
     mut panel_manager: ResMut<PanelManager>,
     mut editor_scene: ResMut<EditorScene>,
     mut layer_manager: ResMut<LayerManager>,
-    mut scene_tree_events: EventWriter<SceneTreeCommand>,
+    mut scene_tree_events: MessageWriter<SceneTreeCommand>,
     scene_entity_query: Query<(Entity, Option<&Name>, Option<&Children>), With<EditorSceneEntity>>,
 ) {
-    let Some(ctx) = contexts.try_ctx_mut() else {
+    let Some(ctx) = contexts.ctx_mut().ok() else {
         return;
     };
 
@@ -128,13 +128,14 @@ pub fn render_right_panel(
     component_registry: Res<EditorComponentRegistry>,
     tileset_manager: Res<TilesetManager>,
     mut tileset_zoom: ResMut<crate::tileset_panel::TilesetZoom>,
-    mut transform_events: EventWriter<TransformEditEvent>,
-    mut name_events: EventWriter<NameEditEvent>,
+    mut transform_events: MessageWriter<TransformEditEvent>,
+    mut name_events: MessageWriter<NameEditEvent>,
     mut name_edit_buffer: ResMut<NameEditBuffer>,
     mut project_browser: ResMut<crate::project_browser::ProjectBrowser>,
     mut project_browser_panel: ResMut<ProjectBrowserPanelState>,
     asset_server: Res<AssetServer>,
-    mut texture_events: EventWriter<SpriteTextureEvent>,
+    mut texture_events: MessageWriter<SpriteTextureEvent>,
+    mut add_component_events: MessageWriter<bevy_editor_scene::AddComponentEvent>,
     images: Res<Assets<Image>>,
     entity_query: Query<(
         Entity,
@@ -154,7 +155,7 @@ pub fn render_right_panel(
             if let Ok((_, _, _, _, sprite, _, _, _, _)) = entity_query.get(selected_entity) {
                 if let Some(sprite) = sprite {
                     if sprite.image.is_strong() {
-                        Some(contexts.add_image(sprite.image.clone_weak()))
+                        Some(contexts.add_image(bevy_egui::EguiTextureHandle::Strong(sprite.image.clone())))
                     } else {
                         None
                     }
@@ -171,7 +172,7 @@ pub fn render_right_panel(
         None
     };
 
-    let Some(ctx) = contexts.try_ctx_mut() else {
+    let Some(ctx) = contexts.ctx_mut().ok() else {
         return;
     };
 
@@ -250,6 +251,7 @@ pub fn render_right_panel(
                         &mut texture_events,
                         sprite_texture_id,
                         &images,
+                        &mut add_component_events,
                     );
                 }
                 RightPanelTab::Tilesets => {

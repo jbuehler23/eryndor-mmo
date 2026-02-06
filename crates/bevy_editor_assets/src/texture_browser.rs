@@ -45,7 +45,7 @@ pub trait TextureHandleProvider {
 
 impl TextureHandleProvider for AssetServer {
     fn load_texture_handle(&self, asset_path: &str) -> Handle<Image> {
-        self.load(asset_path)
+        self.load(asset_path.to_string())
     }
 }
 

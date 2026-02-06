@@ -21,7 +21,7 @@ impl SceneTreeNode {
 }
 
 /// Commands emitted by frontends to manipulate the scene tree.
-#[derive(Event, Debug, Clone)]
+#[derive(Event, Message, Debug, Clone)]
 pub enum SceneTreeCommand {
     AddEntity {
         parent: Option<Entity>,

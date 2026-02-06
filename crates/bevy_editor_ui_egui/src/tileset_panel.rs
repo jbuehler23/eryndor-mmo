@@ -29,12 +29,12 @@ pub fn tileset_panel_ui(
     let mut egui_textures = std::collections::HashMap::new();
     for (id, tileset_info) in tileset_manager.tilesets.iter() {
         if images.get(&tileset_info.texture_handle).is_some() {
-            let egui_tex = contexts.add_image(tileset_info.texture_handle.clone_weak());
+            let egui_tex = contexts.add_image(bevy_egui::EguiTextureHandle::Strong(tileset_info.texture_handle.clone()));
             egui_textures.insert(*id, egui_tex);
         }
     }
 
-    let Some(ctx) = contexts.try_ctx_mut() else {
+    let Some(ctx) = contexts.ctx_mut().ok() else {
         return;
     };
 
@@ -423,13 +423,13 @@ fn render_tileset_grid(
 }
 
 /// Event to select a specific tile in a tileset
-#[derive(Event)]
+#[derive(Event, Message)]
 pub struct SelectTileEvent {
     pub tile_id: u32,
 }
 
 /// Event to select a tileset
-#[derive(Event)]
+#[derive(Event, Message)]
 pub struct SelectTilesetEvent {
     pub tileset_id: u32,
 }

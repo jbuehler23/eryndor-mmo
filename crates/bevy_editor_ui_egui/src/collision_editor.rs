@@ -13,7 +13,7 @@ pub fn collision_editor_ui(
         return;
     }
 
-    let Some(ctx) = contexts.try_ctx_mut() else {
+    let Some(ctx) = contexts.ctx_mut().ok() else {
         return;
     };
 

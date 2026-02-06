@@ -31,7 +31,7 @@ pub fn ui_system(
     mut tab_changed_events: EventWriter<SceneTabChanged>,
     mut editor_actions: EventWriter<EditorAction>,
 ) {
-    let Some(ctx) = contexts.try_ctx_mut() else {
+    let Some(ctx) = contexts.ctx_mut().ok() else {
         return;
     };
 
@@ -109,7 +109,7 @@ pub fn ui_system(
                                         };
                                         info!("Opening recent project: {}", project_path);
                                     }
-                                    ui.close_menu();
+                                    ui.close();
                                 }
                             }
 
@@ -117,7 +117,7 @@ pub fn ui_system(
                             if ui.button("Clear Recent Projects").clicked() {
                                 // Note: We can't mutate workspace here, will need a separate system
                                 info!("Clear recent projects requested (not yet implemented)");
-                                ui.close_menu();
+                                ui.close();
                             }
                         }
                     });
@@ -132,11 +132,11 @@ pub fn ui_system(
             ui.menu_button("Edit", |ui| {
                 if ui.button("Undo (Ctrl+Z)").clicked() {
                     // TODO: Undo system
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui.button("Redo (Ctrl+Y)").clicked() {
                     // TODO: Redo system
-                    ui.close_menu();
+                    ui.close();
                 }
             });
 
@@ -152,7 +152,7 @@ pub fn ui_system(
                     .checkbox(&mut collision_editor.active, "Collision Editor")
                     .clicked()
                 {
-                    ui.close_menu();
+                    ui.close();
                 }
             });
         });

@@ -116,7 +116,7 @@ pub fn update_map_canvas_on_layer_changes(layer_manager: Res<LayerManager>) {
 }
 
 /// Event to paint a tile at a specific position
-#[derive(Event)]
+#[derive(Event, Message)]
 pub struct PaintTileEvent {
     pub layer_id: u32,
     pub x: u32,
@@ -126,7 +126,7 @@ pub struct PaintTileEvent {
 
 /// System to handle tile painting events
 pub fn handle_paint_tile_events(
-    mut paint_events: EventReader<PaintTileEvent>,
+    mut paint_events: MessageReader<PaintTileEvent>,
     tilemap_query: Query<&TileStorage, With<MapCanvas>>,
     mut tile_query: Query<(&mut TileTextureIndex, &mut TileVisible)>,
 ) {
@@ -163,7 +163,7 @@ pub fn handle_canvas_click_painting(
         (&TileStorage, &TilemapSize, &TilemapGridSize, &Transform),
         With<MapCanvas>,
     >,
-    mut paint_events: EventWriter<PaintTileEvent>,
+    mut paint_events: MessageWriter<PaintTileEvent>,
 ) {
     // Only paint on left click
     if !mouse_button.pressed(MouseButton::Left) {
